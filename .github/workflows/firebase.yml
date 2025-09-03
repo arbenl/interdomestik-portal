@@ -1,0 +1,94 @@
+
+name: Firebase CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: interdomestik-portal # Replace with your Firebase Project ID
+  FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+jobs:
+  build_and_test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies (Functions)
+        run: npm install --prefix functions
+
+      - name: Run ESLint (Functions)
+        run: npm run lint --prefix functions
+
+      - name: Run Tests (Functions)
+        run: npm test --prefix functions
+
+      - name: Install Dependencies (Hosting)
+        run: npm install --prefix public # Assuming your frontend is in a 'public' directory
+
+      - name: Build Frontend (if applicable)
+        run: npm run build --prefix public # Adjust if your build command is different
+
+  deploy_preview:
+    name: Deploy to Preview Channel
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: build_and_test
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy to Firebase Hosting Preview Channel
+        run: firebase deploy --project ${{ env.PROJECT_ID }} --only hosting --channel pr-${{ github.event.number }} --token ${{ env.FIREBASE_TOKEN }}
+
+  deploy_staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: build_and_test
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy to Firebase Staging
+        run: firebase deploy --project ${{ env.PROJECT_ID }} --only hosting,functions,firestore:rules --token ${{ env.FIREBASE_TOKEN }}
+
+  deploy_production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build_and_test
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy to Firebase Production
+        run: firebase deploy --project ${{ env.PROJECT_ID }} --only hosting,functions,firestore:rules --token ${{ env.FIREBASE_TOKEN }}
+
+  rollback:
+    name: Rollback (Manual Trigger)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get previous good tag (manual input or logic to find last successful tag)
+        run: |
+          # This is a placeholder. In a real scenario, you'd need a way to determine the last known good tag.
+          # For example, you might pass it as a workflow_dispatch input or query GitHub API.
+          echo "PREVIOUS_TAG=v1.0.0" >> $GITHUB_ENV # Replace with actual logic
+
+      - name: Deploy previous good tag to Production
+        run: firebase deploy --project ${{ env.PROJECT_ID }} --only hosting,functions,firestore:rules --tag ${{ env.PREVIOUS_TAG }} --token ${{ env.FIREBASE_TOKEN }}
+
+

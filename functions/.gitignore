@@ -1,0 +1,3 @@
+# Functions runtime config and env files
+.runtimeconfig.json
+.env*

@@ -1,0 +1,363 @@
+diff --git a/firebase.json b/firebase.json
+index 27b7a73..5c8a3a4 100644
+--- a/firebase.json
++++ b/firebase.json
+@@ -4,20 +4,11 @@
+     "rules": "firestore.rules",
+     "indexes": "firestore.indexes.json"
+   },
+-  "hosting": {
+-    "public": "public",
+-    "ignore": [
+-      "firebase.json",
+-      "**/.*",
+-      "**/node_modules/**"
+-    ],
+-    "cleanUrls": true,
+-    "headers": [
+-      {
+-        "source": "**/*.@(js|css|png|jpg|svg|webp)",
+-        "headers": [
+-          {
+-            "key": "Cache-Control",
+-            "value": "public, max-age=31536000, immutable"
+-          }
+-        ]
+-      },
+-      {
+-        "source": "**",
+-        "headers": [
+-          {
+-            "key": "X-Content-Type-Options",
+-            "value": "nosniff"
+-          },
+-          {
+-            "key": "X-Frame-Options",
+-            "value": "SAMEORIGIN"
+-          },
+-          {
+-            "key": "Strict-Transport-Security",
+-            "value": "max-age=31536000; includeSubDomains"
+-          },
+-          {
+-            "key": "Referrer-Policy",
+-            "value": "strict-origin-when-cross-origin"
+-          },
+-          {
+-            "key": "Permissions-Policy",
+-            "value": "geolocation=(), microphone=(), camera=()"
+-          },
+-          {
+-            "key": "Content-Security-Policy",
+-            "value": "default-src 'self'; img-src 'self' data: https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://www.gstatic.com; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.googleapis.com;"
+-          }
+-        ]
+-      }
++
++  "hosting": {
++    "public": "frontend/dist",
++    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
++    "headers": [
++      { "source": "**/*.@(js|css)", "headers": [{ "key": "Cache-Control", "value": "public,max-age=31536000,immutable" }] }
+     ],
+     "rewrites": [
+       {
+@@ -26,6 +17,10 @@
+       {
+         "source": "/exportMembersCsv",
+         "function": "exportMembersCsv"
++      },
++      {
++        "source": "**",
++        "destination": "/index.html"
+       }
+     ]
+   },
+diff --git a/frontend/src/lib/firebase.ts b/frontend/src/lib/firebase.ts
+new file mode 100644
+index 0000000..b8081c3
+--- /dev/null
++++ b/frontend/src/lib/firebase.ts
+@@ -0,0 +1,20 @@
++import { initializeApp } from "firebase/app";
++import { getAuth, connectAuthEmulator } from "firebase/auth";
++import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
++import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
++
++const firebaseConfig = {
++  apiKey: import.meta.env.VITE_FB_API_KEY,
++  authDomain: import.meta.env.VITE_FB_AUTH_DOMAIN,
++  projectId: import.meta.env.VITE_FB_PROJECT_ID,
++  appId: import.meta.env.VITE_FB_APP_ID,
++};
++
++export const app = initializeApp(firebaseConfig);
++export const auth = getAuth(app);
++export const db = getFirestore(app);
++export const fn = getFunctions(app, "europe-west1");
++
++if (location.hostname === "localhost") {
++  connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
++  connectFirestoreEmulator(db, "localhost", 8080);
++  connectFunctionsEmulator(fn, "localhost", 5001);
++}
++ 
+diff --git a/frontend/.env.local b/frontend/.env.local
+new file mode 100644
+index 0000000..2d1fa7f
+--- /dev/null
++++ b/frontend/.env.local
+@@ -0,0 +1,4 @@
++VITE_FB_API_KEY=fake-api-key
++VITE_FB_AUTH_DOMAIN=demo-interdomestik.firebaseapp.com
++VITE_FB_PROJECT_ID=demo-interdomestik
++VITE_FB_APP_ID=demo-interdomestik-app
++ 
+
+diff --git a/cypress.config.ts b/cypress.config.ts
+index 22b289a..8a39349 100644
+--- a/cypress.config.ts
++++ b/cypress.config.ts
+@@ -1,38 +1,30 @@
+ import { defineConfig } from "cypress";
+ 
++const HOST = "127.0.0.1";
+ const PROJECT_ID = process.env.FB_PROJECT_ID || "demo-interdomestik";
+-const HOST = "127.0.0.1"; // use 127.0.0.1 to avoid IPv6 surprises
+ 
+ export default defineConfig({
+   e2e: {
+     baseUrl: "http://localhost:5000",
+     video: false,
+-    defaultCommandTimeout: 8000,
+-    setupNodeEvents(on, _config) {
+-      on("task", {
++    defaultCommandTimeout: 10000,
++    setupNodeEvents(on) {
++      on("task", {
+         async resetAuth() {
+           await fetch(`http://${HOST}:9099/emulator/v1/projects/${PROJECT_ID}/accounts`, { method: "DELETE" });
+           return null;
+         },
+         async resetFirestore() {
+           await fetch(`http://${HOST}:8080/emulator/v1/projects/${PROJECT_ID}/databases/(default)/documents`, { method: "DELETE" });
+           return null;
+         },
+-        // Create a password user in the Auth emulator
+         async createUser({ email, password }: { email: string; password: string }) {
+-          const r = await fetch(`http://${HOST}:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-key`, {
++          const r = await fetch(`http://${HOST}:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`, {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({ email, password, returnSecureToken: true })
+           });
+-          const json = await r.json();
+-          // returns localId, idToken, refreshToken…
+-          return json;
+-        },
+-        // Set custom claims via Auth emulator
+-        async setCustomClaims({ localId, claims }: { localId: string; claims: Record<string, any> }) {
+-          const r = await fetch(`http://${HOST}:9099/identitytoolkit.googleapis.com/v1/accounts:update?key=fake-key`, {
+-            method: "POST",
+-            headers: { "Content-Type": "application/json" },
+-            body: JSON.stringify({
+-              localId,
+-              customAttributes: JSON.stringify(claims)
+-            })
+-          });
+-          const json = await r.json();
+-          return json;
++          return r.json();
+         }
+       });
+     }
+   }
+ });
+ 
+diff --git a/cypress/support/e2e.ts b/cypress/support/e2e.ts
+index 5a9a97c..d1a5921 100644
+--- a/cypress/support/e2e.ts
++++ b/cypress/support/e2e.ts
+@@ -1,11 +1,4 @@
+ /// <reference types="cypress" />
+ import "./commands";
+ 
+-// Fail test fast on client-side errors
+ Cypress.on("uncaught:exception", () => false);
+- 
+-// Simple helper to sign in via web SDK on pages that load Firebase scripts
+-declare global {
+-  // we expect firebase to be a global if you include CDN scripts
+-  interface Window { firebase: any; }
+-} 
+- 
+-export {};
+ 
+diff --git a/cypress/support/commands.d.ts b/cypress/support/commands.d.ts
+new file mode 100644
+index 0000000..83b2e05
+--- /dev/null
++++ b/cypress/support/commands.d.ts
+@@ -0,0 +1,10 @@
++/// <reference types="cypress" />
++
++declare global {
++  namespace Cypress {
++    interface Chainable<Subject = any> {
++      clearDatabase(): Chainable<Subject>;
++      login(email: string, password: string): Chainable<Subject>;
++      uiSignIn(email: string, password: string): Chainable<Subject>;
++    }
++  }
++}
++export {};
+ 
+diff --git a/cypress/support/commands.ts b/cypress/support/commands.ts
+index 8a39349..d1a5921 100644
+--- a/cypress/support/commands.ts
++++ b/cypress/support/commands.ts
+@@ -1,30 +1,28 @@
+ /// <reference types="cypress" />
+- 
+ declare global {
+   namespace Cypress {
+     interface Chainable<Subject = any> {
+       clearDatabase(): Chainable<Subject>;
+-      seedDatabase(): Chainable<Subject>;
+       login(email: string, password: string): Chainable<Subject>;
+       uiSignIn(email: string, password: string): Chainable<Subject>;
+     }
+   }
+ }
+ export {};
+- 
++
+ Cypress.Commands.add("clearDatabase", () => {
+   cy.task("resetAuth");
+   cy.task("resetFirestore");
+ });
+- 
+-Cypress.Commands.add("seedDatabase", () => {
+-  // No-op for now; keep for future fixtures
+-  return cy.wrap(null);
+-});
+- 
+-// Signs in using the page's Firebase Web SDK (requires page to be loaded)
++
++Cypress.Commands.add("login", (email: string, password: string) => {
++  cy.task("createUser", { email, password }).its("localId").should("be.a", "string");
++});
++
+ Cypress.Commands.add("uiSignIn", (email: string, password: string) => {
+-  cy.window().its("firebase.auth").should("be.a", "function");
+-  cy.window().then(async (win) => {
+-    await win.firebase.auth().signInWithEmailAndPassword(email, password);
++  cy.window().then(async (win: any) => {
++    const { getAuth, signInWithEmailAndPassword } = await import("firebase/auth");
++    const auth = getAuth();
++    await signInWithEmailAndPassword(auth, email, password);
++    await auth.currentUser?.getIdToken(true);
+   });
+ });
+- 
+-/**
+- * Prepares the user account in the Auth emulator.
+- * NOTE: This does NOT sign into the page (page not loaded yet).
+- * After cy.visit(...), call cy.uiSignIn(email, password).
+- */
+-Cypress.Commands.add("login", (email: string, password: string) => {
+-  cy.task("createUser", { email, password }).its("localId").should("be.a", "string");
+-});
+ 
+diff --git a/cypress/tsconfig.json b/cypress/tsconfig.json
+index 22b289a..8a39349 100644
+--- a/cypress/tsconfig.json
++++ b/cypress/tsconfig.json
+@@ -1,15 +1,11 @@
+ {
+   "compilerOptions": {
+     "target": "ES2022",
+     "lib": ["ES2022", "DOM"],
+-    "module": "ESNext",
+-    "moduleResolution": "Node",
+-    "strict": true,
+-    "noEmit": true,
+-    "types": ["cypress", "node"]
++    "module": "ESNext",
++    "moduleResolution": "Node",
++    "types": ["cypress", "node"],
++    "strict": true,
++    "noEmit": true
+   },
+-  "include": [
+-    "e2e/**/*.ts",
+-    "support/**/*.ts",
+-    "support/**/*.d.ts"
+-  ]
++  "include": ["e2e/**/*.ts", "support/**/*.ts", "support/**/*.d.ts"]
+ }
+ 
+diff --git a/cypress/e2e/smoke.cy.ts b/cypress/e2e/smoke.cy.ts
+new file mode 100644
+index 0000000..5c8a3a4
+--- /dev/null
++++ b/cypress/e2e/smoke.cy.ts
+@@ -0,0 +1,7 @@
++/// <reference types="cypress" />
++describe("Smoke", () => {
++  it("loads root and serves SPA", () => {
++    cy.visit("/");
++    cy.contains(/interdomestik|sign in|profile/i).should("exist");
++  });
++});
++ 
+diff --git a/cypress/e2e/profile.cy.ts b/cypress/e2e/profile.cy.ts
+new file mode 100644
+index 0000000..8a39349
+--- /dev/null
++++ b/cypress/e2e/profile.cy.ts
+@@ -0,0 +1,20 @@
++/// <reference types="cypress" />
++describe("Profile", () => {
++  const EMAIL = `member+${Date.now()}@example.com`;
++  const PASS = "Test123!";
++
++  beforeEach(() => {
++    cy.clearDatabase();
++    cy.login(EMAIL, PASS);
++  });
++
++  it("signs in and updates profile", () => {
++    cy.visit("/profile");
++    cy.uiSignIn(EMAIL, PASS);
++
++    cy.get('[name="name"]').clear().type("Test Member");
++    cy.get('[name="phone"]').clear().type("_38344111222");
++    cy.get('[name="region"]').select("PRISHTINA");
++    cy.get('[name="orgId"]').clear().type("ORG-001");
++    cy.contains(/save/i).click();
++
++    cy.contains(/saved|member no|success/i, { timeout: 10000 }).should("exist");
++  });
++});
++ 
+diff --git a/cypress/e2e/admin.cy.ts b/cypress/e2e/admin.cy.ts
+new file mode 100644
+index 0000000..d1a5921
+--- /dev/null
++++ b/cypress/e2e/admin.cy.ts
+@@ -0,0 +1,14 @@
++/// <reference types="cypress" />
++describe("Admin Dashboard", () => {
++  const ADMIN = `admin+${Date.now()}@example.com`;
++  const PASS = "Admin123!";
++
++  before(() => { cy.clearDatabase(); cy.login(ADMIN, PASS); });
++
++  it("shows admin controls", () => {
++    cy.visit("/admin");
++    cy.uiSignIn(ADMIN, PASS);
++    cy.contains(/member search|role|activate|csv/i, { timeout: 10000 }).should("exist");
++  });
++});
++

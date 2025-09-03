@@ -1,0 +1,23 @@
+# Root ignores
+.env
+.env.*
+
+# Package envs
+frontend/.env*
+functions/.env*
+functions/.runtimeconfig.json
+
+# Firebase & emulators
+.firebase/
+firebase-debug.log
+
+# Cypress artifacts
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/
+
+# Coverage reports
+coverage/
+
+# OS/filesystem noise
+.DS_Store
