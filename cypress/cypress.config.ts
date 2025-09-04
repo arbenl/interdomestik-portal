@@ -1,7 +1,8 @@
 // cypress.config.ts
 import { defineConfig } from "cypress";
 
-const HOST = "127.0.0.1";
+const HOST = process.env.FIRESTORE_EMULATOR_HOST?.split(":")[0] || "127.0.0.1";
+const FS_PORT = Number(process.env.FIRESTORE_EMULATOR_HOST?.split(":")[1] || process.env.FIRESTORE_PORT || 8085);
 const PROJECT_ID = process.env.FB_PROJECT_ID || "demo-interdomestik";
 
 export default defineConfig({
@@ -15,7 +16,7 @@ export default defineConfig({
           return null;
         },
         async resetFirestore() {
-          await fetch(`http://${HOST}:8080/emulator/v1/projects/${PROJECT_ID}/databases/(default)/documents`, { method: "DELETE" });
+          await fetch(`http://${HOST}:${FS_PORT}/emulator/v1/projects/${PROJECT_ID}/databases/(default)/documents`, { method: "DELETE" });
           return null;
         },
         async createUser({ email, password }: { email: string; password: string }) {
