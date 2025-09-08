@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
+exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.getUserClaims = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const firestore_1 = require("firebase-admin/firestore");
 const firebaseAdmin_1 = require("./firebaseAdmin");
@@ -62,6 +62,9 @@ exports.searchUserByEmail = functions
 exports.agentCreateMember = functions
     .region(REGION)
     .https.onCall((data, context) => (0, agent_1.agentCreateMemberLogic)(data, context));
+exports.getUserClaims = functions
+    .region(REGION)
+    .https.onCall((data, context) => (0, user_1.getUserClaimsLogic)(data, context));
 // HTTP utilities -------------------------------------------------------------
 exports.clearDatabase = functions
     .region(REGION)
@@ -106,6 +109,41 @@ exports.verifyMembership = functions
         return;
     }
     try {
+        // Simple IP-based rate limiting (skips emulator). Limits: 60/minute or 1000/day
+        const isEmu = process.env.FUNCTIONS_EMULATOR || process.env.FIREBASE_EMULATOR_HUB;
+        if (!isEmu) {
+            const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+            const ip = fwd || req.ip || (req.socket && req.socket.remoteAddress) || 'unknown';
+            const crypto = await Promise.resolve().then(() => __importStar(require('crypto')));
+            const hash = crypto.createHash('sha256').update(String(ip)).digest('hex').slice(0, 12);
+            const now = new Date();
+            const dayKey = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}${String(now.getUTCDate()).padStart(2, '0')}`;
+            const minuteKey = Math.floor(now.getTime() / 60000); // epoch minute
+            const ref = firebaseAdmin_1.db.collection('ratelimit_verify').doc(`${dayKey}-${hash}`);
+            let limited = false;
+            await firebaseAdmin_1.db.runTransaction(async (tx) => {
+                const snap = await tx.get(ref);
+                const data = snap.exists ? snap.data() : {};
+                const prevMinuteKey = Number(data.minuteKey || 0);
+                const prevMinuteCount = Number(data.minuteCount || 0);
+                const prevDayCount = Number(data.dayCount || 0);
+                const minuteCount = (prevMinuteKey === minuteKey) ? (prevMinuteCount + 1) : 1;
+                const dayCount = prevDayCount + 1;
+                if (minuteCount > 60 || dayCount > 1000) {
+                    limited = true;
+                }
+                tx.set(ref, {
+                    minuteKey,
+                    minuteCount,
+                    dayCount,
+                    updatedAt: firestore_1.FieldValue.serverTimestamp(),
+                }, { merge: true });
+            });
+            if (limited) {
+                res.status(429).json({ ok: false, error: 'Too many requests' });
+                return;
+            }
+        }
         const memberNoRaw = req.query.memberNo;
         const memberNo = String(memberNoRaw ?? "").trim();
         if (!memberNo) {
@@ -164,8 +202,56 @@ exports.stripeWebhook = functions
         return;
     }
     try {
+        const signingSecret = process.env.STRIPE_SIGNING_SECRET;
+        const sig = req?.headers ? req.headers['stripe-signature'] : undefined;
+        const isStripeMode = !!(signingSecret && sig);
+        if (isStripeMode) {
+            // Verify signature and construct event
+            // Indirect dynamic import to avoid hard dependency in test/emulator without package
+            const Stripe = (await Function('m', 'return import(m)')('stripe')).default;
+            const stripe = new Stripe(process.env.STRIPE_API_KEY || '', { apiVersion: '2024-06-20' });
+            let event;
+            try {
+                event = stripe.webhooks.constructEvent(req.rawBody, sig, signingSecret);
+            }
+            catch (err) {
+                console.error('[stripeWebhook] signature verification failed', err);
+                res.status(400).send(`Webhook Error: ${err.message}`);
+                return;
+            }
+            // Idempotency: skip if processed
+            const eventDoc = firebaseAdmin_1.db.collection('webhooks_stripe').doc(event.id);
+            const already = await eventDoc.get();
+            if (already.exists && already.get('processed')) {
+                res.json({ ok: true, duplicate: true });
+                return;
+            }
+            if (event.type === 'invoice.payment_succeeded') {
+                const inv = event.data.object;
+                const uid = inv.metadata?.uid;
+                if (!uid) {
+                    res.status(400).send('metadata.uid missing');
+                    return;
+                }
+                const invoiceId = inv.id || `inv_${Date.now()}`;
+                const amount = Number(inv.amount_paid || inv.amount_due || 0);
+                const currency = (inv.currency || 'eur').toUpperCase();
+                const created = firestore_1.Timestamp.fromMillis((inv.created || Math.floor(Date.now() / 1000)) * 1000);
+                await firebaseAdmin_1.db.runTransaction(async (tx) => {
+                    const invRef = firebaseAdmin_1.db.collection('billing').doc(uid).collection('invoices').doc(invoiceId);
+                    tx.set(invRef, { invoiceId, amount, currency, created, status: 'paid' }, { merge: true });
+                    tx.set(eventDoc, { processed: true, type: event.type, at: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
+                });
+                res.json({ ok: true });
+                return;
+            }
+            // Unhandled event types acknowledged
+            await eventDoc.set({ processed: true, type: event.type, at: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
+            res.json({ ok: true, ignored: true, type: event.type });
+            return;
+        }
+        // Emulator-friendly JSON fallback
         const body = req.body || {};
-        // Expect { uid, invoiceId, amount, currency, created }
         const uid = String(body.uid || '');
         if (!uid) {
             res.status(400).send('uid required');
@@ -179,7 +265,7 @@ exports.stripeWebhook = functions
             invoiceId, amount, currency, created,
             status: 'paid',
         }, { merge: true });
-        res.json({ ok: true });
+        res.json({ ok: true, mode: 'emulator' });
     }
     catch (e) {
         console.error('[stripeWebhook] error', e);

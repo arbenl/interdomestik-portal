@@ -126,6 +126,43 @@ The project uses GitHub Actions for CI/CD:
 firebase deploy --only hosting,functions,firestore:rules
 ```
 
+### CI Strategy (limited billing)
+
+- Workflows:
+  - `CI` (full): lint, frontend unit, functions unit (emulators), rules, and E2E. Heavy jobs are skipped when repo/org variable `CI_LIGHT` is `true` (default). Set `CI_LIGHT=false` to re-enable heavy jobs.
+  - `CI Light`: always runs lint + typecheck for frontend/functions; useful while billing for hosted runners is limited.
+- While CI heavy jobs are disabled, run heavier checks locally:
+  - Functions tests (emulators): `cd functions && npm test`
+  - Rules tests: `npm test` (root)
+  - E2E: `firebase emulators:exec --only functions,firestore,auth,hosting "npm run cypress:run"`
+
+## Payments
+
+- MVP: Admin-activated memberships with `paymentMethod` and optional `externalRef`.
+- Billing page lists `billing/{uid}/invoices` and can simulate a paid invoice via the emulator-friendly `stripeWebhook`.
+- Production: Stripe signature verification and idempotency are implemented in `stripeWebhook`.
+  - Requires `invoice.payment_succeeded` events with `metadata.uid` set to the Firebase UID.
+  - Duplicates are ignored using `webhooks_stripe/{event.id}`.
+
+Setup (production):
+- Set Functions secrets:
+```
+firebase functions:secrets:set STRIPE_SIGNING_SECRET
+firebase functions:secrets:set STRIPE_API_KEY
+```
+- Deploy functions:
+```
+firebase deploy --only functions
+```
+
+Local testing (no signature):
+```
+curl -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"uid":"<UID>","invoiceId":"inv_test_1","amount":2500,"currency":"EUR"}' \
+  http://localhost:5001/demo-interdomestik/europe-west1/stripeWebhook
+```
+
 ## Cost Optimization
 
 The system is designed with cost-first principles:

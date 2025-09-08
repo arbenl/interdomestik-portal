@@ -75,5 +75,35 @@ async function startMembershipLogic(data, context) {
             reference: externalRef ?? undefined,
         });
     }
+    // Audit log
+    try {
+        await firebaseAdmin_1.db.collection('audit_logs').add({
+            action: 'startMembership',
+            actor: context.auth?.uid || 'system',
+            target: uid,
+            year,
+            amount: price ?? 0,
+            currency,
+            method: paymentMethod,
+            ts: firestore_1.FieldValue.serverTimestamp(),
+        });
+    }
+    catch (e) {
+        console.warn('[audit] failed to write startMembership audit', e);
+    }
+    // Metrics: increment daily activations and by-region counts (best effort)
+    try {
+        const dateKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (local UTC ok for coarse metrics)
+        const ref = firebaseAdmin_1.db.collection('metrics').doc(`daily-${dateKey}`);
+        const inc = firebaseAdmin_1.admin.firestore.FieldValue.increment?.(1) || firestore_1.FieldValue.increment(1);
+        await ref.set({
+            activations_total: inc,
+            [`activations_by_region.${region || 'UNKNOWN'}`]: inc,
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        }, { merge: true });
+    }
+    catch (e) {
+        console.warn('[metrics] failed to write activation metric', e);
+    }
     return { message: "Membership started successfully", refPath };
 }

@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Profile } from '../types';
 import useAdmin from '../hooks/useAdmin';
 import useAgentOrAdmin from '../hooks/useAgentOrAdmin';
 import { useUsers } from '../hooks/useUsers';
+import { auth, functions } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { REGIONS } from '../constants/regions';
 //
 import ActivateMembershipModal from '../components/ActivateMembershipModal';
 import AgentRegistrationCard from '../components/AgentRegistrationCard';
@@ -17,6 +20,13 @@ export default function Admin() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Role management state (admin only)
+  const [lookupEmail, setLookupEmail] = useState('');
+  const [targetUid, setTargetUid] = useState('');
+  const [targetRole, setTargetRole] = useState<'member'|'agent'|'admin'>('member');
+  const [targetRegions, setTargetRegions] = useState<string[]>([]);
+  const [roleBusy, setRoleBusy] = useState(false);
+  const [claims, setClaims] = useState<Record<string, unknown> | null>(null);
 
   const handleActivateClick = (user: Profile) => {
     setSelectedUser(user);
@@ -63,6 +73,7 @@ export default function Admin() {
   // Emulator utilities (visible only when running locally)
   const isLocal = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   const EMU_BASE = 'http://127.0.0.1:5001/demo-interdomestik/europe-west1';
+  const today = new Date().toISOString().slice(0,10);
 
   const handleSeedEmulator = async () => {
     try {
@@ -118,6 +129,105 @@ export default function Admin() {
         <AgentRegistrationCard allowedRegions={allowedRegions} onSuccess={handleSuccess} onError={setError} />
       )}
 
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Role Management</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Lookup by email</label>
+              <input className="mt-1 w-full border rounded px-3 py-2" placeholder="user@example.com" value={lookupEmail} onChange={e=>setLookupEmail(e.target.value)} />
+            </div>
+            <button className="bg-gray-700 text-white px-3 py-2 rounded h-10 md:h-auto" onClick={async ()=>{
+              try {
+                setRoleBusy(true); setError(null); setSuccess(null);
+                const search = httpsCallable<{ email: string }, { uid: string }>(functions, 'searchUserByEmail');
+                const res = await search({ email: lookupEmail });
+                const uid = res.data?.uid;
+                if (!uid) throw new Error('User not found');
+                setTargetUid(uid);
+                setSuccess(`Found UID: ${uid}`);
+              } catch (e) {
+                setError(e instanceof Error ? e.message : String(e));
+              } finally { setRoleBusy(false); }
+            }}>Find UID</button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Or set UID directly</label>
+              <input className="mt-1 w-full border rounded px-3 py-2" placeholder="uid_..." value={targetUid} onChange={e=>setTargetUid(e.target.value)} />
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Role</label>
+              <select className="mt-1 w-full border rounded px-3 py-2" value={targetRole} onChange={e=>setTargetRole(e.target.value as 'member'|'agent'|'admin')}>
+                <option value="member">member</option>
+                <option value="agent">agent</option>
+                <option value="admin">admin</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">Allowed regions (for agents/admins)</label>
+              <div className="mt-1 grid grid-cols-2 md:grid-cols-4 gap-2">
+                {REGIONS.map(r => (
+                  <label key={r} className="inline-flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={targetRegions.includes(r)} onChange={(e)=>{
+                      setTargetRegions(prev=> e.target.checked ? Array.from(new Set([...prev, r])) : prev.filter(x=>x!==r));
+                    }} />
+                    <span>{r}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4">
+            <button disabled={!targetUid || roleBusy} className="bg-indigo-600 disabled:bg-gray-400 text-white px-4 py-2 rounded mr-2" onClick={async ()=>{
+              try {
+                setRoleBusy(true); setError(null); setSuccess(null);
+                const setRole = httpsCallable<{ uid: string; role: 'member'|'agent'|'admin'; allowedRegions: string[] }, { message: string }>(functions, 'setUserRole');
+                await setRole({ uid: targetUid, role: targetRole, allowedRegions: targetRegions });
+                setSuccess('Role updated');
+              } catch (e) {
+                const err = e as unknown as { message?: string; code?: string };
+                const msg = (err?.message || 'Failed'); const code = err?.code ? ` (${err.code})` : '';
+                setError(`${msg}${code}`);
+              } finally { setRoleBusy(false); }
+            }}>Apply Role</button>
+            <button disabled={!targetUid || roleBusy} className="bg-gray-700 disabled:bg-gray-400 text-white px-4 py-2 rounded mr-2" onClick={async ()=>{
+              try {
+                setRoleBusy(true); setError(null); setSuccess(null); setClaims(null);
+                type ClaimsResp = { uid: string; claims: Record<string, unknown> };
+                const fn = httpsCallable<{ uid: string }, ClaimsResp>(functions, 'getUserClaims');
+                const r = await fn({ uid: targetUid });
+                setClaims(r.data?.claims || {});
+                setSuccess('Fetched claims');
+              } catch (e) {
+                const err = e as unknown as { message?: string; code?: string };
+                const msg = (err?.message || 'Failed'); const code = err?.code ? ` (${err.code})` : '';
+                setError(`${msg}${code}`);
+              } finally { setRoleBusy(false); }
+            }}>View Claims</button>
+            <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={async ()=>{
+              try {
+                await auth.currentUser?.getIdToken(true);
+                setSuccess('Token refreshed. If role changed, sign out/in may be required.');
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                setError(msg);
+              }
+            }}>Refresh my token</button>
+            {claims && (
+              <pre className="mt-3 p-2 bg-gray-50 border rounded text-xs overflow-auto max-h-40">{JSON.stringify(claims, null, 2)}</pre>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Daily Metrics</h3>
+          <MetricsPanel dateKey={today} />
+        </div>
+      )}
+
       {usersError && <p className="text-red-500">{usersError.message}</p>}
       {error && <p className="text-red-500">{error}</p>}
       {success && <p className="text-green-500">{success}</p>}
@@ -160,6 +270,54 @@ export default function Admin() {
           onSuccess={handleSuccess}
         />
       )}
+    </div>
+  );
+}
+
+function MetricsPanel({ dateKey }: { dateKey: string }) {
+  type MetricsDoc = {
+    activations_total?: number;
+    activations_by_region?: Record<string, number>;
+  };
+  const [data, setData] = useState<MetricsDoc | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const isLocal = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  // Note: metrics stored at metrics/daily-YYYY-MM-DD
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const { doc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('../firebase');
+        const ref = doc(db, 'metrics', `daily-${dateKey}`);
+        const snap = await getDoc(ref);
+        setData((snap.exists() ? (snap.data() as MetricsDoc) : {}) as MetricsDoc);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [dateKey]);
+  if (loading) return <div className="text-gray-600">Loading…</div>;
+  if (error) return <div className="text-red-600">Failed to load metrics: {error}</div>;
+  const total = data?.activations_total || 0;
+  const byRegion = data?.activations_by_region || {};
+  return (
+    <div>
+      <div className="text-sm text-gray-600">Date: {dateKey}</div>
+      <div className="mt-2">Activations today: <span className="font-semibold">{total}</span></div>
+      <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
+        {Object.keys(byRegion).length === 0 ? (
+          <div className="text-sm text-gray-500">No per-region data</div>
+        ) : (
+          Object.entries(byRegion).map(([r, n]) => (
+            <div key={r} className="text-sm"><span className="text-gray-600">{r}:</span> <span className="font-medium">{String(n)}</span></div>
+          ))
+        )}
+      </div>
+      {isLocal && <div className="mt-2 text-xs text-gray-500">Note: metrics are best-effort and update on membership activation.</div>}
     </div>
   );
 }

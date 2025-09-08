@@ -26,8 +26,14 @@ export async function reserveUniqueMemberNo(
   tx.set(ref, { uid }, { merge: true });
 }
 
+function resolveMemberYear(): number {
+  const envYear = Number(process.env.MEMBER_YEAR);
+  if (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100) return envYear;
+  return new Date().getUTCFullYear();
+}
+
 export async function nextMemberNo(tx: admin.firestore.Transaction) {
-  const y = 2025; // consider deriving from current year if business allows
+  const y = resolveMemberYear();
   const counterRef = db.doc(`counters/members-${y}`);
   const c = await tx.get(counterRef);
   const next = ((c.exists && c.get('current')) || 0) + 1;

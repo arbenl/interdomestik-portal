@@ -55,7 +55,10 @@ export async function agentCreateMemberLogic(data: any, context: functions.https
 
     // Prepare refs
     const emailRef = db.collection('registry_email').doc(emailLower);
-    const year = 2025; // align with current numbering scheme
+    const envYear = Number(process.env.MEMBER_YEAR);
+    const year = (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100)
+      ? envYear
+      : new Date().getUTCFullYear();
     const counterRef = db.doc(`counters/members-${year}`);
 
     // Pre-reads (all reads before any writes)

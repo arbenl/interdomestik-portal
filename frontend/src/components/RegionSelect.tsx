@@ -6,15 +6,17 @@ type Props = {
   id?: string;
   className?: string;
   options?: string[];
+  ariaLabel?: string;
 };
 
-export default function RegionSelect({ value, onChange, id, className, options }: Props) {
+export default function RegionSelect({ value, onChange, id, className, options, ariaLabel = 'Region' }: Props) {
   const opts = Array.isArray(options) && options.length > 0 ? options : REGIONS;
   return (
     <select
       id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      aria-label={ariaLabel}
       className={className}
       required
     >

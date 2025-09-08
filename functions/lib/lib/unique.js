@@ -21,8 +21,14 @@ async function reserveUniqueMemberNo(uid, memberNo, tx) {
         throw new Error('MEMBERNO_IN_USE');
     tx.set(ref, { uid }, { merge: true });
 }
+function resolveMemberYear() {
+    const envYear = Number(process.env.MEMBER_YEAR);
+    if (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100)
+        return envYear;
+    return new Date().getUTCFullYear();
+}
 async function nextMemberNo(tx) {
-    const y = 2025; // consider deriving from current year if business allows
+    const y = resolveMemberYear();
     const counterRef = firebaseAdmin_1.db.doc(`counters/members-${y}`);
     const c = await tx.get(counterRef);
     const next = ((c.exists && c.get('current')) || 0) + 1;

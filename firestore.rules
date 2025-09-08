@@ -58,7 +58,8 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /metrics/{period}/{id} {
+    // Metrics: allow admins to read/write root docs like metrics/daily-YYYY-MM-DD
+    match /metrics/{id} {
       allow read, write: if isAdmin();
     }
     match /audit_logs/{id} {

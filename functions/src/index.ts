@@ -1,8 +1,8 @@
 import * as functions from "firebase-functions/v1";
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { admin, db } from "./firebaseAdmin";
 import { upsertProfileLogic } from "./lib/upsertProfile";
-import { setUserRoleLogic, searchUserByEmailLogic } from "./lib/user";
+import { setUserRoleLogic, searchUserByEmailLogic, getUserClaimsLogic } from "./lib/user";
 import { startMembershipLogic } from "./lib/startMembership";
 import { agentCreateMemberLogic } from "./lib/agent";
 import { sendRenewalReminder } from "./lib/membership";
@@ -31,6 +31,10 @@ export const searchUserByEmail = functions
 export const agentCreateMember = functions
   .region(REGION)
   .https.onCall((data, context) => agentCreateMemberLogic(data, context));
+
+export const getUserClaims = functions
+  .region(REGION)
+  .https.onCall((data, context) => getUserClaimsLogic(data, context));
 
 // HTTP utilities -------------------------------------------------------------
 export const clearDatabase = functions
@@ -75,6 +79,42 @@ export const verifyMembership = functions
     }
 
     try {
+      // Simple IP-based rate limiting (skips emulator). Limits: 60/minute or 1000/day
+      const isEmu = process.env.FUNCTIONS_EMULATOR || process.env.FIREBASE_EMULATOR_HUB;
+      if (!isEmu) {
+        const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+        const ip = fwd || (req as any).ip || (req.socket && (req.socket as any).remoteAddress) || 'unknown';
+        const crypto = await import('crypto');
+        const hash = crypto.createHash('sha256').update(String(ip)).digest('hex').slice(0, 12);
+        const now = new Date();
+        const dayKey = `${now.getUTCFullYear()}${String(now.getUTCMonth()+1).padStart(2,'0')}${String(now.getUTCDate()).padStart(2,'0')}`;
+        const minuteKey = Math.floor(now.getTime() / 60000); // epoch minute
+        const ref = db.collection('ratelimit_verify').doc(`${dayKey}-${hash}`);
+        let limited = false;
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(ref);
+          const data = snap.exists ? snap.data() as any : {};
+          const prevMinuteKey = Number(data.minuteKey || 0);
+          const prevMinuteCount = Number(data.minuteCount || 0);
+          const prevDayCount = Number(data.dayCount || 0);
+          const minuteCount = (prevMinuteKey === minuteKey) ? (prevMinuteCount + 1) : 1;
+          const dayCount = prevDayCount + 1;
+          if (minuteCount > 60 || dayCount > 1000) {
+            limited = true;
+          }
+          tx.set(ref, {
+            minuteKey,
+            minuteCount,
+            dayCount,
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true });
+        });
+        if (limited) {
+          res.status(429).json({ ok: false, error: 'Too many requests' });
+          return;
+        }
+      }
+
       const memberNoRaw = req.query.memberNo;
       const memberNo = String(memberNoRaw ?? "").trim();
 
@@ -133,8 +173,57 @@ export const stripeWebhook = functions
     if (req.method === 'OPTIONS') { res.status(204).end(); return; }
     if (req.method !== 'POST') { res.status(405).send('Method not allowed'); return; }
     try {
+      const signingSecret = process.env.STRIPE_SIGNING_SECRET;
+      const sig = (req as any)?.headers ? ((req as any).headers['stripe-signature'] as string | undefined) : undefined;
+      const isStripeMode = !!(signingSecret && sig);
+
+      if (isStripeMode) {
+        // Verify signature and construct event
+        // Indirect dynamic import to avoid hard dependency in test/emulator without package
+        const Stripe = (await (Function('m', 'return import(m)') as any)('stripe')).default;
+        const stripe = new Stripe(process.env.STRIPE_API_KEY || '', { apiVersion: '2024-06-20' as any });
+        let event: any;
+        try {
+          event = stripe.webhooks.constructEvent(req.rawBody, sig!, signingSecret!);
+        } catch (err) {
+          console.error('[stripeWebhook] signature verification failed', err);
+          res.status(400).send(`Webhook Error: ${(err as Error).message}`);
+          return;
+        }
+
+        // Idempotency: skip if processed
+        const eventDoc = db.collection('webhooks_stripe').doc(event.id);
+        const already = await eventDoc.get();
+        if (already.exists && already.get('processed')) {
+          res.json({ ok: true, duplicate: true });
+          return;
+        }
+
+        if (event.type === 'invoice.payment_succeeded') {
+          const inv = event.data.object as any;
+          const uid: string | undefined = inv.metadata?.uid;
+          if (!uid) { res.status(400).send('metadata.uid missing'); return; }
+          const invoiceId: string = inv.id || `inv_${Date.now()}`;
+          const amount: number = Number(inv.amount_paid || inv.amount_due || 0);
+          const currency: string = (inv.currency || 'eur').toUpperCase();
+          const created: Timestamp = Timestamp.fromMillis((inv.created || Math.floor(Date.now()/1000)) * 1000);
+          await db.runTransaction(async (tx) => {
+            const invRef = db.collection('billing').doc(uid).collection('invoices').doc(invoiceId);
+            tx.set(invRef, { invoiceId, amount, currency, created, status: 'paid' }, { merge: true });
+            tx.set(eventDoc, { processed: true, type: event.type, at: FieldValue.serverTimestamp() }, { merge: true });
+          });
+          res.json({ ok: true });
+          return;
+        }
+
+        // Unhandled event types acknowledged
+        await eventDoc.set({ processed: true, type: event.type, at: FieldValue.serverTimestamp() }, { merge: true });
+        res.json({ ok: true, ignored: true, type: event.type });
+        return;
+      }
+
+      // Emulator-friendly JSON fallback
       const body = req.body || {};
-      // Expect { uid, invoiceId, amount, currency, created }
       const uid = String(body.uid || '');
       if (!uid) { res.status(400).send('uid required'); return; }
       const invoiceId = String(body.invoiceId || `inv_${Date.now()}`);
@@ -145,7 +234,7 @@ export const stripeWebhook = functions
         invoiceId, amount, currency, created,
         status: 'paid',
       }, { merge: true });
-      res.json({ ok: true });
+      res.json({ ok: true, mode: 'emulator' });
     } catch (e) {
       console.error('[stripeWebhook] error', e);
       res.status(500).json({ ok: false, error: String(e) });
