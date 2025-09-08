@@ -81,6 +81,13 @@ export default function Admin() {
   const { push } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const { results: searchResults, loading: searchLoading, error: searchError, search, clear } = useMemberSearch();
+  // Backfill dialog state
+  const [showBackfill, setShowBackfill] = useState(false);
+  const [bfRunning, setBfRunning] = useState(false);
+  const [bfCancel, setBfCancel] = useState(false);
+  const [bfPage, setBfPage] = useState(0);
+  const [bfUpdated, setBfUpdated] = useState(0);
+  const [bfNext, setBfNext] = useState<string | null>(null);
 
   const handleSeedEmulator = async () => {
     try {
@@ -291,21 +298,51 @@ export default function Admin() {
           <h3 className="text-lg font-semibold mb-2">Maintenance</h3>
           <p className="text-sm text-gray-600 mb-2">One-off tasks for admins. These run against the current project.</p>
           <div className="flex gap-2">
-            <button className="bg-gray-700 text-white px-3 py-2 rounded" onClick={async ()=>{
-              if (!confirm('Backfill nameLower for up to 500 members starting at the beginning?')) return;
-              try {
-                const fn = httpsCallable<{ pageSize?: number; startAfter?: string }, { page:number; updated:number; nextStartAfter:string|null }>(functions, 'backfillNameLower');
-                const r = await fn({ pageSize: 500 });
-                const data = r.data;
-                handleSuccess(`Backfill done: page=${data.page}, updated=${data.updated}${data.nextStartAfter?`, nextStartAfter=\"${data.nextStartAfter}\"`:''}`);
-              } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                setError(msg);
-              }
-            }}>Backfill nameLower (500)</button>
+            <button className="bg-gray-700 text-white px-3 py-2 rounded" onClick={()=>{
+              setBfPage(0); setBfUpdated(0); setBfNext(null); setBfCancel(false); setShowBackfill(true);
+            }}>Run full backfill…</button>
           </div>
           <p className="text-xs text-gray-500 mt-2">Repeat until nextStartAfter is null to complete backfill for all members.</p>
         </div>
+      )}
+
+      {showBackfill && (
+        <BackfillDialog
+          onClose={()=>{ setShowBackfill(false); }}
+          running={bfRunning}
+          page={bfPage}
+          updated={bfUpdated}
+          nextStartAfter={bfNext}
+          onStart={async ()=>{
+            setBfCancel(false); setBfRunning(true);
+            try {
+              const fn = httpsCallable<{ pageSize?: number; startAfter?: string }, { page:number; updated:number; nextStartAfter:string|null }>(functions, 'backfillNameLower');
+              let next: string | null | undefined = bfNext || null;
+              let pages = bfPage;
+              let updated = bfUpdated;
+              // Loop until finished or cancel requested
+              while (!bfCancel) {
+                const payload: any = { pageSize: 500 };
+                if (next) payload.startAfter = next;
+                const r = await fn(payload);
+                const d = r.data;
+                pages += 1;
+                updated += d.updated;
+                next = d.nextStartAfter;
+                setBfPage(pages); setBfUpdated(updated); setBfNext(next ?? null);
+                if (!next) break;
+                // Let UI breathe
+                await new Promise(res => setTimeout(res, 50));
+              }
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : String(e);
+              setError(msg);
+            } finally {
+              setBfRunning(false);
+            }
+          }}
+          onStop={()=>{ setBfCancel(true); setBfRunning(false); }}
+        />
       )}
 
       {isAdmin && (
@@ -446,6 +483,33 @@ function MetricsPanel({ dateKey }: { dateKey: string }) {
         )}
       </div>
       {isLocal && <div className="mt-2 text-xs text-gray-500">Note: metrics are best-effort and update on membership activation.</div>}
+    </div>
+  );
+}
+
+function BackfillDialog({ onClose, running, page, updated, nextStartAfter, onStart, onStop }: { onClose: ()=>void; running: boolean; page: number; updated: number; nextStartAfter: string | null; onStart: ()=>void; onStop: ()=>void; }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-semibold">Backfill nameLower</h3>
+          <button className="text-gray-500 hover:text-gray-700" onClick={onClose}>✕</button>
+        </div>
+        <div className="text-sm text-gray-700 space-y-2">
+          <div>Pages processed: <span className="font-medium">{page}</span></div>
+          <div>Members updated: <span className="font-medium">{updated}</span></div>
+          <div>Next startAfter: <span className="font-mono break-all">{nextStartAfter ?? '(done)'}</span></div>
+        </div>
+        <div className="mt-4 flex gap-2 justify-end">
+          {!running ? (
+            <button className="bg-indigo-600 text-white px-3 py-2 rounded" onClick={onStart}>Start / Resume</button>
+          ) : (
+            <button className="bg-gray-600 text-white px-3 py-2 rounded" onClick={onStop}>Stop</button>
+          )}
+          <button className="bg-gray-200 px-3 py-2 rounded" onClick={onClose}>Close</button>
+        </div>
+        <p className="mt-3 text-xs text-gray-500">This will iterate 500 docs per page. You can stop and resume safely; progress shows the next startAfter value.</p>
+      </div>
     </div>
   );
 }
