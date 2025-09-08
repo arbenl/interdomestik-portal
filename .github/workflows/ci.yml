@@ -5,6 +5,11 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  # Toggle to skip heavy jobs while billing is limited. Set repo/org variable CI_LIGHT=false to re-enable.
+  CI_LIGHT: ${{ vars.CI_LIGHT || 'true' }}
 
 jobs:
   lint:
@@ -38,6 +43,7 @@ jobs:
           path: frontend/coverage
 
   functions-unit:
+    if: env.CI_LIGHT != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,6 +68,7 @@ jobs:
           path: functions/coverage
 
   rules:
+    if: env.CI_LIGHT != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -78,6 +85,7 @@ jobs:
         run: npm test
 
   e2e:
+    if: env.CI_LIGHT != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

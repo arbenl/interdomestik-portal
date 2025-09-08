@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Profile } from '../types';
 import useAdmin from '../hooks/useAdmin';
 import useAgentOrAdmin from '../hooks/useAgentOrAdmin';
@@ -140,9 +140,9 @@ export default function Admin() {
             <button className="bg-gray-700 text-white px-3 py-2 rounded h-10 md:h-auto" onClick={async ()=>{
               try {
                 setRoleBusy(true); setError(null); setSuccess(null);
-                const search = httpsCallable(functions, 'searchUserByEmail');
+                const search = httpsCallable<{ email: string }, { uid: string }>(functions, 'searchUserByEmail');
                 const res = await search({ email: lookupEmail });
-                const uid = (res.data as any)?.uid as string | undefined;
+                const uid = res.data?.uid;
                 if (!uid) throw new Error('User not found');
                 setTargetUid(uid);
                 setSuccess(`Found UID: ${uid}`);
@@ -158,7 +158,7 @@ export default function Admin() {
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Role</label>
-              <select className="mt-1 w-full border rounded px-3 py-2" value={targetRole} onChange={e=>setTargetRole(e.target.value as any)}>
+              <select className="mt-1 w-full border rounded px-3 py-2" value={targetRole} onChange={e=>setTargetRole(e.target.value as 'member'|'agent'|'admin')}>
                 <option value="member">member</option>
                 <option value="agent">agent</option>
                 <option value="admin">admin</option>
@@ -182,23 +182,26 @@ export default function Admin() {
             <button disabled={!targetUid || roleBusy} className="bg-indigo-600 disabled:bg-gray-400 text-white px-4 py-2 rounded mr-2" onClick={async ()=>{
               try {
                 setRoleBusy(true); setError(null); setSuccess(null);
-                const setRole = httpsCallable(functions, 'setUserRole');
+                const setRole = httpsCallable<{ uid: string; role: 'member'|'agent'|'admin'; allowedRegions: string[] }, { message: string }>(functions, 'setUserRole');
                 await setRole({ uid: targetUid, role: targetRole, allowedRegions: targetRegions });
                 setSuccess('Role updated');
               } catch (e) {
-                const err = e as any; const msg = (err?.message || 'Failed'); const code = err?.code ? ` (${err.code})` : '';
+                const err = e as unknown as { message?: string; code?: string };
+                const msg = (err?.message || 'Failed'); const code = err?.code ? ` (${err.code})` : '';
                 setError(`${msg}${code}`);
               } finally { setRoleBusy(false); }
             }}>Apply Role</button>
             <button disabled={!targetUid || roleBusy} className="bg-gray-700 disabled:bg-gray-400 text-white px-4 py-2 rounded mr-2" onClick={async ()=>{
               try {
                 setRoleBusy(true); setError(null); setSuccess(null); setClaims(null);
-                const fn = httpsCallable(functions, 'getUserClaims');
+                type ClaimsResp = { uid: string; claims: Record<string, unknown> };
+                const fn = httpsCallable<{ uid: string }, ClaimsResp>(functions, 'getUserClaims');
                 const r = await fn({ uid: targetUid });
-                setClaims((r.data as any)?.claims || {});
+                setClaims(r.data?.claims || {});
                 setSuccess('Fetched claims');
               } catch (e) {
-                const err = e as any; const msg = (err?.message || 'Failed'); const code = err?.code ? ` (${err.code})` : '';
+                const err = e as unknown as { message?: string; code?: string };
+                const msg = (err?.message || 'Failed'); const code = err?.code ? ` (${err.code})` : '';
                 setError(`${msg}${code}`);
               } finally { setRoleBusy(false); }
             }}>View Claims</button>
@@ -207,7 +210,8 @@ export default function Admin() {
                 await auth.currentUser?.getIdToken(true);
                 setSuccess('Token refreshed. If role changed, sign out/in may be required.');
               } catch (e) {
-                const err = e as any; setError(err?.message || String(e));
+                const msg = e instanceof Error ? e.message : String(e);
+                setError(msg);
               }
             }}>Refresh my token</button>
             {claims && (
@@ -271,12 +275,16 @@ export default function Admin() {
 }
 
 function MetricsPanel({ dateKey }: { dateKey: string }) {
-  const [data, setData] = useState<any | null>(null);
+  type MetricsDoc = {
+    activations_total?: number;
+    activations_by_region?: Record<string, number>;
+  };
+  const [data, setData] = useState<MetricsDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isLocal = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   // Note: metrics stored at metrics/daily-YYYY-MM-DD
-  useState(() => {
+  useEffect(() => {
     (async () => {
       try {
         setLoading(true);
@@ -284,14 +292,14 @@ function MetricsPanel({ dateKey }: { dateKey: string }) {
         const { db } = await import('../firebase');
         const ref = doc(db, 'metrics', `daily-${dateKey}`);
         const snap = await getDoc(ref);
-        setData(snap.exists() ? snap.data() : {});
+        setData((snap.exists() ? (snap.data() as MetricsDoc) : {}) as MetricsDoc);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
         setLoading(false);
       }
     })();
-  });
+  }, [dateKey]);
   if (loading) return <div className="text-gray-600">Loading…</div>;
   if (error) return <div className="text-red-600">Failed to load metrics: {error}</div>;
   const total = data?.activations_total || 0;

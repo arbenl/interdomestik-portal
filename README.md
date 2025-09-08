@@ -126,6 +126,16 @@ The project uses GitHub Actions for CI/CD:
 firebase deploy --only hosting,functions,firestore:rules
 ```
 
+### CI Strategy (limited billing)
+
+- Workflows:
+  - `CI` (full): lint, frontend unit, functions unit (emulators), rules, and E2E. Heavy jobs are skipped when repo/org variable `CI_LIGHT` is `true` (default). Set `CI_LIGHT=false` to re-enable heavy jobs.
+  - `CI Light`: always runs lint + typecheck for frontend/functions; useful while billing for hosted runners is limited.
+- While CI heavy jobs are disabled, run heavier checks locally:
+  - Functions tests (emulators): `cd functions && npm test`
+  - Rules tests: `npm test` (root)
+  - E2E: `firebase emulators:exec --only functions,firestore,auth,hosting "npm run cypress:run"`
+
 ## Payments
 
 - MVP: Admin-activated memberships with `paymentMethod` and optional `externalRef`.

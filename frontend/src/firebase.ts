@@ -29,10 +29,10 @@ const db = initializeFirestore(app, {
 const functions = getFunctions(app, 'europe-west1');
 
 // Emulator config from Vite env (optional) or defaults
-const host = (import.meta as any).env?.VITE_EMULATOR_HOST || 'localhost';
-const fsPort = Number((import.meta as any).env?.VITE_FIRESTORE_PORT || 8085);
-const fnPort = Number((import.meta as any).env?.VITE_FUNCTIONS_PORT || 5001);
-const authPort = Number((import.meta as any).env?.VITE_AUTH_PORT || 9099);
+const host = import.meta.env.VITE_EMULATOR_HOST ?? 'localhost';
+const fsPort = Number(import.meta.env.VITE_FIRESTORE_PORT ?? 8085);
+const fnPort = Number(import.meta.env.VITE_FUNCTIONS_PORT ?? 5001);
+const authPort = Number(import.meta.env.VITE_AUTH_PORT ?? 9099);
 
 if (typeof location !== 'undefined' && (location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
   // Only connect to emulators in local dev

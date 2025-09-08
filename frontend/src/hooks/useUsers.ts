@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, query, getDocs, where, limit as qLimit } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Profile } from '../types';
@@ -8,9 +8,11 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number }) =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshSeq, setRefreshSeq] = useState(0);
-  const allowedRegions = opts?.allowedRegions ?? [];
+  const allowedRegionsInput = opts?.allowedRegions ?? [];
+  const allowedRegions = useMemo(() => allowedRegionsInput, [opts?.allowedRegions && JSON.stringify(opts.allowedRegions)]);
   const max = opts?.limit ?? 100;
 
+  const regionsKey = JSON.stringify(allowedRegions);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -34,7 +36,7 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number }) =
       }
     })();
     return () => { cancelled = true; };
-  }, [refreshSeq, JSON.stringify(allowedRegions), max]);
+  }, [refreshSeq, regionsKey, max, allowedRegions]);
 
   const refresh = () => setRefreshSeq((n) => n + 1);
 
