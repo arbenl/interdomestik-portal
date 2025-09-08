@@ -92,6 +92,7 @@ export async function agentCreateMemberLogic(data: any, context: functions.https
     tx.set(memberRef, {
       email: emailLower,
       name: input.name,
+      nameLower: input.name.toLowerCase().trim(),
       region: input.region,
       phone: input.phone,
       orgId: input.orgId,

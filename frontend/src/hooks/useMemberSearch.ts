@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, limit, orderBy, query, startAt, endAt, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Profile } from '../types';
 
@@ -24,8 +24,18 @@ export function useMemberSearch() {
       } else if (isMemberNo(term)) {
         qRef = query(collection(db, 'members'), where('memberNo', '==', term.toUpperCase()));
       } else {
-        // Fallback: try exact name match (best-effort)
-        qRef = query(collection(db, 'members'), where('name', '==', term));
+        // Name prefix search using normalized field
+        const prefix = term.toLowerCase();
+        // Require at least 2 chars to avoid heavy scans
+        if (prefix.length < 2) {
+          setResults([]);
+          setError('Type at least 2 characters to search by name');
+          setLoading(false);
+          return;
+        }
+        const col = collection(db, 'members');
+        // order by nameLower and bound by prefix range
+        qRef = query(col, orderBy('nameLower'), startAt(prefix), endAt(prefix + '\uf8ff'), limit(20));
       }
       const snap = await getDocs(qRef);
       const items: Profile[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as Profile) }));
@@ -43,4 +53,3 @@ export function useMemberSearch() {
 }
 
 export default useMemberSearch;
-

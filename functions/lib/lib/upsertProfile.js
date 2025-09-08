@@ -80,6 +80,7 @@ async function upsertProfileLogic(data, context) {
             await (0, unique_1.reserveUniqueEmail)(auth.uid, emailLower, tx);
             tx.set(memberRef, {
                 ...validatedData,
+                nameLower: String(validatedData.name || '').toLowerCase().trim(),
                 email: emailLower,
                 memberNo,
                 updatedAt: nowTs,
