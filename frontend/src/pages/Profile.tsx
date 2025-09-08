@@ -147,7 +147,9 @@ export default function Profile() {
                 <p>No active membership found.</p>
               </div>
             );
-            const expiresAtSec = activeMembership?.expiresAt?.seconds ?? (profile as any)?.expiresAt?.seconds;
+            type TS = { seconds?: number } | undefined;
+            const profileExpires = (profile as unknown as { expiresAt?: TS })?.expiresAt?.seconds;
+            const expiresAtSec = activeMembership?.expiresAt?.seconds ?? profileExpires;
             const hasActive = typeof expiresAtSec === 'number' && expiresAtSec * 1000 > Date.now();
             const validUntil = typeof expiresAtSec === 'number' ? new Date(expiresAtSec * 1000).toLocaleDateString() : '—';
             const status = hasActive ? 'active' : (typeof expiresAtSec === 'number' ? 'expired' : 'none');

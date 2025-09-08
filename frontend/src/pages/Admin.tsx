@@ -7,6 +7,7 @@ import { auth, functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { REGIONS } from '../constants/regions';
 import { useAuditLogs } from '../hooks/useAuditLogs';
+import { useMemberSearch } from '../hooks/useMemberSearch';
 import { useToast } from '../components/ui/useToast';
 //
 import ActivateMembershipModal from '../components/ActivateMembershipModal';
@@ -78,6 +79,8 @@ export default function Admin() {
   const today = new Date().toISOString().slice(0,10);
   const { items: auditLogs, loading: auditLoading, error: auditError } = useAuditLogs(20);
   const { push } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
+  const { results: searchResults, loading: searchLoading, error: searchError, search, clear } = useMemberSearch();
 
   const handleSeedEmulator = async () => {
     try {
@@ -234,6 +237,53 @@ export default function Admin() {
 
       {isAdmin && (
         <BulkImportPanel onSuccess={handleSuccess} onError={setError} onToast={push} />
+      )}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Search Members</h3>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700">Email or Member No</label>
+              <input className="mt-1 w-full border rounded px-3 py-2" placeholder="member@example.com or INT-2025-000001" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
+            </div>
+            <button className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={searchLoading || !searchTerm.trim()} onClick={()=>search(searchTerm)}>Search</button>
+            <button className="bg-gray-600 text-white px-4 py-2 rounded" onClick={()=>{ setSearchTerm(''); clear(); }}>Clear</button>
+          </div>
+          {searchError && <div className="text-sm text-red-600 mt-2">{searchError}</div>}
+          {!searchLoading && searchResults.length > 0 && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-600">
+                    <th className="px-3 py-2">Name</th>
+                    <th className="px-3 py-2">Email</th>
+                    <th className="px-3 py-2">Member No</th>
+                    <th className="px-3 py-2">Region</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {searchResults.map(u => (
+                    <tr key={u.id} className="border-t">
+                      <td className="px-3 py-2">{u.name}</td>
+                      <td className="px-3 py-2">{u.email}</td>
+                      <td className="px-3 py-2">{u.memberNo}</td>
+                      <td className="px-3 py-2">{u.region}</td>
+                      <td className="px-3 py-2 text-right">
+                        <button className="text-indigo-600" onClick={()=>handleActivateClick(u)}>Activate Membership</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {searchLoading && <div className="text-gray-600 mt-2">Searching…</div>}
+          {!searchLoading && searchResults.length === 0 && searchTerm.trim() && !searchError && (
+            <div className="text-gray-600 mt-2 text-sm">No results</div>
+          )}
+        </div>
       )}
 
       {isAdmin && (
