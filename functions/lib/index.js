@@ -203,7 +203,7 @@ exports.stripeWebhook = functions
     }
     try {
         const signingSecret = process.env.STRIPE_SIGNING_SECRET;
-        const sig = req.headers['stripe-signature'];
+        const sig = req?.headers ? req.headers['stripe-signature'] : undefined;
         const isStripeMode = !!(signingSecret && sig);
         if (isStripeMode) {
             // Verify signature and construct event

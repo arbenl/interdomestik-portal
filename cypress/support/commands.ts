@@ -17,7 +17,11 @@ Cypress.Commands.add("clearDatabase", () => {
   cy.task("resetFirestore");
 });
 
-Cypress.Commands.add("seedDatabase", () => cy.wrap(null));
+Cypress.Commands.add("seedDatabase", () => {
+  const PROJECT_ID = Cypress.env('FB_PROJECT_ID') || 'demo-interdomestik';
+  // Seed via Functions emulator if available
+  return cy.request(`http://127.0.0.1:5001/${PROJECT_ID}/europe-west1/seedDatabase`);
+});
 
 // Signs in using the app's SignIn form (modular SDK handled by the app)
 Cypress.Commands.add("signInUI", (email: string, password: string) => {
