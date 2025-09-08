@@ -6,6 +6,7 @@ import { useUsers } from '../hooks/useUsers';
 import { auth, functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { REGIONS } from '../constants/regions';
+import { useAuditLogs } from '../hooks/useAuditLogs';
 //
 import ActivateMembershipModal from '../components/ActivateMembershipModal';
 import AgentRegistrationCard from '../components/AgentRegistrationCard';
@@ -74,6 +75,7 @@ export default function Admin() {
   const isLocal = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   const EMU_BASE = 'http://127.0.0.1:5001/demo-interdomestik/europe-west1';
   const today = new Date().toISOString().slice(0,10);
+  const { items: auditLogs, loading: auditLoading, error: auditError } = useAuditLogs(20);
 
   const handleSeedEmulator = async () => {
     try {
@@ -225,6 +227,54 @@ export default function Admin() {
         <div className="mb-6 p-4 border rounded bg-white">
           <h3 className="text-lg font-semibold mb-2">Daily Metrics</h3>
           <MetricsPanel dateKey={today} />
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Recent Audit Logs</h3>
+          {auditLoading && <div className="text-gray-600">Loading…</div>}
+          {auditError && <div className="text-red-600">Failed to load audit logs: {auditError.message}</div>}
+          {!auditLoading && !auditError && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-600">
+                    <th className="px-3 py-2">Time</th>
+                    <th className="px-3 py-2">Action</th>
+                    <th className="px-3 py-2">Actor</th>
+                    <th className="px-3 py-2">Target</th>
+                    <th className="px-3 py-2">Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.length === 0 ? (
+                    <tr><td className="px-3 py-2 text-gray-500" colSpan={5}>No recent entries.</td></tr>
+                  ) : (
+                    auditLogs.map(a => {
+                      const ts = a.ts && (a.ts as unknown as { seconds?: number }).seconds
+                        ? new Date(((a.ts as unknown as { seconds: number }).seconds) * 1000).toLocaleString()
+                        : '—';
+                      const details = a.action === 'setUserRole'
+                        ? `role=${a.role || ''} regions=${(a.allowedRegions||[]).join(',')}`
+                        : a.action === 'startMembership'
+                        ? `year=${a.year} amount=${a.amount} ${a.currency} method=${a.method}`
+                        : '';
+                      return (
+                        <tr key={a.id} className="border-t">
+                          <td className="px-3 py-2 whitespace-nowrap">{ts}</td>
+                          <td className="px-3 py-2">{a.action}</td>
+                          <td className="px-3 py-2">{a.actor || '—'}</td>
+                          <td className="px-3 py-2">{a.target || '—'}</td>
+                          <td className="px-3 py-2 text-gray-600">{details}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

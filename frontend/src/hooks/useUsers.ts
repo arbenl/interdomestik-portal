@@ -9,7 +9,7 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number }) =
   const [error, setError] = useState<Error | null>(null);
   const [refreshSeq, setRefreshSeq] = useState(0);
   const allowedRegionsInput = opts?.allowedRegions ?? [];
-  const allowedRegions = useMemo(() => allowedRegionsInput, [opts?.allowedRegions && JSON.stringify(opts.allowedRegions)]);
+  const allowedRegions = useMemo(() => allowedRegionsInput, [allowedRegionsInput.join('|')]);
   const max = opts?.limit ?? 100;
 
   const regionsKey = JSON.stringify(allowedRegions);
