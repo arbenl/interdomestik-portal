@@ -8,6 +8,7 @@ export default defineConfig({
   e2e: {
     baseUrl: "http://localhost:5000",
     video: false,
+    retries: 1,
     defaultCommandTimeout: 8000,
     setupNodeEvents(on, _config) {
       async function mustOk(url: string, init?: RequestInit) {

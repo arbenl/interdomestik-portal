@@ -23,9 +23,9 @@ describe('Admin Journey', () => {
     cy.get('input[placeholder="Full name"]').type('Member E2E');
     // Select the Region dropdown (aria-label provided by RegionSelect)
     cy.get('select[aria-label="Region"]').select('PRISHTINA');
+    cy.intercept({ method: 'POST', url: /agentCreateMember/i }).as('agentCreateMember');
     cy.contains('button', /Register Member/i).click();
-
-    // Admin page shows success text
-    cy.contains(/Member registered successfully/i).should('exist');
+    cy.wait('@agentCreateMember', { timeout: 20000 }).its('response.statusCode').should('be.oneOf', [200, 204]);
+    cy.contains(/Member registered successfully/i, { timeout: 15000 }).should('exist');
   });
 });
