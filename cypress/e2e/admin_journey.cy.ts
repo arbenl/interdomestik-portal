@@ -21,8 +21,8 @@ describe('Admin Journey', () => {
     // Fill agent/admin registration form
     cy.get('input[placeholder="Email"]').type(MEMBER_EMAIL);
     cy.get('input[placeholder="Full name"]').type('Member E2E');
-    // Select the Region dropdown, not the Role selector
-    cy.contains('label', /Region/i).parent().find('select').select('PRISHTINA');
+    // Select the Region dropdown (aria-label provided by RegionSelect)
+    cy.get('select[aria-label="Region"]').select('PRISHTINA');
     cy.contains('button', /Register Member/i).click();
 
     // Admin page shows success text

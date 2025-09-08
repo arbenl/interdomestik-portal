@@ -21,8 +21,8 @@ describe('Admin Activate Flow', () => {
     const NEW_EMAIL = `e2e_act_${Date.now()}@example.com`;
     cy.get('input[placeholder="Email"]', { timeout: 10000 }).type(NEW_EMAIL);
     cy.get('input[placeholder="Full name"]').type('E2E Activate');
-    // Choose the Region select specifically to avoid matching other selects on the page
-    cy.contains('label', /Region/i).parent().find('select').select('PRISHTINA');
+    // Select the Region dropdown (aria-label provided by RegionSelect)
+    cy.get('select[aria-label="Region"]').select('PRISHTINA');
     cy.contains('button', /Register Member/i).click();
     cy.contains(/Member registered successfully/i, { timeout: 10000 }).should('exist');
     // Manually refresh users list if button exists; otherwise fallback to reload
