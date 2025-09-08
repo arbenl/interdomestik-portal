@@ -44,3 +44,8 @@ Hand-off
 - Admin UX:
   - Added Role Management section (email→UID lookup, role select, region checkboxes) invoking callables.
 - Snapshot updated in docs/STATE_SNAPSHOT_2025-09-08.md.
+
+2025-09-08 — Stripe + Docs
+- Stripe webhook now verifies signatures and is idempotent; emulator path preserved.
+- Added signed webhook test (functions/test/stripeWebhookSigned.test.ts).
+- Updated README and PROJECT_GUIDE with Stripe setup instructions and examples.

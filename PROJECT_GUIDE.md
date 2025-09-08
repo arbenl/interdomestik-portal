@@ -121,11 +121,21 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
 - Only hosting: `firebase deploy --only hosting`
 
 ## Payments
-- MVP: Admin‑activated memberships with `paymentMethod` and optional `externalRef`
-- Billing page displays `billing/{uid}/invoices` and can simulate a paid invoice via `stripeWebhook` in emulator
-- Production hardening: add Stripe signature verification, map events to membership activation, and consider Checkout/Payment Links
+- MVP: Admin‑activated memberships with `paymentMethod` and optional `externalRef`.
+- Billing page displays `billing/{uid}/invoices` and can simulate a paid invoice via `stripeWebhook` in emulator.
+- Production: Stripe signature verification + idempotency implemented.
+  - Expect `invoice.payment_succeeded` with `metadata.uid` set to the Firebase UID.
+  - Webhook uses `STRIPE_SIGNING_SECRET` and `STRIPE_API_KEY` when present; otherwise falls back to emulator JSON body.
+  - Duplicate events are ignored via `webhooks_stripe/{event.id}`.
 
-Example (local webhook call):
+Production setup:
+```
+firebase functions:secrets:set STRIPE_SIGNING_SECRET
+firebase functions:secrets:set STRIPE_API_KEY
+firebase deploy --only functions
+```
+
+Local webhook example (no signature):
 ```
 curl -X POST \
   -H 'Content-Type: application/json' \

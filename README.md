@@ -126,6 +126,33 @@ The project uses GitHub Actions for CI/CD:
 firebase deploy --only hosting,functions,firestore:rules
 ```
 
+## Payments
+
+- MVP: Admin-activated memberships with `paymentMethod` and optional `externalRef`.
+- Billing page lists `billing/{uid}/invoices` and can simulate a paid invoice via the emulator-friendly `stripeWebhook`.
+- Production: Stripe signature verification and idempotency are implemented in `stripeWebhook`.
+  - Requires `invoice.payment_succeeded` events with `metadata.uid` set to the Firebase UID.
+  - Duplicates are ignored using `webhooks_stripe/{event.id}`.
+
+Setup (production):
+- Set Functions secrets:
+```
+firebase functions:secrets:set STRIPE_SIGNING_SECRET
+firebase functions:secrets:set STRIPE_API_KEY
+```
+- Deploy functions:
+```
+firebase deploy --only functions
+```
+
+Local testing (no signature):
+```
+curl -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"uid":"<UID>","invoiceId":"inv_test_1","amount":2500,"currency":"EUR"}' \
+  http://localhost:5001/demo-interdomestik/europe-west1/stripeWebhook
+```
+
 ## Cost Optimization
 
 The system is designed with cost-first principles:
