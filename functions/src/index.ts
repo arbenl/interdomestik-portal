@@ -179,7 +179,8 @@ export const stripeWebhook = functions
 
       if (isStripeMode) {
         // Verify signature and construct event
-        const { default: Stripe } = await import('stripe');
+        // Indirect dynamic import to avoid hard dependency in test/emulator without package
+        const Stripe = (await (Function('m', 'return import(m)') as any)('stripe')).default;
         const stripe = new Stripe(process.env.STRIPE_API_KEY || '', { apiVersion: '2024-06-20' as any });
         let event: any;
         try {
