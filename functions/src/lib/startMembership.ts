@@ -1,5 +1,5 @@
 import { admin, db } from "../firebaseAdmin";
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import * as functions from "firebase-functions/v1";
 import { startMembershipSchema } from "./validators";
 import { requireAdmin } from "./rbac";
@@ -13,8 +13,8 @@ export async function activateMembership(
   paymentMethod: string,
   externalRef: string | null | undefined
 ): Promise<{ refPath: string; alreadyActive: boolean }> {
-  const startsAt = admin.firestore.Timestamp.fromDate(new Date(year, 0, 1));
-  const expiresAt = admin.firestore.Timestamp.fromDate(new Date(year, 11, 31, 23, 59, 59));
+  const startsAt = Timestamp.fromDate(new Date(year, 0, 1));
+  const expiresAt = Timestamp.fromDate(new Date(year, 11, 31, 23, 59, 59));
 
   const ref = db.collection('members').doc(uid).collection('memberships').doc(String(year));
 
