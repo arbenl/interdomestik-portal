@@ -141,18 +141,31 @@ export default function Profile() {
         </div>
         <div className="md:col-span-1">
           <h2 className="text-2xl font-bold mb-4">Membership Card</h2>
-          {profile && activeMembership ? (
-            <DigitalMembershipCard 
-              name={profile.name || 'Member'}
-              memberNo={profile.memberNo || '—'}
-              region={profile.region || '—'}
-              validUntil={activeMembership.expiresAt ? new Date(activeMembership.expiresAt.seconds * 1000).toLocaleDateString() : '—'}
-            />
-          ) : (
-            <div className="bg-gray-100 rounded-2xl p-6 text-center text-gray-500">
-              <p>No active membership found.</p>
-            </div>
-          )}
+          {(() => {
+            if (!profile) return (
+              <div className="bg-gray-100 rounded-2xl p-6 text-center text-gray-500">
+                <p>No active membership found.</p>
+              </div>
+            );
+            const expiresAtSec = activeMembership?.expiresAt?.seconds ?? (profile as any)?.expiresAt?.seconds;
+            const hasActive = typeof expiresAtSec === 'number' && expiresAtSec * 1000 > Date.now();
+            const validUntil = typeof expiresAtSec === 'number' ? new Date(expiresAtSec * 1000).toLocaleDateString() : '—';
+            if (hasActive) {
+              return (
+                <DigitalMembershipCard
+                  name={profile.name || 'Member'}
+                  memberNo={profile.memberNo || '—'}
+                  region={profile.region || '—'}
+                  validUntil={validUntil}
+                />
+              );
+            }
+            return (
+              <div className="bg-gray-100 rounded-2xl p-6 text-center text-gray-500">
+                <p>No active membership found.</p>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
