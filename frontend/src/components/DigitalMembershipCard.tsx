@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 
 interface DigitalMembershipCardProps {
   name: string;
@@ -13,12 +13,38 @@ import SimpleQr from './SimpleQr';
 import Button from './ui/Button';
 
 const DigitalMembershipCard: React.FC<DigitalMembershipCardProps> = ({ name, memberNo, region, validUntil, status = 'none', verifyUrl }) => {
+  const imgRef = useRef<HTMLImageElement | null>(null);
   const qrUrl = verifyUrl ? `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(verifyUrl)}` : undefined;
   const copyLink = async () => {
     if (!verifyUrl) return;
     try { await navigator.clipboard.writeText(verifyUrl); } catch (e) {
       // Non-blocking: clipboard API may be unavailable or denied
       console.warn('Failed to copy verify URL', e);
+    }
+  };
+  const downloadQr = async () => {
+    try {
+      const img = imgRef.current;
+      if (!img) throw new Error('QR not ready');
+      // Draw to canvas to get a same-origin data URL (requires CORS-enabled image)
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || 200;
+      canvas.height = img.naturalHeight || 200;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('2D context unavailable');
+      ctx.drawImage(img, 0, 0);
+      const dataUrl = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'membership-qr.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      // Fallback: open current QR URL so user can save manually
+      const src = imgRef.current?.src || qrUrl;
+      if (src) window.open(src, '_blank');
+      else console.warn('QR download failed', e);
     }
   };
   const statusCfg = (() => {
@@ -53,14 +79,14 @@ const DigitalMembershipCard: React.FC<DigitalMembershipCardProps> = ({ name, mem
       </div>
       {verifyUrl && (
         <div className="mt-6 flex items-start gap-4">
-          <SimpleQr value={verifyUrl} size={96} className="rounded bg-white p-1" />
+          <SimpleQr ref={imgRef} value={verifyUrl} size={96} className="rounded bg-white p-1" />
           <div className="text-xs text-gray-300 flex-1">
             <div className="mb-1">Verify:</div>
             <a href={verifyUrl} className="underline text-gray-200 break-all">{verifyUrl}</a>
             <div className="mt-2 flex gap-2">
               <Button variant="ghost" onClick={copyLink} className="px-2 py-1 text-white border border-white/20">Copy link</Button>
-              {qrUrl && (
-                <a href={qrUrl} download="membership-qr.png" className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm">Download QR</a>
+              {verifyUrl && (
+                <button onClick={downloadQr} className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm">Download QR</button>
               )}
             </div>
           </div>
