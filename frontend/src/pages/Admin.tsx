@@ -3,6 +3,9 @@ import type { Profile } from '../types';
 import useAdmin from '../hooks/useAdmin';
 import useAgentOrAdmin from '../hooks/useAgentOrAdmin';
 import { useUsers } from '../hooks/useUsers';
+import { functions } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { REGIONS } from '../constants/regions';
 //
 import ActivateMembershipModal from '../components/ActivateMembershipModal';
 import AgentRegistrationCard from '../components/AgentRegistrationCard';
@@ -17,6 +20,12 @@ export default function Admin() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Role management state (admin only)
+  const [lookupEmail, setLookupEmail] = useState('');
+  const [targetUid, setTargetUid] = useState('');
+  const [targetRole, setTargetRole] = useState<'member'|'agent'|'admin'>('member');
+  const [targetRegions, setTargetRegions] = useState<string[]>([]);
+  const [roleBusy, setRoleBusy] = useState(false);
 
   const handleActivateClick = (user: Profile) => {
     setSelectedUser(user);
@@ -116,6 +125,70 @@ export default function Admin() {
 
       {canRegister && (
         <AgentRegistrationCard allowedRegions={allowedRegions} onSuccess={handleSuccess} onError={setError} />
+      )}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Role Management</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Lookup by email</label>
+              <input className="mt-1 w-full border rounded px-3 py-2" placeholder="user@example.com" value={lookupEmail} onChange={e=>setLookupEmail(e.target.value)} />
+            </div>
+            <button className="bg-gray-700 text-white px-3 py-2 rounded h-10 md:h-auto" onClick={async ()=>{
+              try {
+                setRoleBusy(true); setError(null); setSuccess(null);
+                const search = httpsCallable(functions, 'searchUserByEmail');
+                const res = await search({ email: lookupEmail });
+                const uid = (res.data as any)?.uid as string | undefined;
+                if (!uid) throw new Error('User not found');
+                setTargetUid(uid);
+                setSuccess(`Found UID: ${uid}`);
+              } catch (e) {
+                setError(e instanceof Error ? e.message : String(e));
+              } finally { setRoleBusy(false); }
+            }}>Find UID</button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Or set UID directly</label>
+              <input className="mt-1 w-full border rounded px-3 py-2" placeholder="uid_..." value={targetUid} onChange={e=>setTargetUid(e.target.value)} />
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Role</label>
+              <select className="mt-1 w-full border rounded px-3 py-2" value={targetRole} onChange={e=>setTargetRole(e.target.value as any)}>
+                <option value="member">member</option>
+                <option value="agent">agent</option>
+                <option value="admin">admin</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">Allowed regions (for agents/admins)</label>
+              <div className="mt-1 grid grid-cols-2 md:grid-cols-4 gap-2">
+                {REGIONS.map(r => (
+                  <label key={r} className="inline-flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={targetRegions.includes(r)} onChange={(e)=>{
+                      setTargetRegions(prev=> e.target.checked ? Array.from(new Set([...prev, r])) : prev.filter(x=>x!==r));
+                    }} />
+                    <span>{r}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4">
+            <button disabled={!targetUid || roleBusy} className="bg-indigo-600 disabled:bg-gray-400 text-white px-4 py-2 rounded" onClick={async ()=>{
+              try {
+                setRoleBusy(true); setError(null); setSuccess(null);
+                const setRole = httpsCallable(functions, 'setUserRole');
+                await setRole({ uid: targetUid, role: targetRole, allowedRegions: targetRegions });
+                setSuccess('Role updated');
+              } catch (e) {
+                setError(e instanceof Error ? e.message : String(e));
+              } finally { setRoleBusy(false); }
+            }}>Apply Role</button>
+          </div>
+        </div>
       )}
 
       {usersError && <p className="text-red-500">{usersError.message}</p>}

@@ -92,5 +92,21 @@ export async function startMembershipLogic(data: any, context: functions.https.C
     });
   }
 
+  // Audit log
+  try {
+    await db.collection('audit_logs').add({
+      action: 'startMembership',
+      actor: context.auth?.uid || 'system',
+      target: uid,
+      year,
+      amount: price ?? 0,
+      currency,
+      method: paymentMethod,
+      ts: FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    console.warn('[audit] failed to write startMembership audit', e);
+  }
+
   return { message: "Membership started successfully", refPath };
 }

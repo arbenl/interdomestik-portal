@@ -1,5 +1,5 @@
 import * as functions from "firebase-functions/v1";
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { admin, db } from "./firebaseAdmin";
 import { upsertProfileLogic } from "./lib/upsertProfile";
 import { setUserRoleLogic, searchUserByEmailLogic } from "./lib/user";
@@ -75,6 +75,42 @@ export const verifyMembership = functions
     }
 
     try {
+      // Simple IP-based rate limiting (skips emulator). Limits: 60/minute or 1000/day
+      const isEmu = process.env.FUNCTIONS_EMULATOR || process.env.FIREBASE_EMULATOR_HUB;
+      if (!isEmu) {
+        const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+        const ip = fwd || (req as any).ip || (req.socket && (req.socket as any).remoteAddress) || 'unknown';
+        const crypto = await import('crypto');
+        const hash = crypto.createHash('sha256').update(String(ip)).digest('hex').slice(0, 12);
+        const now = new Date();
+        const dayKey = `${now.getUTCFullYear()}${String(now.getUTCMonth()+1).padStart(2,'0')}${String(now.getUTCDate()).padStart(2,'0')}`;
+        const minuteKey = Math.floor(now.getTime() / 60000); // epoch minute
+        const ref = db.collection('ratelimit_verify').doc(`${dayKey}-${hash}`);
+        let limited = false;
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(ref);
+          const data = snap.exists ? snap.data() as any : {};
+          const prevMinuteKey = Number(data.minuteKey || 0);
+          const prevMinuteCount = Number(data.minuteCount || 0);
+          const prevDayCount = Number(data.dayCount || 0);
+          const minuteCount = (prevMinuteKey === minuteKey) ? (prevMinuteCount + 1) : 1;
+          const dayCount = prevDayCount + 1;
+          if (minuteCount > 60 || dayCount > 1000) {
+            limited = true;
+          }
+          tx.set(ref, {
+            minuteKey,
+            minuteCount,
+            dayCount,
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true });
+        });
+        if (limited) {
+          res.status(429).json({ ok: false, error: 'Too many requests' });
+          return;
+        }
+      }
+
       const memberNoRaw = req.query.memberNo;
       const memberNo = String(memberNoRaw ?? "").trim();
 
