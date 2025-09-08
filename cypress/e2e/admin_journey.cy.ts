@@ -17,6 +17,7 @@ describe('Admin Journey', () => {
     cy.signInUI(ADMIN_EMAIL, ADMIN_PASS);
     cy.visit('/admin');
     cy.reload();
+    cy.contains('button', /Refresh my token/i).click({ force: true });
 
     // Fill agent/admin registration form
     cy.get('input[placeholder="Email"]').type(MEMBER_EMAIL);
