@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.setUserRoleLogic = setUserRoleLogic;
 exports.searchUserByEmailLogic = searchUserByEmailLogic;
+exports.getUserClaimsLogic = getUserClaimsLogic;
 const firebaseAdmin_1 = require("../firebaseAdmin");
 const firestore_1 = require("firebase-admin/firestore");
 const functions = __importStar(require("firebase-functions/v1"));
@@ -71,4 +72,13 @@ async function searchUserByEmailLogic(data, context) {
     catch (error) {
         throw new functions.https.HttpsError('not-found', 'User not found');
     }
+}
+async function getUserClaimsLogic(data, context) {
+    (0, rbac_1.requireAdmin)(context);
+    const uid = String(data?.uid || '').trim();
+    if (!uid)
+        throw new functions.https.HttpsError('invalid-argument', 'uid required');
+    const user = await firebaseAdmin_1.admin.auth().getUser(uid);
+    const claims = (user.customClaims || {});
+    return { uid, claims };
 }

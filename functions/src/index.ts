@@ -174,7 +174,7 @@ export const stripeWebhook = functions
     if (req.method !== 'POST') { res.status(405).send('Method not allowed'); return; }
     try {
       const signingSecret = process.env.STRIPE_SIGNING_SECRET;
-      const sig = req.headers['stripe-signature'] as string | undefined;
+      const sig = (req as any)?.headers ? ((req as any).headers['stripe-signature'] as string | undefined) : undefined;
       const isStripeMode = !!(signingSecret && sig);
 
       if (isStripeMode) {
