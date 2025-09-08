@@ -4,6 +4,7 @@ import { admin, db } from "./firebaseAdmin";
 import { upsertProfileLogic } from "./lib/upsertProfile";
 import { setUserRoleLogic, searchUserByEmailLogic, getUserClaimsLogic } from "./lib/user";
 import { importMembersCsvLogic } from './lib/importCsv';
+import { backfillNameLowerLogic } from './lib/backfill';
 import { startMembershipLogic } from "./lib/startMembership";
 import { agentCreateMemberLogic } from "./lib/agent";
 import { sendRenewalReminder } from "./lib/membership";
@@ -40,6 +41,10 @@ export const getUserClaims = functions
 export const importMembersCsv = functions
   .region(REGION)
   .https.onCall((data, context) => importMembersCsvLogic(data, context));
+
+export const backfillNameLower = functions
+  .region(REGION)
+  .https.onCall((data, context) => backfillNameLowerLogic(data, context));
 
 // HTTP utilities -------------------------------------------------------------
 export const clearDatabase = functions

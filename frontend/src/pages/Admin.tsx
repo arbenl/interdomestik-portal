@@ -288,6 +288,28 @@ export default function Admin() {
 
       {isAdmin && (
         <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Maintenance</h3>
+          <p className="text-sm text-gray-600 mb-2">One-off tasks for admins. These run against the current project.</p>
+          <div className="flex gap-2">
+            <button className="bg-gray-700 text-white px-3 py-2 rounded" onClick={async ()=>{
+              if (!confirm('Backfill nameLower for up to 500 members starting at the beginning?')) return;
+              try {
+                const fn = httpsCallable<{ pageSize?: number; startAfter?: string }, { page:number; updated:number; nextStartAfter:string|null }>(functions, 'backfillNameLower');
+                const r = await fn({ pageSize: 500 });
+                const data = r.data;
+                handleSuccess(`Backfill done: page=${data.page}, updated=${data.updated}${data.nextStartAfter?`, nextStartAfter=\"${data.nextStartAfter}\"`:''}`);
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                setError(msg);
+              }
+            }}>Backfill nameLower (500)</button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">Repeat until nextStartAfter is null to complete backfill for all members.</p>
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
           <h3 className="text-lg font-semibold mb-2">Recent Audit Logs</h3>
           {auditLoading && <div className="text-gray-600">Loading…</div>}
           {auditError && <div className="text-red-600">Failed to load audit logs: {auditError.message}</div>}
