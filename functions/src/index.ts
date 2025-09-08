@@ -3,6 +3,7 @@ import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { admin, db } from "./firebaseAdmin";
 import { upsertProfileLogic } from "./lib/upsertProfile";
 import { setUserRoleLogic, searchUserByEmailLogic, getUserClaimsLogic } from "./lib/user";
+import { importMembersCsvLogic } from './lib/importCsv';
 import { startMembershipLogic } from "./lib/startMembership";
 import { agentCreateMemberLogic } from "./lib/agent";
 import { sendRenewalReminder } from "./lib/membership";
@@ -35,6 +36,10 @@ export const agentCreateMember = functions
 export const getUserClaims = functions
   .region(REGION)
   .https.onCall((data, context) => getUserClaimsLogic(data, context));
+
+export const importMembersCsv = functions
+  .region(REGION)
+  .https.onCall((data, context) => importMembersCsvLogic(data, context));
 
 // HTTP utilities -------------------------------------------------------------
 export const clearDatabase = functions

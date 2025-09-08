@@ -33,12 +33,13 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.getUserClaims = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
+exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.importMembersCsv = exports.getUserClaims = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const firestore_1 = require("firebase-admin/firestore");
 const firebaseAdmin_1 = require("./firebaseAdmin");
 const upsertProfile_1 = require("./lib/upsertProfile");
 const user_1 = require("./lib/user");
+const importCsv_1 = require("./lib/importCsv");
 const startMembership_1 = require("./lib/startMembership");
 const agent_1 = require("./lib/agent");
 const membership_1 = require("./lib/membership");
@@ -65,6 +66,9 @@ exports.agentCreateMember = functions
 exports.getUserClaims = functions
     .region(REGION)
     .https.onCall((data, context) => (0, user_1.getUserClaimsLogic)(data, context));
+exports.importMembersCsv = functions
+    .region(REGION)
+    .https.onCall((data, context) => (0, importCsv_1.importMembersCsvLogic)(data, context));
 // HTTP utilities -------------------------------------------------------------
 exports.clearDatabase = functions
     .region(REGION)

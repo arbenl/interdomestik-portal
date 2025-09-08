@@ -7,6 +7,7 @@ import { auth, functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { REGIONS } from '../constants/regions';
 import { useAuditLogs } from '../hooks/useAuditLogs';
+import { useToast } from '../components/ui/useToast';
 //
 import ActivateMembershipModal from '../components/ActivateMembershipModal';
 import AgentRegistrationCard from '../components/AgentRegistrationCard';
@@ -76,6 +77,7 @@ export default function Admin() {
   const EMU_BASE = 'http://127.0.0.1:5001/demo-interdomestik/europe-west1';
   const today = new Date().toISOString().slice(0,10);
   const { items: auditLogs, loading: auditLoading, error: auditError } = useAuditLogs(20);
+  const { push } = useToast();
 
   const handleSeedEmulator = async () => {
     try {
@@ -231,6 +233,10 @@ export default function Admin() {
       )}
 
       {isAdmin && (
+        <BulkImportPanel onSuccess={handleSuccess} onError={setError} onToast={push} />
+      )}
+
+      {isAdmin && (
         <div className="mb-6 p-4 border rounded bg-white">
           <h3 className="text-lg font-semibold mb-2">Recent Audit Logs</h3>
           {auditLoading && <div className="text-gray-600">Loading…</div>}
@@ -368,6 +374,60 @@ function MetricsPanel({ dateKey }: { dateKey: string }) {
         )}
       </div>
       {isLocal && <div className="mt-2 text-xs text-gray-500">Note: metrics are best-effort and update on membership activation.</div>}
+    </div>
+  );
+}
+function BulkImportPanel({ onSuccess, onError, onToast }: { onSuccess: (m:string)=>void; onError:(m:string)=>void; onToast: (t:{type:'success'|'error'; message:string})=>void }) {
+  const [csv, setCsv] = useState('email,name,region\nexample1@example.com,Example One,PRISHTINA');
+  const [dryRun, setDryRun] = useState(true);
+  const [busy, setBusy] = useState(false);
+  type ImportReport = { rows:number; created:number; updated:number; errors:Array<{ line:number; email?:string; error:string }>};
+  const [report, setReport] = useState<ImportReport | null>(null);
+  const importFn = httpsCallable<{csv:string; dryRun?:boolean; defaultRegion?:string}, ImportReport>(functions, 'importMembersCsv');
+
+  async function runImport() {
+    setBusy(true); setReport(null);
+    try {
+      const res = await importFn({ csv, dryRun });
+      const data = res.data as ImportReport;
+      setReport(data);
+      if (!dryRun) {
+        onSuccess('Import completed');
+        onToast({ type: 'success', message: `Imported: ${data.created} created, ${data.updated} updated` });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      onError(msg);
+      onToast({ type: 'error', message: msg });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mb-6 p-4 border rounded bg-white">
+      <h3 className="text-lg font-semibold mb-2">Bulk Import (CSV)</h3>
+      <p className="text-sm text-gray-600 mb-2">Columns: email,name,region[,phone,orgId]</p>
+      <textarea className="w-full border rounded p-2 font-mono text-sm" rows={6} value={csv} onChange={e=>setCsv(e.target.value)} />
+      <div className="mt-2 flex items-center gap-3">
+        <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={dryRun} onChange={e=>setDryRun(e.target.checked)} />Dry run</label>
+        <button disabled={busy} className="bg-indigo-600 text-white px-4 py-2 rounded disabled:opacity-50" onClick={runImport}>{busy ? (dryRun ? 'Checking…' : 'Importing…') : (dryRun ? 'Dry Run' : 'Import')}</button>
+      </div>
+      {report && (
+        <div className="mt-3 text-sm">
+          <div className="mb-1">Rows: {report.rows} • Created: {report.created} • Updated: {report.updated}</div>
+          {report.errors && report.errors.length > 0 && (
+            <div className="border rounded p-2 bg-red-50 text-red-800">
+              <div className="font-medium mb-1">Errors ({report.errors.length}):</div>
+              <ul className="list-disc pl-5">
+                {report.errors.map((e, i) => (
+                  <li key={i}>line {e.line}{e.email ? ` (${e.email})` : ''}: {e.error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
