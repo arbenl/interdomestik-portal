@@ -3,7 +3,7 @@ import type { Profile } from '../types';
 import useAdmin from '../hooks/useAdmin';
 import useAgentOrAdmin from '../hooks/useAgentOrAdmin';
 import { useUsers } from '../hooks/useUsers';
-import { functions } from '../firebase';
+import { auth, functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { REGIONS } from '../constants/regions';
 //
@@ -26,6 +26,7 @@ export default function Admin() {
   const [targetRole, setTargetRole] = useState<'member'|'agent'|'admin'>('member');
   const [targetRegions, setTargetRegions] = useState<string[]>([]);
   const [roleBusy, setRoleBusy] = useState(false);
+  const [claims, setClaims] = useState<Record<string, unknown> | null>(null);
 
   const handleActivateClick = (user: Profile) => {
     setSelectedUser(user);
@@ -72,6 +73,7 @@ export default function Admin() {
   // Emulator utilities (visible only when running locally)
   const isLocal = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   const EMU_BASE = 'http://127.0.0.1:5001/demo-interdomestik/europe-west1';
+  const today = new Date().toISOString().slice(0,10);
 
   const handleSeedEmulator = async () => {
     try {
@@ -177,17 +179,48 @@ export default function Admin() {
             </div>
           </div>
           <div className="mt-4">
-            <button disabled={!targetUid || roleBusy} className="bg-indigo-600 disabled:bg-gray-400 text-white px-4 py-2 rounded" onClick={async ()=>{
+            <button disabled={!targetUid || roleBusy} className="bg-indigo-600 disabled:bg-gray-400 text-white px-4 py-2 rounded mr-2" onClick={async ()=>{
               try {
                 setRoleBusy(true); setError(null); setSuccess(null);
                 const setRole = httpsCallable(functions, 'setUserRole');
                 await setRole({ uid: targetUid, role: targetRole, allowedRegions: targetRegions });
                 setSuccess('Role updated');
               } catch (e) {
-                setError(e instanceof Error ? e.message : String(e));
+                const err = e as any; const msg = (err?.message || 'Failed'); const code = err?.code ? ` (${err.code})` : '';
+                setError(`${msg}${code}`);
               } finally { setRoleBusy(false); }
             }}>Apply Role</button>
+            <button disabled={!targetUid || roleBusy} className="bg-gray-700 disabled:bg-gray-400 text-white px-4 py-2 rounded mr-2" onClick={async ()=>{
+              try {
+                setRoleBusy(true); setError(null); setSuccess(null); setClaims(null);
+                const fn = httpsCallable(functions, 'getUserClaims');
+                const r = await fn({ uid: targetUid });
+                setClaims((r.data as any)?.claims || {});
+                setSuccess('Fetched claims');
+              } catch (e) {
+                const err = e as any; const msg = (err?.message || 'Failed'); const code = err?.code ? ` (${err.code})` : '';
+                setError(`${msg}${code}`);
+              } finally { setRoleBusy(false); }
+            }}>View Claims</button>
+            <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={async ()=>{
+              try {
+                await auth.currentUser?.getIdToken(true);
+                setSuccess('Token refreshed. If role changed, sign out/in may be required.');
+              } catch (e) {
+                const err = e as any; setError(err?.message || String(e));
+              }
+            }}>Refresh my token</button>
+            {claims && (
+              <pre className="mt-3 p-2 bg-gray-50 border rounded text-xs overflow-auto max-h-40">{JSON.stringify(claims, null, 2)}</pre>
+            )}
           </div>
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Daily Metrics</h3>
+          <MetricsPanel dateKey={today} />
         </div>
       )}
 
@@ -233,6 +266,50 @@ export default function Admin() {
           onSuccess={handleSuccess}
         />
       )}
+    </div>
+  );
+}
+
+function MetricsPanel({ dateKey }: { dateKey: string }) {
+  const [data, setData] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const isLocal = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  // Note: metrics stored at metrics/daily-YYYY-MM-DD
+  useState(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const { doc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('../firebase');
+        const ref = doc(db, 'metrics', `daily-${dateKey}`);
+        const snap = await getDoc(ref);
+        setData(snap.exists() ? snap.data() : {});
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  });
+  if (loading) return <div className="text-gray-600">Loading…</div>;
+  if (error) return <div className="text-red-600">Failed to load metrics: {error}</div>;
+  const total = data?.activations_total || 0;
+  const byRegion = data?.activations_by_region || {};
+  return (
+    <div>
+      <div className="text-sm text-gray-600">Date: {dateKey}</div>
+      <div className="mt-2">Activations today: <span className="font-semibold">{total}</span></div>
+      <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
+        {Object.keys(byRegion).length === 0 ? (
+          <div className="text-sm text-gray-500">No per-region data</div>
+        ) : (
+          Object.entries(byRegion).map(([r, n]) => (
+            <div key={r} className="text-sm"><span className="text-gray-600">{r}:</span> <span className="font-medium">{String(n)}</span></div>
+          ))
+        )}
+      </div>
+      {isLocal && <div className="mt-2 text-xs text-gray-500">Note: metrics are best-effort and update on membership activation.</div>}
     </div>
   );
 }

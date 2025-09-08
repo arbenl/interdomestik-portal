@@ -38,3 +38,12 @@ export async function searchUserByEmailLogic(data: any, context: functions.https
     throw new functions.https.HttpsError('not-found', 'User not found');
   }
 }
+
+export async function getUserClaimsLogic(data: any, context: functions.https.CallableContext) {
+  requireAdmin(context);
+  const uid = String(data?.uid || '').trim();
+  if (!uid) throw new functions.https.HttpsError('invalid-argument', 'uid required');
+  const user = await admin.auth().getUser(uid);
+  const claims = (user.customClaims || {}) as Record<string, unknown>;
+  return { uid, claims };
+}

@@ -2,7 +2,7 @@ import * as functions from "firebase-functions/v1";
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { admin, db } from "./firebaseAdmin";
 import { upsertProfileLogic } from "./lib/upsertProfile";
-import { setUserRoleLogic, searchUserByEmailLogic } from "./lib/user";
+import { setUserRoleLogic, searchUserByEmailLogic, getUserClaimsLogic } from "./lib/user";
 import { startMembershipLogic } from "./lib/startMembership";
 import { agentCreateMemberLogic } from "./lib/agent";
 import { sendRenewalReminder } from "./lib/membership";
@@ -31,6 +31,10 @@ export const searchUserByEmail = functions
 export const agentCreateMember = functions
   .region(REGION)
   .https.onCall((data, context) => agentCreateMemberLogic(data, context));
+
+export const getUserClaims = functions
+  .region(REGION)
+  .https.onCall((data, context) => getUserClaimsLogic(data, context));
 
 // HTTP utilities -------------------------------------------------------------
 export const clearDatabase = functions
@@ -169,8 +173,56 @@ export const stripeWebhook = functions
     if (req.method === 'OPTIONS') { res.status(204).end(); return; }
     if (req.method !== 'POST') { res.status(405).send('Method not allowed'); return; }
     try {
+      const signingSecret = process.env.STRIPE_SIGNING_SECRET;
+      const sig = req.headers['stripe-signature'] as string | undefined;
+      const isStripeMode = !!(signingSecret && sig);
+
+      if (isStripeMode) {
+        // Verify signature and construct event
+        const { default: Stripe } = await import('stripe');
+        const stripe = new Stripe(process.env.STRIPE_API_KEY || '', { apiVersion: '2024-06-20' as any });
+        let event: any;
+        try {
+          event = stripe.webhooks.constructEvent(req.rawBody, sig!, signingSecret!);
+        } catch (err) {
+          console.error('[stripeWebhook] signature verification failed', err);
+          res.status(400).send(`Webhook Error: ${(err as Error).message}`);
+          return;
+        }
+
+        // Idempotency: skip if processed
+        const eventDoc = db.collection('webhooks_stripe').doc(event.id);
+        const already = await eventDoc.get();
+        if (already.exists && already.get('processed')) {
+          res.json({ ok: true, duplicate: true });
+          return;
+        }
+
+        if (event.type === 'invoice.payment_succeeded') {
+          const inv = event.data.object as any;
+          const uid: string | undefined = inv.metadata?.uid;
+          if (!uid) { res.status(400).send('metadata.uid missing'); return; }
+          const invoiceId: string = inv.id || `inv_${Date.now()}`;
+          const amount: number = Number(inv.amount_paid || inv.amount_due || 0);
+          const currency: string = (inv.currency || 'eur').toUpperCase();
+          const created: Timestamp = Timestamp.fromMillis((inv.created || Math.floor(Date.now()/1000)) * 1000);
+          await db.runTransaction(async (tx) => {
+            const invRef = db.collection('billing').doc(uid).collection('invoices').doc(invoiceId);
+            tx.set(invRef, { invoiceId, amount, currency, created, status: 'paid' }, { merge: true });
+            tx.set(eventDoc, { processed: true, type: event.type, at: FieldValue.serverTimestamp() }, { merge: true });
+          });
+          res.json({ ok: true });
+          return;
+        }
+
+        // Unhandled event types acknowledged
+        await eventDoc.set({ processed: true, type: event.type, at: FieldValue.serverTimestamp() }, { merge: true });
+        res.json({ ok: true, ignored: true, type: event.type });
+        return;
+      }
+
+      // Emulator-friendly JSON fallback
       const body = req.body || {};
-      // Expect { uid, invoiceId, amount, currency, created }
       const uid = String(body.uid || '');
       if (!uid) { res.status(400).send('uid required'); return; }
       const invoiceId = String(body.invoiceId || `inv_${Date.now()}`);
@@ -181,7 +233,7 @@ export const stripeWebhook = functions
         invoiceId, amount, currency, created,
         status: 'paid',
       }, { merge: true });
-      res.json({ ok: true });
+      res.json({ ok: true, mode: 'emulator' });
     } catch (e) {
       console.error('[stripeWebhook] error', e);
       res.status(500).json({ ok: false, error: String(e) });

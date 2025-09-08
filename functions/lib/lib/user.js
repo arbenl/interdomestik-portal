@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.setUserRoleLogic = setUserRoleLogic;
 exports.searchUserByEmailLogic = searchUserByEmailLogic;
 const firebaseAdmin_1 = require("../firebaseAdmin");
+const firestore_1 = require("firebase-admin/firestore");
 const functions = __importStar(require("firebase-functions/v1"));
 const validators_1 = require("./validators");
 const rbac_1 = require("./rbac");
@@ -44,6 +45,20 @@ async function setUserRoleLogic(data, context) {
     const { uid, role, allowedRegions } = validators_1.setUserRoleSchema.parse(data);
     await firebaseAdmin_1.admin.auth().setCustomUserClaims(uid, { role, allowedRegions });
     await firebaseAdmin_1.db.collection('members').doc(uid).set({ role, allowedRegions }, { merge: true });
+    // Audit log
+    try {
+        await firebaseAdmin_1.db.collection('audit_logs').add({
+            action: 'setUserRole',
+            actor: context.auth?.uid || 'system',
+            target: uid,
+            role,
+            allowedRegions: allowedRegions ?? [],
+            ts: firestore_1.FieldValue.serverTimestamp(),
+        });
+    }
+    catch (e) {
+        console.warn('[audit] failed to write setUserRole audit', e);
+    }
     return { message: "User role updated successfully" };
 }
 async function searchUserByEmailLogic(data, context) {
