@@ -150,13 +150,18 @@ export default function Profile() {
             const expiresAtSec = activeMembership?.expiresAt?.seconds ?? (profile as any)?.expiresAt?.seconds;
             const hasActive = typeof expiresAtSec === 'number' && expiresAtSec * 1000 > Date.now();
             const validUntil = typeof expiresAtSec === 'number' ? new Date(expiresAtSec * 1000).toLocaleDateString() : '—';
+            const status = hasActive ? 'active' : (typeof expiresAtSec === 'number' ? 'expired' : 'none');
+            const memberNo = profile.memberNo || '—';
+            const verifyUrl = memberNo && memberNo !== '—' ? `${location.origin}/verify?memberNo=${encodeURIComponent(memberNo)}` : undefined;
             if (hasActive) {
               return (
                 <DigitalMembershipCard
                   name={profile.name || 'Member'}
-                  memberNo={profile.memberNo || '—'}
+                  memberNo={memberNo}
                   region={profile.region || '—'}
                   validUntil={validUntil}
+                  status={status}
+                  verifyUrl={verifyUrl}
                 />
               );
             }
