@@ -39,3 +39,10 @@ exports.admin = admin;
 admin.initializeApp();
 const db = admin.firestore();
 exports.db = db;
+// Ignore undefined fields in writes to simplify optional value handling
+try {
+    // Supported by @google-cloud/firestore settings
+    // Safe no-op if not supported in a future version
+    db.settings?.({ ignoreUndefinedProperties: true });
+}
+catch { }

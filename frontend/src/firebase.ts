@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { connectAuthEmulator, indexedDBLocalPersistence, initializeAuth, browserLocalPersistence } from "firebase/auth";
+import { initializeFirestore, connectFirestoreEmulator, persistentLocalCache } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 const firebaseConfig = {
@@ -15,15 +15,31 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-const auth = getAuth(app);
-const db = getFirestore(app);
-const functions = getFunctions(app);
+// Prefer explicit auth initialization to ensure IndexedDB persistence
+const auth = initializeAuth(app, {
+  persistence: [indexedDBLocalPersistence, browserLocalPersistence]
+});
 
-if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+// Enable persistent local cache to speed up reads and offline
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache()
+});
+
+// Match backend region
+const functions = getFunctions(app, 'europe-west1');
+
+// Emulator config from Vite env (optional) or defaults
+const host = (import.meta as any).env?.VITE_EMULATOR_HOST || 'localhost';
+const fsPort = Number((import.meta as any).env?.VITE_FIRESTORE_PORT || 8085);
+const fnPort = Number((import.meta as any).env?.VITE_FUNCTIONS_PORT || 5001);
+const authPort = Number((import.meta as any).env?.VITE_AUTH_PORT || 9099);
+
+if (typeof location !== 'undefined' && (location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+  // Only connect to emulators in local dev
   console.log("Using local emulators");
-  connectAuthEmulator(auth, "http://localhost:9099");
-  connectFirestoreEmulator(db, "localhost", 8080);
-  connectFunctionsEmulator(functions, "localhost", 5001);
+  connectAuthEmulator(auth, `http://${host}:${authPort}`);
+  connectFirestoreEmulator(db, host, fsPort);
+  connectFunctionsEmulator(functions, host, fnPort);
 }
 
 export { auth, db, functions };

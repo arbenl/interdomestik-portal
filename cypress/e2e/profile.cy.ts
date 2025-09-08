@@ -2,12 +2,12 @@ describe('Profile Page', () => {
   beforeEach(() => {
     cy.clearDatabase();
     cy.seedDatabase();
-    cy.login('testuser@example.com', 'password123');
-    cy.visit('/profile.html');
+    cy.signInUI('member1@example.com', 'password123');
+    cy.visit('/profile');
   });
 
   it("should display the user's profile", () => {
-    cy.contains('h1', 'User Profile');
-    cy.get('#name').should('have.value', 'Test User');
+    cy.get('input[type="email"]', { timeout: 15000 }).should('exist');
+    cy.contains('h2', /My Profile/i, { timeout: 15000 }).should('be.visible');
   });
 });

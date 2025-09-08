@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 const Verify: React.FC = () => {
   const [memberNo, setMemberNo] = useState('');
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<{ ok?: boolean; valid?: boolean; name?: string; memberNo?: string; region?: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,8 +23,9 @@ const Verify: React.FC = () => {
 
       const data = await response.json();
       setResult(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
     } finally {
       setLoading(false);
     }

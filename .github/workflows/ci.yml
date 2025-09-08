@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npm --prefix frontend ci
+      - run: npm --prefix functions ci
+      - run: npm run lint
+
+  frontend-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend run build
+      - run: npm --prefix frontend run test:coverage -- --run
+      - name: Upload frontend coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+
+  functions-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm --prefix functions ci
+      - run: npm --prefix functions run build
+      - name: Install Firebase CLI
+        run: npm i -g firebase-tools
+      - name: Run functions tests with coverage (emulators)
+        env:
+          FIRESTORE_EMULATOR_HOST: localhost:8085
+          FIREBASE_AUTH_EMULATOR_HOST: localhost:9099
+        run: |
+          npm --prefix functions run test:coverage
+      - name: Upload functions coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: functions-coverage
+          path: functions/coverage
+
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Install Firebase CLI
+        run: npm i -g firebase-tools
+      - name: Run rules tests
+        env:
+          FIRESTORE_EMULATOR_HOST: localhost:8085
+        run: npm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npm --prefix frontend ci
+      - run: npm --prefix functions ci
+      - run: npm --prefix frontend run build
+      - name: Install Firebase CLI
+        run: npm i -g firebase-tools
+      - name: Run E2E with emulators + hosting
+        env:
+          FIRESTORE_EMULATOR_HOST: localhost:8085
+          FB_PROJECT_ID: demo-interdomestik
+        run: |
+          firebase emulators:exec --only functions,firestore,auth,hosting "npm run cypress:run"

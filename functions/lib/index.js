@@ -33,48 +33,65 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyMembership = exports.clearDatabase = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = void 0;
+exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
+const firestore_1 = require("firebase-admin/firestore");
 const firebaseAdmin_1 = require("./firebaseAdmin");
 const upsertProfile_1 = require("./lib/upsertProfile");
 const user_1 = require("./lib/user");
 const startMembership_1 = require("./lib/startMembership");
-exports.upsertProfile = functions.https.onCall((data, context) => {
-    return (0, upsertProfile_1.upsertProfileLogic)(data, context);
-});
-exports.setUserRole = functions.https.onCall((data, context) => {
-    return (0, user_1.setUserRoleLogic)(data, context);
-});
-exports.startMembership = functions.https.onCall((data, context) => {
-    return (0, startMembership_1.startMembershipLogic)(data, context);
-});
-exports.searchUserByEmail = functions.https.onCall((data, context) => {
-    return (0, user_1.searchUserByEmailLogic)(data, context);
-});
-exports.clearDatabase = functions.region("europe-west1").https.onRequest(async (req, res) => {
+const agent_1 = require("./lib/agent");
+const membership_1 = require("./lib/membership");
+var exportMembersCsv_1 = require("./exportMembersCsv");
+Object.defineProperty(exports, "exportMembersCsv", { enumerable: true, get: function () { return exportMembersCsv_1.exportMembersCsv; } });
+// Region constant for consistency
+const REGION = "europe-west1";
+// Callable functions ---------------------------------------------------------
+exports.upsertProfile = functions
+    .region(REGION)
+    .https.onCall((data, context) => (0, upsertProfile_1.upsertProfileLogic)(data, context));
+exports.setUserRole = functions
+    .region(REGION)
+    .https.onCall((data, context) => (0, user_1.setUserRoleLogic)(data, context));
+exports.startMembership = functions
+    .region(REGION)
+    .https.onCall((data, context) => (0, startMembership_1.startMembershipLogic)(data, context));
+exports.searchUserByEmail = functions
+    .region(REGION)
+    .https.onCall((data, context) => (0, user_1.searchUserByEmailLogic)(data, context));
+exports.agentCreateMember = functions
+    .region(REGION)
+    .https.onCall((data, context) => (0, agent_1.agentCreateMemberLogic)(data, context));
+// HTTP utilities -------------------------------------------------------------
+exports.clearDatabase = functions
+    .region(REGION)
+    .https.onRequest(async (req, res) => {
     try {
-        const firestore = firebaseAdmin_1.db;
+        // CORS for local tools
+        res.set("Access-Control-Allow-Origin", "*");
+        res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.set("Access-Control-Allow-Headers", "Content-Type");
+        if (req.method === 'OPTIONS') {
+            res.status(204).end();
+            return;
+        }
         const auth = firebaseAdmin_1.admin.auth();
-        // Delete all users
         const listUsersResult = await auth.listUsers();
-        await Promise.all(listUsersResult.users.map(user => auth.deleteUser(user.uid)));
-        // Delete all member documents
-        const membersSnapshot = await firestore.collection('members').get();
-        await Promise.all(membersSnapshot.docs.map(doc => doc.ref.delete()));
+        await Promise.all(listUsersResult.users.map((user) => auth.deleteUser(user.uid)));
+        const membersSnapshot = await firebaseAdmin_1.db.collection('members').get();
+        await Promise.all(membersSnapshot.docs.map((d) => d.ref.delete()));
         res.status(200).send('Database cleared successfully.');
     }
     catch (error) {
         console.error('Error clearing database:', error);
-        if (error instanceof Error) {
+        if (error instanceof Error)
             res.status(500).send(`Error clearing database: ${error.message}`);
-        }
-        else {
+        else
             res.status(500).send('An unknown error occurred during database clearing.');
-        }
     }
 });
 exports.verifyMembership = functions
-    .region("europe-west1")
+    .region(REGION)
     .https.onRequest(async (req, res) => {
     // Basic CORS for GET
     res.set("Access-Control-Allow-Origin", "*");
@@ -95,13 +112,10 @@ exports.verifyMembership = functions
             res.status(400).json({ ok: false, error: "memberNo required" });
             return;
         }
-        // Optional: quick format sanity check to avoid useless reads
-        // (Adjust to your exact pattern if needed)
         if (!/^INT-\d{4}-\d{6}$/.test(memberNo)) {
             res.json({ ok: true, valid: false, memberNo });
             return;
         }
-        // Find the member by memberNo
         const q = await firebaseAdmin_1.db
             .collection("members")
             .where("memberNo", "==", memberNo)
@@ -112,13 +126,12 @@ exports.verifyMembership = functions
             return;
         }
         const doc = q.docs[0];
-        // Check any active (unexpired) membership
         const activeSnap = await firebaseAdmin_1.db
             .collection("members")
             .doc(doc.id)
             .collection("memberships")
             .where("status", "==", "active")
-            .where("expiresAt", ">", firebaseAdmin_1.admin.firestore.Timestamp.now())
+            .where("expiresAt", ">", firestore_1.Timestamp.now())
             .limit(1)
             .get();
         res.json({
@@ -135,134 +148,172 @@ exports.verifyMembership = functions
         return;
     }
 });
-// export const seedDatabase = functions.region("europe-west1").https.onRequest(async (req: functions.https.Request, res: functions.Response): Promise<void> => {
-//   try {
-//     // Clear existing data (optional, but good for test isolation)
-//     // This is a simplified clear and might need more robust implementation for production
-//     const firestore = admin.firestore();
-//     const auth = admin.auth();
-//     // Seed a regular user
-//     const regularUser = await auth.createUser({
-//       email: 'testuser@example.com',
-//       password: 'password123',
-//       displayName: 'Test User',
-//     });
-//     await firestore.collection('members').doc(regularUser.uid).set({
-//       name: 'Test User',
-//       email: 'testuser@example.com',
-//       memberNo: 'INT-2023-000001',
-//       region: 'Europe',
-//       role: 'member',
-//     });
-//     await firestore.collection('members').doc(regularUser.uid).collection('memberships').add({
-//       year: 2025,
-//       status: 'active',
-//       startsAt: admin.firestore.Timestamp.fromDate(new Date('2025-01-01')),
-//       expiresAt: admin.firestore.Timestamp.fromDate(new Date('2025-12-31')),
-//       price: 100,
-//       currency: 'EUR',
-//       paymentMethod: 'Stripe',
-//       externalRef: 'stripe_123',
-//     });
-//     // Seed an admin user
-//     const adminUser = await auth.createUser({
-//       email: 'admin@example.com',
-//       password: 'password123',
-//       displayName: 'Admin User',
-//     });
-//     await auth.setCustomUserClaims(adminUser.uid, { role: 'admin', allowedRegions: ['Europe', 'Asia'] });
-//     await firestore.collection('members').doc(adminUser.uid).set({
-//       name: 'Admin User',
-//       email: 'admin@example.com',
-//       memberNo: 'INT-2023-000002',
-//       region: 'Europe',
-//       role: 'admin',
-//     });
-//     res.status(200).send('Database seeded successfully.');
-//   } catch (error: unknown) {
-//     console.error('Error seeding database:', error);
-//     if (error instanceof Error) {
-//       res.status(500).send(`Error seeding database: ${error.message}`);
-//     } else {
-//       res.status(500).send('An unknown error occurred during database seeding.');
-//     }
-//   }
-// });
-// export const upsertProfile = functions.https.onCall((data, context) => {
-//   return upsertProfileLogic(admin, data, context);
-// });
-// export const setUserRole = functions.https.onCall((data, context) => {
-//   return setUserRoleLogic(admin, data, context);
-// });
-// export async function setUserRoleLogic(adminInstance: typeof admin, data: any, context: functions.https.CallableContext) {
-//   requireAdmin(context);
-//   const { uid, role, allowedRegions } = setUserRoleSchema.parse(data);
-//   await adminInstance.auth().setCustomUserClaims(uid, { role, allowedRegions });
-//   await adminInstance.firestore().collection('members').doc(uid).set({ role, allowedRegions }, { merge: true });
-//   return { message: "User role updated successfully" };
-// }
-// export const startMembership = functions.https.onCall((data, context) => {
-//   return startMembershipLogic(admin, data, context);
-// });
-// export async function startMembershipLogic(adminInstance: typeof admin, data: any, context: functions.https.CallableContext) {
-//   requireAdmin(context);
-//   const { uid, year, price, currency, paymentMethod, externalRef } = startMembershipSchema.parse(data);
-//   const { refPath } = await activateMembership(uid, year, price, currency, paymentMethod, externalRef);
-//   const memberDoc = await adminInstance.firestore().collection('members').doc(uid).get();
-//   const memberNo = memberDoc.get('memberNo');
-//   const name = memberDoc.get('name');
-//   const region = memberDoc.get('region');
-//   const verifyUrl = `https://interdomestik.app/verify?memberNo=${memberNo}`;
-//   const html = membershipCardHtml({
-//     memberNo,
-//     name,
-//     region,
-//     validity: `${year + 1}`,
-//     verifyUrl,
-//   });
-//   await queueEmail([memberDoc.get('email')], `Interdomestik Membership ${year}`, html);
-//   return { message: "Membership started successfully", refPath };
-// }
-// /**
-//  * Public verification endpoint
-//  * GET /verifyMembership?memberNo=INT-YYYY-XXXXXX
-//  * - CORS: open to all (read-only check)
-//  * - Does NOT return a Response object (Promise<void> compliant)
-//  */
-// export const verifyMembership = functions
-//   .region("europe-west1")
-//   .https.onRequest(async (req: functions.https.Request, res: functions.Response): Promise<void> => {
-//     // Basic CORS for GET
-//     res.set("Access-Control-Allow-Origin", "*");
-//     res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
-//     res.set("Access-Control-Allow-Headers", "Content-Type");
-//     if (req.method === "OPTIONS") {
-//       res.status(200).send("ok");
-//       return;
-//     }
-//     if (req.method !== "GET") {
-//       res.status(405).json({ ok: false, error: "Method not allowed" });
-//       return;
-//     }
-//     try {
-//       const memberNoRaw = req.query.memberNo;
-//       const memberNo = String(memberNoRaw ?? "").trim();
-//       if (!memberNo) {
-//         res.status(400).json({ ok: false, error: "memberNo required" });
-//         return;
-//       }
-//       // Optional: quick format sanity check to avoid useless reads
-//       // (Adjust to your exact pattern if needed)
-//       if (!/^INT-\d{4}-\d{6}$/.test(memberNo)) {
-//         res.json({ ok: true, valid: false, memberNo });
-//         return;
-//       }
-//       // Find the member by memberNo
-//       const q = await admin.firestore()
-//         .collection("members")
-//         .where("memberNo", "==", memberNo)
-//         .limit(1)
-//         .get();
+// Stripe webhook (emulator-friendly placeholder). In production, add signature verification.
+exports.stripeWebhook = functions
+    .region(REGION)
+    .https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Stripe-Signature');
+    if (req.method === 'OPTIONS') {
+        res.status(204).end();
+        return;
+    }
+    if (req.method !== 'POST') {
+        res.status(405).send('Method not allowed');
+        return;
+    }
+    try {
+        const body = req.body || {};
+        // Expect { uid, invoiceId, amount, currency, created }
+        const uid = String(body.uid || '');
+        if (!uid) {
+            res.status(400).send('uid required');
+            return;
+        }
+        const invoiceId = String(body.invoiceId || `inv_${Date.now()}`);
+        const amount = Number(body.amount || 0);
+        const currency = String(body.currency || 'EUR');
+        const created = body.created ? firestore_1.Timestamp.fromDate(new Date(body.created)) : firestore_1.Timestamp.now();
+        await firebaseAdmin_1.db.collection('billing').doc(uid).collection('invoices').doc(invoiceId).set({
+            invoiceId, amount, currency, created,
+            status: 'paid',
+        }, { merge: true });
+        res.json({ ok: true });
+    }
+    catch (e) {
+        console.error('[stripeWebhook] error', e);
+        res.status(500).json({ ok: false, error: String(e) });
+    }
+});
+if (process.env.FUNCTIONS_EMULATOR) {
+    // Export a seed function only in emulator mode
+    exports.seedDatabase = functions.region(REGION).https.onRequest(async (req, res) => {
+        try {
+            // CORS for local tools
+            res.set("Access-Control-Allow-Origin", "*");
+            res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            res.set("Access-Control-Allow-Headers", "Content-Type");
+            if (req.method === 'OPTIONS') {
+                res.status(204).end();
+                return;
+            }
+            // Create two member accounts
+            const member1 = await firebaseAdmin_1.admin.auth().createUser({
+                email: 'member1@example.com',
+                password: 'password123',
+                displayName: 'Member One',
+                emailVerified: true,
+            });
+            await firebaseAdmin_1.db.collection('members').doc(member1.uid).set({
+                name: 'Member One',
+                email: 'member1@example.com',
+                memberNo: 'INT-2025-000001',
+                region: 'PRISHTINA',
+                role: 'member',
+                createdAt: firestore_1.Timestamp.now(),
+                updatedAt: firestore_1.Timestamp.now(),
+            });
+            await firebaseAdmin_1.db.collection('members').doc(member1.uid).collection('memberships').doc('2025').set({
+                year: 2025,
+                status: 'active',
+                startedAt: firestore_1.Timestamp.fromDate(new Date('2025-01-01')),
+                expiresAt: firestore_1.Timestamp.fromDate(new Date('2025-12-31')),
+                price: 100,
+                currency: 'EUR',
+                paymentMethod: 'cash',
+                externalRef: null,
+                updatedAt: firestore_1.Timestamp.now(),
+            });
+            const member2 = await firebaseAdmin_1.admin.auth().createUser({
+                email: 'member2@example.com',
+                password: 'password123',
+                displayName: 'Member Two',
+                emailVerified: true,
+            });
+            await firebaseAdmin_1.db.collection('members').doc(member2.uid).set({
+                name: 'Member Two',
+                email: 'member2@example.com',
+                memberNo: 'INT-2025-000002',
+                region: 'PEJA',
+                role: 'member',
+                createdAt: firestore_1.Timestamp.now(),
+                updatedAt: firestore_1.Timestamp.now(),
+            });
+            // Create an admin for admin-screen testing
+            const adminUser = await firebaseAdmin_1.admin.auth().createUser({
+                email: 'admin@example.com',
+                password: 'password123',
+                displayName: 'Admin User',
+                emailVerified: true,
+            });
+            await firebaseAdmin_1.admin.auth().setCustomUserClaims(adminUser.uid, { role: 'admin', allowedRegions: ['PRISHTINA', 'PEJA'] });
+            await firebaseAdmin_1.db.collection('members').doc(adminUser.uid).set({
+                name: 'Admin User',
+                email: 'admin@example.com',
+                memberNo: 'INT-2025-999999',
+                region: 'PRISHTINA',
+                role: 'admin',
+                createdAt: firestore_1.Timestamp.now(),
+                updatedAt: firestore_1.Timestamp.now(),
+            });
+            // Seed a couple of events
+            await firebaseAdmin_1.db.collection('events').add({
+                title: 'Welcome meetup — PRISHTINA',
+                startAt: firestore_1.Timestamp.fromDate(new Date(Date.now() + 7 * 86400000)),
+                location: 'PRISHTINA',
+                createdAt: firestore_1.Timestamp.now(),
+            });
+            await firebaseAdmin_1.db.collection('events').add({
+                title: 'Volunteer day',
+                startAt: firestore_1.Timestamp.fromDate(new Date(Date.now() + 21 * 86400000)),
+                location: 'PEJA',
+                createdAt: firestore_1.Timestamp.now(),
+            });
+            res.status(200).json({ ok: true, seeded: ['member1@example.com', 'member2@example.com', 'admin@example.com'] });
+        }
+        catch (error) {
+            console.error('Error seeding database:', error);
+            if (error instanceof Error) {
+                res.status(500).send(`Error seeding database: ${error.message}`);
+            }
+            else {
+                res.status(500).send('An unknown error occurred during database seeding.');
+            }
+        }
+    });
+}
+// Scheduled renewal reminders at ~03:00 UTC daily
+exports.dailyRenewalReminders = functions
+    .region(REGION)
+    .pubsub.schedule('0 3 * * *')
+    .timeZone('UTC')
+    .onRun(async () => {
+    const now = firebaseAdmin_1.admin.firestore.Timestamp.now();
+    const today = now.toDate();
+    async function runForOffset(days) {
+        const target = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + days));
+        const start = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate(), 0, 0, 0));
+        const end = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate(), 23, 59, 59));
+        const startTs = firebaseAdmin_1.admin.firestore.Timestamp.fromDate(start);
+        const endTs = firebaseAdmin_1.admin.firestore.Timestamp.fromDate(end);
+        const q = await firebaseAdmin_1.db.collection('members')
+            .where('expiresAt', '>=', startTs)
+            .where('expiresAt', '<=', endTs)
+            .get();
+        for (const d of q.docs) {
+            const email = d.get('email');
+            const name = d.get('name') || 'Member';
+            const memberNo = d.get('memberNo');
+            if (!email || !memberNo)
+                continue;
+            const expiresAt = d.get('expiresAt');
+            const expiresOn = expiresAt.toDate().toISOString().slice(0, 10);
+            await (0, membership_1.sendRenewalReminder)({ email, name, memberNo, expiresOn });
+        }
+    }
+    await Promise.all([runForOffset(30), runForOffset(7), runForOffset(1)]);
+});
 //       if (q.empty) {
 //         res.json({ ok: true, valid: false, memberNo });
 //         return;

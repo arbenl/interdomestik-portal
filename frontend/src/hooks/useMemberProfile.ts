@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import type { Profile, Membership } from '../types';
 
 export const useMemberProfile = (uid: string | undefined) => {
-  const [profile, setProfile] = useState<any>(null);
-  const [activeMembership, setActiveMembership] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [activeMembership, setActiveMembership] = useState<Membership | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -20,7 +21,7 @@ export const useMemberProfile = (uid: string | undefined) => {
         const profileSnap = await getDoc(profileDocRef);
 
         if (profileSnap.exists()) {
-          setProfile(profileSnap.data());
+          setProfile({ id: profileSnap.id, ...(profileSnap.data() as Profile) });
         } else {
           // Handle case where user is authenticated but has no profile data yet
           setProfile(null);
@@ -32,8 +33,8 @@ export const useMemberProfile = (uid: string | undefined) => {
         
         if (!querySnapshot.empty) {
           // Assuming only one active membership at a time
-          const membershipData = querySnapshot.docs[0].data();
-          setActiveMembership(membershipData);
+          const d = querySnapshot.docs[0];
+          setActiveMembership({ id: d.id, ...(d.data() as Membership) });
         } else {
           setActiveMembership(null);
         }

@@ -5,7 +5,7 @@ import { functions } from '../firebase';
 const startMembership = httpsCallable(functions, 'startMembership');
 
 interface ActivateMembershipModalProps {
-  user: any;
+  user: { id: string; email?: string };
   onClose: () => void;
   onSuccess: (message: string) => void;
 }
@@ -25,10 +25,11 @@ const ActivateMembershipModal: React.FC<ActivateMembershipModalProps> = ({ user,
     setIsSubmitting(true);
     try {
       await startMembership({ uid: user.id, year, price, currency, paymentMethod, externalRef: externalRef || null });
-      onSuccess(`Membership activated for ${user.email}`);
+      onSuccess(`Membership activated for ${user.email || user.id}`);
       onClose();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -53,7 +54,7 @@ const ActivateMembershipModal: React.FC<ActivateMembershipModalProps> = ({ user,
           </div>
           <div>
             <label className="block text-sm font-medium">Payment Method</label>
-            <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)} className="mt-1 block w-full p-2 border rounded">
+            <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as 'cash'|'card'|'bank'|'other')} className="mt-1 block w-full p-2 border rounded">
               <option value="cash">Cash</option>
               <option value="bank">Bank Transfer</option>
               <option value="card">Card</option>

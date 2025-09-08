@@ -77,31 +77,36 @@ Firebase provides a cohesive ecosystem that reduces integration complexity and o
 - Limited customization compared to self-hosted solutions
 - Pricing model changes could impact long-term costs
 
-## ADR-003: Vanilla JavaScript Frontend
+## ADR-003: Frontend Stack — React + TypeScript (Revised 2025-09)
 
 ### Status
-Accepted
+Accepted (revised 2025-09; supersedes the earlier "Vanilla JS" choice)
 
 ### Context
-Need for a lightweight, maintainable frontend that minimizes build complexity and loading times while supporting modern web standards.
+Initial explorations prioritized a vanilla JS approach for minimal bundle size and build complexity. As the product scope evolved (role-gated areas, reusable cards/forms, complex state around auth and Firestore), the need for predictable composition, strong typing, and a familiar testing surface increased.
 
 ### Decision
-Use vanilla HTML/CSS/JavaScript with Tailwind CSS for styling, avoiding heavy frameworks like React or Vue.
+Adopt React + TypeScript via Vite, styled with Tailwind CSS. Keep a strict focus on cost and simplicity: no heavy state libraries, prefer hooks and Firestore listeners with pagination, and lean on the router for code-splitting.
 
 ### Rationale
-This approach minimizes bundle size, reduces build complexity, and eliminates framework-specific dependencies. The resulting application loads faster and requires less maintenance overhead.
+- Component model and hooks improve reuse and readability for admin/agent/member surfaces.
+- TypeScript across the stack improves maintainability and refactor safety.
+- Vite provides fast dev and small production bundles.
+- Existing team proficiency and ecosystem support speed delivery.
 
 ### Consequences
 **Positive:**
-- Faster loading times
-- Reduced build complexity
-- Lower maintenance overhead
-- Better performance on mobile devices
+- Clear component boundaries and reusability
+- Strong typing throughout the UI
+- Easy route-level code splitting for performance
 
 **Negative:**
-- More verbose code for complex interactions
-- Manual state management
-- Limited component reusability
+- Slightly larger baseline bundle vs. vanilla JS
+- Familiarity with React/TS required for contributors
+
+### Migration Notes (from earlier ADR)
+- Replace references to `public/js/*` with `frontend/src/*` in docs.
+- Frontend build and tests run under `frontend/` via Vite/Vitest.
 
 ## ADR-004: Security-First Data Model
 
@@ -209,4 +214,3 @@ Architectural decisions should support scaling from 1 to 5k members without requ
 ---
 
 *This document will be updated as new architectural decisions are made or existing decisions are revised.*
-

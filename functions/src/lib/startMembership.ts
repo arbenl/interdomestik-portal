@@ -1,4 +1,5 @@
 import { admin, db } from "../firebaseAdmin";
+import { FieldValue } from 'firebase-admin/firestore';
 import * as functions from "firebase-functions/v1";
 import { startMembershipSchema } from "./validators";
 import { requireAdmin } from "./rbac";
@@ -33,7 +34,7 @@ export async function activateMembership(
       status: 'active',
       startedAt: startsAt,
       expiresAt,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
 
     const memberRef = db.collection('members').doc(uid);
@@ -46,7 +47,7 @@ export async function activateMembership(
         status: 'active',
         expiresAt,
       },
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
   });
 

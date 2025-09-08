@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
+import { Timestamp } from 'firebase-admin/firestore';
 
 try {
   admin.app();
@@ -57,7 +58,7 @@ export const exportMembersCsv = functions
       }
 
       // 2) Load all active memberships (single collectionGroup query)
-      const now = admin.firestore.Timestamp.now();
+      const now = Timestamp.now();
       const activeSnap = await db
         .collectionGroup("memberships")
         .where("status", "==", "active")

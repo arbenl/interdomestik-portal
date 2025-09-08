@@ -6,6 +6,10 @@ exports.sendRenewalReminder = sendRenewalReminder;
 exports.sendPaymentReceipt = sendPaymentReceipt;
 exports.membershipCardHtml = membershipCardHtml;
 const firebaseAdmin_1 = require("../firebaseAdmin");
+const firestore_1 = require("firebase-admin/firestore");
+const ORG_NAME = process.env.ORG_NAME || 'Interdomestik';
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@interdomestik.app';
+const ORG_ADDRESS = process.env.ORG_ADDRESS || 'Interdomestik, Prishtina, Kosovo';
 function isEmulator() {
     // FUNCTIONS_EMULATOR is set by legacy emulator; FIREBASE_EMULATOR_HUB is set by current suite
     return process.env.FUNCTIONS_EMULATOR === "true" || !!process.env.FIREBASE_EMULATOR_HUB;
@@ -30,7 +34,7 @@ async function queueEmail(mail) {
             html: mail.html,
         },
         template: mail.template, // optional, if your extension/template setup uses it
-        createdAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: firestore_1.FieldValue.serverTimestamp(),
     };
     const ref = await firebaseAdmin_1.db.collection("mail").add(doc);
     if (isEmulator()) {
@@ -42,7 +46,7 @@ async function queueEmail(mail) {
 // Domain-specific helpers ----------------------------------------------------
 async function sendWelcomeEmail(opts) {
     const name = opts.name ?? "Member";
-    const org = opts.orgName ?? "Interdomestik";
+    const org = opts.orgName ?? ORG_NAME;
     const html = `
     <p>Hi ${escapeHtml(name)},</p>
     <p>Welcome to ${org}! Your membership is now active.</p>
@@ -52,6 +56,8 @@ async function sendWelcomeEmail(opts) {
     </ul>
     <p>You can verify your membership at any time here: <a href="${opts.verifyUrl}">${opts.verifyUrl}</a></p>
     <p>Thank you,<br/>${org}</p>
+    <hr/>
+    <p style="font-size:12px;color:#6b7280;">${org} • ${escapeHtml(ORG_ADDRESS)} • <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
   `;
     return queueEmail({
         to: opts.email,
@@ -70,12 +76,14 @@ ${org}`,
 }
 async function sendRenewalReminder(opts) {
     const name = opts.name ?? "Member";
-    const org = opts.orgName ?? "Interdomestik";
+    const org = opts.orgName ?? ORG_NAME;
     const html = `
     <p>Hi ${escapeHtml(name)},</p>
     <p>Your ${org} membership (No: ${escapeHtml(opts.memberNo)}) is expiring on <b>${escapeHtml(opts.expiresOn)}</b>.</p>
     ${opts.renewUrl ? `<p>Please renew here: <a href="${opts.renewUrl}">${opts.renewUrl}</a></p>` : ""}
     <p>Thank you,<br/>${org}</p>
+    <hr/>
+    <p style="font-size:12px;color:#6b7280;">${org} • ${escapeHtml(ORG_ADDRESS)} • <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
   `;
     return queueEmail({
         to: opts.email,
@@ -92,7 +100,7 @@ ${org}`,
 }
 async function sendPaymentReceipt(opts) {
     const name = opts.name ?? "Member";
-    const org = opts.orgName ?? "Interdomestik";
+    const org = opts.orgName ?? ORG_NAME;
     const amountFmt = `${opts.amount.toFixed(2)} ${opts.currency}`;
     const html = `
     <p>Hi ${escapeHtml(name)},</p>
@@ -104,6 +112,8 @@ async function sendPaymentReceipt(opts) {
       ${opts.reference ? `<li><b>Reference:</b> ${escapeHtml(opts.reference)}</li>` : ""}
     </ul>
     <p>Thank you,<br/>${org}</p>
+    <hr/>
+    <p style="font-size:12px;color:#6b7280;">${org} • ${escapeHtml(ORG_ADDRESS)} • <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
   `;
     return queueEmail({
         to: opts.email,

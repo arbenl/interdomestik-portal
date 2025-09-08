@@ -7,11 +7,12 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "outDir": "lib",
+    "rootDir": "src",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,
      "types": ["node", "mocha"]
   },
-  "include": ["src", "test"],
+  "include": ["src"],
   "compileOnSave": false
 }

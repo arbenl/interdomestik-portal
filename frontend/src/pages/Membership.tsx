@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { useMembershipHistory } from '../hooks/useMembershipHistory';
 
 const Membership: React.FC = () => {
@@ -43,8 +43,8 @@ const Membership: React.FC = () => {
                       {item.status}
                     </span>
                   </td>
-                  <td className="py-3 px-4">{new Date(item.startsAt.seconds * 1000).toLocaleDateString()}</td>
-                  <td className="py-3 px-4">{new Date(item.expiresAt.seconds * 1000).toLocaleDateString()}</td>
+                  <td className="py-3 px-4">{item.startedAt ? new Date(item.startedAt.seconds * 1000).toLocaleDateString() : '—'}</td>
+                  <td className="py-3 px-4">{item.expiresAt ? new Date(item.expiresAt.seconds * 1000).toLocaleDateString() : '—'}</td>
                   <td className="py-3 px-4">{item.price} {item.currency}</td>
                 </tr>
               ))}

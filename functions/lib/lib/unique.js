@@ -1,27 +1,28 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reserveUniqueEmail = reserveUniqueEmail;
-exports.reserveUniquePhone = reserveUniquePhone;
+exports.reserveUniqueMemberNo = reserveUniqueMemberNo;
 exports.nextMemberNo = nextMemberNo;
 const firebaseAdmin_1 = require("../firebaseAdmin");
-async function reserveUniqueEmail(uid, email_norm, tx) {
-    const ref = firebaseAdmin_1.db.doc('unique/email/' + email_norm);
+// Registry collections (cheap uniqueness registry):
+//  - registry_email/{emailLower}  -> { uid }
+//  - registry_memberNo/{memberNo} -> { uid }
+async function reserveUniqueEmail(uid, emailLower, tx) {
+    const ref = firebaseAdmin_1.db.collection('registry_email').doc(emailLower);
     const snap = await tx.get(ref);
     if (snap.exists && snap.get('uid') !== uid)
         throw new Error('EMAIL_IN_USE');
     tx.set(ref, { uid }, { merge: true });
 }
-async function reserveUniquePhone(uid, phone_e164, tx) {
-    if (!phone_e164)
-        return;
-    const ref = firebaseAdmin_1.db.doc('unique/phone/' + phone_e164);
+async function reserveUniqueMemberNo(uid, memberNo, tx) {
+    const ref = firebaseAdmin_1.db.collection('registry_memberNo').doc(memberNo);
     const snap = await tx.get(ref);
     if (snap.exists && snap.get('uid') !== uid)
-        throw new Error('PHONE_IN_USE');
+        throw new Error('MEMBERNO_IN_USE');
     tx.set(ref, { uid }, { merge: true });
 }
 async function nextMemberNo(tx) {
-    const y = 2025;
+    const y = 2025; // consider deriving from current year if business allows
     const counterRef = firebaseAdmin_1.db.doc(`counters/members-${y}`);
     const c = await tx.get(counterRef);
     const next = ((c.exists && c.get('current')) || 0) + 1;

@@ -3,7 +3,7 @@ import useAgentOrAdmin from '../hooks/useAgentOrAdmin';
 import AgentRegistrationCard from '../components/AgentRegistrationCard';
 
 export default function AgentTools() {
-  const { canRegister, isAgent, isAdmin, allowedRegions, loading } = useAgentOrAdmin();
+  const { canRegister, isAgent, allowedRegions, loading } = useAgentOrAdmin();
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,4 +20,3 @@ export default function AgentTools() {
     </div>
   );
 }
-

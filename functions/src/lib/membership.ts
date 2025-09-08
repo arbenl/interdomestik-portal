@@ -1,4 +1,5 @@
 import { admin, db } from "../firebaseAdmin";
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 const ORG_NAME = process.env.ORG_NAME || 'Interdomestik';
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@interdomestik.app';
@@ -39,7 +40,7 @@ export async function queueEmail(mail: MailOptions): Promise<{ id: string }> {
       html: mail.html,
     },
     template: mail.template, // optional, if your extension/template setup uses it
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   } as const;
 
   const ref = await db.collection("mail").add(doc as any);

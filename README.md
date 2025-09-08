@@ -13,7 +13,7 @@ The Interdomestik Member Portal is designed to provide a simple, secure member s
 - **Hosting:** Firebase Hosting with CDN
 - **Authentication:** Firebase Auth with custom claims
 - **Database:** Firestore (EU region)
-- **Functions:** Cloud Functions (Node 22 LTS, europe-west1)
+- **Functions:** Cloud Functions (Node 20 LTS, europe-west1)
 - **Email:** Trigger Email for transactional messaging
 - **Frontend:** React + TypeScript (Vite) with Tailwind CSS
 
@@ -56,7 +56,8 @@ The Interdomestik Member Portal is designed to provide a simple, secure member s
 2. Install dependencies:
    ```bash
    npm install
-   cd functions && npm install
+   (cd functions && npm install)
+   (cd frontend && npm install)
    ```
 
 3. Configure Firebase:
@@ -66,8 +67,7 @@ The Interdomestik Member Portal is designed to provide a simple, secure member s
    ```
 
 4. Update configuration:
-   - Edit `public/js/config.js` with your Firebase config
-   - Update project ID in `.github/workflows/firebase.yml`
+   - Update project ID in `.github/workflows/firebase.yml` if you plan to use that workflow
 
 5. Deploy:
    ```bash
@@ -94,17 +94,19 @@ The system uses Firebase Remote Config for feature flags:
 
 ### Local Development
 ```bash
-firebase emulators:start
+cd functions && npm run serve
 ```
 
 ### Testing
 ```bash
+cd frontend && npm test
 cd functions && npm test
+npm test  # rules tests at repo root
 ```
 
 ### Linting
 ```bash
-cd functions && npm run lint
+npm run lint  # runs frontend + functions linters
 ```
 
 ### Dependency Management

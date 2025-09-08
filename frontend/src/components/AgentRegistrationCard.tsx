@@ -29,8 +29,9 @@ export default function AgentRegistrationCard({ allowedRegions, onSuccess, onErr
       await agentCreateMember({ email, name, region, phone, orgId });
       onSuccess('Member registered successfully');
       setEmail(''); setName(''); setRegion(''); setPhone(''); setOrgId('');
-    } catch (err: any) {
-      onError(err?.message || 'Registration failed');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Registration failed';
+      onError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -43,7 +44,7 @@ export default function AgentRegistrationCard({ allowedRegions, onSuccess, onErr
       <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-3">
         <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} className="border rounded px-3 py-2" required />
         <input type="text" placeholder="Full name" value={name} onChange={e=>setName(e.target.value)} className="border rounded px-3 py-2" required />
-        <RegionSelect value={region} onChange={setRegion} className="border rounded px-3 py-2" />
+        <RegionSelect value={region} onChange={setRegion} className="border rounded px-3 py-2" options={allowedRegions} />
         <input type="tel" placeholder="Phone (optional)" value={phone} onChange={e=>setPhone(e.target.value)} className="border rounded px-3 py-2" />
         <input type="text" placeholder="Org ID (optional)" value={orgId} onChange={e=>setOrgId(e.target.value)} className="border rounded px-3 py-2" />
         <div className="md:col-span-5 flex justify-end">
@@ -55,4 +56,3 @@ export default function AgentRegistrationCard({ allowedRegions, onSuccess, onErr
     </div>
   );
 }
-

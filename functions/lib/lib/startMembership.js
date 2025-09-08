@@ -3,30 +3,50 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.activateMembership = activateMembership;
 exports.startMembershipLogic = startMembershipLogic;
 const firebaseAdmin_1 = require("../firebaseAdmin");
+const firestore_1 = require("firebase-admin/firestore");
 const validators_1 = require("./validators");
 const rbac_1 = require("./rbac");
 const membership_1 = require("./membership");
 async function activateMembership(uid, year, price, currency, paymentMethod, externalRef) {
-    const startsAt = new Date(year, 0, 1);
-    const expiresAt = new Date(year, 11, 31);
-    const membershipData = {
-        year,
-        price,
-        currency,
-        paymentMethod,
-        externalRef,
-        status: 'active',
-        startsAt,
-        expiresAt,
-        createdAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
-    };
-    const ref = await firebaseAdmin_1.db.collection('members').doc(uid).collection('memberships').add(membershipData);
-    return { refPath: ref.path };
+    const startsAt = firebaseAdmin_1.admin.firestore.Timestamp.fromDate(new Date(year, 0, 1));
+    const expiresAt = firebaseAdmin_1.admin.firestore.Timestamp.fromDate(new Date(year, 11, 31, 23, 59, 59));
+    const ref = firebaseAdmin_1.db.collection('members').doc(uid).collection('memberships').doc(String(year));
+    let alreadyActive = false;
+    await firebaseAdmin_1.db.runTransaction(async (tx) => {
+        const existing = await tx.get(ref);
+        if (existing.exists && existing.get('status') === 'active') {
+            alreadyActive = true;
+        }
+        tx.set(ref, {
+            year,
+            price,
+            currency,
+            paymentMethod,
+            externalRef: externalRef ?? null,
+            status: 'active',
+            startedAt: startsAt,
+            expiresAt,
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        const memberRef = firebaseAdmin_1.db.collection('members').doc(uid);
+        tx.set(memberRef, {
+            status: 'active',
+            year,
+            expiresAt,
+            activeMembership: {
+                year,
+                status: 'active',
+                expiresAt,
+            },
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        }, { merge: true });
+    });
+    return { refPath: ref.path, alreadyActive };
 }
 async function startMembershipLogic(data, context) {
     (0, rbac_1.requireAdmin)(context);
     const { uid, year, price, currency, paymentMethod, externalRef } = validators_1.startMembershipSchema.parse(data);
-    const { refPath } = await activateMembership(uid, year, price, currency, paymentMethod, externalRef);
+    const { refPath, alreadyActive } = await activateMembership(uid, year, price, currency, paymentMethod, externalRef);
     const memberDoc = await firebaseAdmin_1.db.collection('members').doc(uid).get();
     const memberNo = memberDoc.get('memberNo');
     const name = memberDoc.get('name');
@@ -37,9 +57,23 @@ async function startMembershipLogic(data, context) {
         memberNo,
         name,
         region,
-        validity: `${year + 1}`,
+        validity: `${year}`,
         verifyUrl,
     });
-    await (0, membership_1.queueEmail)({ to: [email], subject: `Interdomestik Membership ${year}`, html });
+    if (!alreadyActive) {
+        await (0, membership_1.queueEmail)({ to: [email], subject: `Interdomestik Membership ${year}`, html });
+    }
+    // Send payment receipt if any payment recorded
+    if (!alreadyActive && (price ?? 0) > 0) {
+        await (0, membership_1.sendPaymentReceipt)({
+            email,
+            name,
+            memberNo,
+            amount: price ?? 0,
+            currency,
+            method: paymentMethod,
+            reference: externalRef ?? undefined,
+        });
+    }
     return { message: "Membership started successfully", refPath };
 }

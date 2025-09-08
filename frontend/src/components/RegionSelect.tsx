@@ -1,4 +1,3 @@
-import React from 'react';
 import { REGIONS } from '../constants/regions';
 
 type Props = {
@@ -6,9 +5,11 @@ type Props = {
   onChange: (value: string) => void;
   id?: string;
   className?: string;
+  options?: string[];
 };
 
-export default function RegionSelect({ value, onChange, id, className }: Props) {
+export default function RegionSelect({ value, onChange, id, className, options }: Props) {
+  const opts = Array.isArray(options) && options.length > 0 ? options : REGIONS;
   return (
     <select
       id={id}
@@ -20,7 +21,7 @@ export default function RegionSelect({ value, onChange, id, className }: Props) 
       <option value="" disabled>
         Select region
       </option>
-      {REGIONS.map((r) => (
+      {opts.map((r) => (
         <option key={r} value={r}>
           {r}
         </option>
@@ -28,4 +29,3 @@ export default function RegionSelect({ value, onChange, id, className }: Props) 
     </select>
   );
 }
-

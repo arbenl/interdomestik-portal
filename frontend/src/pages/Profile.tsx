@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { auth, functions } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { useMemberProfile } from '../hooks/useMemberProfile';
 import DigitalMembershipCard from '../components/DigitalMembershipCard';
+import Button from '../components/ui/Button';
+import { useToast } from '../components/ui/useToast';
 import RegionSelect from '../components/RegionSelect';
 import { ProfileInput } from '../validation/profile';
 
@@ -19,6 +21,9 @@ export default function Profile() {
   const [region, setRegion] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const isLocal = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  const { push } = useToast();
 
   useEffect(() => {
     if (profile) {
@@ -49,9 +54,27 @@ export default function Profile() {
     if (v) { setError(v); return; }
     try {
       await upsertProfile({ name: name.trim(), phone: phone.trim(), region });
+      // Refresh Auth user to pick up displayName updates from server
+      if (auth.currentUser) {
+        try { await auth.currentUser.reload(); } catch (e) {
+          console.warn('Failed to reload auth user', e);
+        }
+      }
       setSuccess('Profile updated successfully!');
-    } catch (err: any) {
-      setError(err?.message || 'Update failed');
+      push({ type: 'success', message: 'Profile updated' });
+      setDebugInfo(null);
+    } catch (err) {
+      const anyErr = err as Record<string, unknown>;
+      const code = (anyErr?.code as string) || (anyErr?.name as string) || 'unknown';
+      const message = (anyErr?.message as string) || 'Update failed';
+      const details = anyErr?.details;
+      setError(`${message}${code ? ` (code: ${code})` : ''}`);
+      push({ type: 'error', message });
+      try {
+        setDebugInfo(JSON.stringify({ code, message, details }, null, 2));
+      } catch {
+        setDebugInfo(String(message));
+      }
     }
   };
 
@@ -61,6 +84,12 @@ export default function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
+      {isLocal && debugInfo && (
+        <div className="mb-4 border border-red-300 bg-red-50 text-red-800 rounded p-3">
+          <div className="font-semibold mb-1">Debug: upsertProfile error</div>
+          <pre className="whitespace-pre-wrap text-xs">{debugInfo}</pre>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2">
           <h2 className="text-2xl font-bold mb-4">My Profile</h2>
@@ -105,18 +134,8 @@ export default function Profile() {
             {profileError && <p className="text-sm text-red-600">Error loading profile: {profileError.message}</p>}
             {success && <p className="text-sm text-green-600">{success}</p>}
             <div className="flex justify-between items-center">
-              <button
-                type="submit"
-                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Update Profile
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                Sign Out
-              </button>
+              <Button type="submit">Update Profile</Button>
+              <Button variant="ghost" onClick={handleSignOut}>Sign Out</Button>
             </div>
           </form>
         </div>
@@ -124,10 +143,10 @@ export default function Profile() {
           <h2 className="text-2xl font-bold mb-4">Membership Card</h2>
           {profile && activeMembership ? (
             <DigitalMembershipCard 
-              name={profile.name}
-              memberNo={profile.memberNo}
-              region={profile.region}
-              validUntil={new Date((activeMembership.expiresAt.seconds || activeMembership.expiresAt._seconds) * 1000).toLocaleDateString()}
+              name={profile.name || 'Member'}
+              memberNo={profile.memberNo || '—'}
+              region={profile.region || '—'}
+              validUntil={activeMembership.expiresAt ? new Date(activeMembership.expiresAt.seconds * 1000).toLocaleDateString() : '—'}
             />
           ) : (
             <div className="bg-gray-100 rounded-2xl p-6 text-center text-gray-500">

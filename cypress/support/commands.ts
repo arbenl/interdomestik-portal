@@ -6,7 +6,7 @@ declare global {
       clearDatabase(): Chainable<Subject>;
       seedDatabase(): Chainable<Subject>;
       login(email: string, password: string): Chainable<Subject>;
-      uiSignIn(email: string, password: string): Chainable<Subject>;
+      signInUI(email: string, password: string): Chainable<Subject>;
     }
   }
 }
@@ -17,17 +17,16 @@ Cypress.Commands.add("clearDatabase", () => {
   cy.task("resetFirestore");
 });
 
-Cypress.Commands.add("seedDatabase", () => {
-  // No-op for now; keep for future fixtures
-  return cy.wrap(null);
-});
+Cypress.Commands.add("seedDatabase", () => cy.wrap(null));
 
-// Signs in using the page's Firebase Web SDK (requires page to be loaded)
-Cypress.Commands.add("uiSignIn", (email: string, password: string) => {
-  cy.window().its("firebase.auth").should("be.a", "function");
-  cy.window().then(async (win) => {
-    await win.firebase.auth().signInWithEmailAndPassword(email, password);
-  });
+// Signs in using the app's SignIn form (modular SDK handled by the app)
+Cypress.Commands.add("signInUI", (email: string, password: string) => {
+  cy.visit('/signin');
+  cy.get('input[type="email"]').clear().type(email);
+  cy.get('input[type="password"]').clear().type(password);
+  cy.contains('button', /sign in/i).click();
+  // Wait for redirect to profile page or other authenticated route
+  cy.location('pathname', { timeout: 8000 }).should('match', /\/profile|\/portal|\//);
 });
 
 /**

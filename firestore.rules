@@ -3,12 +3,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function isAdmin() { return signedIn() && request.auth.token.role == 'admin'; }
-    function isAgent() { return signedIn() && request.auth.token.role == 'agent'; }
+    function hasToken() { return signedIn() && request.auth.token != null; }
+    function isAdmin() { return hasToken() && request.auth.token.role == 'admin'; }
+    function isAgent() { return hasToken() && request.auth.token.role == 'agent'; }
     function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
     function agentHasRegion(region) {
       return isAgent() &&
-        request.auth.token.allowedRegions is list &&
+        hasToken() && request.auth.token.allowedRegions is list &&
         region in request.auth.token.allowedRegions;
     }
 
@@ -18,20 +19,23 @@ service cloud.firestore {
     }
 
     match /members/{uid} {
-      allow read: if isSelf(uid) || isAdmin() || isAgent();
-      allow create: if isSelf(uid) || agentHasRegion(request.resource.data.region);
-      allow update: if isAdmin() || (
-        isSelf(uid) &&
-        // Members can only edit a safe subset of fields
-        request.resource.data.diff(resource.data).changedKeys().hasOnly(["name","region","phone","orgId"]) &&
-        // Ensure server-only fields are untouched
-        request.resource.data.memberNo == resource.data.memberNo &&
-        request.resource.data.agentId == resource.data.agentId &&
-        request.resource.data.activeMembership == resource.data.activeMembership &&
-        request.resource.data.status == resource.data.status &&
-        request.resource.data.year == resource.data.year &&
-        request.resource.data.expiresAt == resource.data.expiresAt
-      );
+      // Read self; agents/admins limited to allowedRegions
+      allow read: if isSelf(uid)
+        || (isAdmin() && resource.data.region in request.auth.token.allowedRegions)
+        || (isAgent() && resource.data.region in request.auth.token.allowedRegions);
+      // split create into separate rules to avoid evaluating agent clause for self-writes
+      allow create: if isSelf(uid);
+      // Agents cannot create member docs directly (must use backend callable)
+      // Admins can create/update only within allowedRegions
+      allow create: if isAdmin() && request.auth.token.allowedRegions is list && request.resource.data.region in request.auth.token.allowedRegions;
+      // split update similarly
+      allow update: if isAdmin() && resource.data.region in request.auth.token.allowedRegions;
+      // Members can only edit a safe subset of fields
+      allow update: if isSelf(uid) &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(["name","region","phone","orgId"]);
+      // Agents can edit the same safe subset within their allowed regions
+      allow update: if isAgent() && request.auth.token.allowedRegions is list && resource.data.region in request.auth.token.allowedRegions &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(["name","region","phone","orgId"]);
       allow delete: if isAdmin();
     }
 
@@ -41,6 +45,18 @@ service cloud.firestore {
     }
 
     match /registry/{path=**} { allow read, write: if false; }
+
+    // Public events: readable by signed-in users; writable by admins only
+    match /events/{eventId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // Billing invoices: readable by owner and admins; client writes are disallowed
+    match /billing/{uid}/invoices/{invoiceId} {
+      allow read: if isSelf(uid) || isAdmin();
+      allow write: if false;
+    }
 
     match /metrics/{period}/{id} {
       allow read, write: if isAdmin();

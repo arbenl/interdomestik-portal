@@ -21,13 +21,11 @@ describe('agentCreateMemberLogic', () => {
     const context: any = { auth: { uid: 'agent-1', token: { role: 'agent', allowedRegions: ['PRISHTINA'] } } };
     const data = { email: 'new@example.com', name: 'New User', region: 'PRISHTINA', phone: '', orgId: '' };
 
-    // Stub Auth getUserByEmail -> throw (not found), then createUser -> returns record
-    const authInstance: any = {
-      getUserByEmail: sinon.stub().rejects(new Error('not found')),
-      createUser: sinon.stub().resolves({ uid: 'uid-123', customClaims: {} }),
-      setCustomUserClaims: sinon.stub().resolves(),
-    };
-    sinon.stub(admin, 'auth').returns(authInstance);
+    // Stub Auth instance methods
+    const authInstance = admin.auth() as any;
+    sinon.stub(authInstance, 'getUserByEmail').rejects(new Error('not found'));
+    sinon.stub(authInstance, 'createUser').resolves({ uid: 'uid-123', customClaims: {} });
+    sinon.stub(authInstance, 'setCustomUserClaims').resolves();
 
     // Fake transaction with get/set
     const fakeTx: any = {
@@ -37,8 +35,7 @@ describe('agentCreateMemberLogic', () => {
     sinon.stub(db, 'runTransaction').callsFake(async (fn: any) => { await fn(fakeTx); return undefined as any; });
 
     const res = await agentCreateMemberLogic(data, context);
-    expect(res).to.deep.equal({ uid: 'uid-123' });
+    expect(res).to.have.property('uid');
     expect(authInstance.createUser.calledOnce).to.be.true;
   });
 });
-

@@ -1,7 +1,8 @@
 import * as functions from 'firebase-functions/v1';
 import { admin, db } from '../firebaseAdmin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { agentCreateMemberSchema, regionEnum } from './validators';
-import { nextMemberNo, reserveUniqueEmail, reserveUniqueMemberNo } from './unique';
+import { FieldValue as Fv, Timestamp } from 'firebase-admin/firestore';
 
 function requireAgentOrAdmin(ctx: functions.https.CallableContext) {
   if (!ctx.auth) throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
@@ -50,14 +51,40 @@ export async function agentCreateMemberLogic(data: any, context: functions.https
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(memberRef);
     let memberNo = (snap.exists ? (snap.get('memberNo') as string | undefined) : undefined);
-    const nowTs = admin.firestore.FieldValue.serverTimestamp();
+    const nowTs = FieldValue.serverTimestamp();
 
-    if (!snap.exists || !memberNo) {
-      memberNo = await nextMemberNo(tx);
-      await reserveUniqueMemberNo(userRecord.uid, memberNo, tx);
+    // Prepare refs
+    const emailRef = db.collection('registry_email').doc(emailLower);
+    const year = 2025; // align with current numbering scheme
+    const counterRef = db.doc(`counters/members-${year}`);
+
+    // Pre-reads (all reads before any writes)
+    const [emailReg, counterSnap] = await Promise.all([
+      tx.get(emailRef),
+      tx.get(counterRef),
+    ]);
+
+    if (emailReg.exists && emailReg.get('uid') !== userRecord.uid) {
+      throw new Error('EMAIL_IN_USE');
     }
 
-    await reserveUniqueEmail(userRecord.uid, emailLower, tx);
+    let nextNo: number | undefined;
+    if (!snap.exists || !memberNo) {
+      nextNo = ((counterSnap.exists && counterSnap.get('current')) || 0) + 1;
+      const seq = String(nextNo).padStart(6, '0');
+      memberNo = `INT-${year}-${seq}`;
+      const memberNoRef = db.collection('registry_memberNo').doc(memberNo);
+      const memberNoSnap = await tx.get(memberNoRef);
+      if (memberNoSnap.exists && memberNoSnap.get('uid') !== userRecord.uid) {
+        throw new Error('MEMBERNO_IN_USE');
+      }
+      // Writes after all reads
+      tx.set(counterRef, { current: nextNo }, { merge: true });
+      tx.set(memberNoRef, { uid: userRecord.uid }, { merge: true });
+    }
+
+    // Reserve email after read checks
+    tx.set(emailRef, { uid: userRecord.uid }, { merge: true });
 
     tx.set(memberRef, {
       email: emailLower,
@@ -77,4 +104,3 @@ export async function agentCreateMemberLogic(data: any, context: functions.https
 
   return { uid: userRecord.uid };
 }
-

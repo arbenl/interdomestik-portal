@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from './useAuth';
 
 export default function useAgentOrAdmin() {
   const { user } = useAuth();
@@ -14,10 +14,13 @@ export default function useAgentOrAdmin() {
         if (mounted) setLoading(false);
         return;
       }
+      // Force refresh to pick up updated custom claims (emulator/dev convenience)
+      await user.getIdToken(true);
       const token = await user.getIdTokenResult();
       if (!mounted) return;
-      setRole((token.claims as any).role || null);
-      setAllowedRegions(((token.claims as any).allowedRegions as string[] | undefined) || []);
+      const claims = token.claims as { role?: string; allowedRegions?: string[] };
+      setRole(claims.role ?? null);
+      setAllowedRegions(Array.isArray(claims.allowedRegions) ? claims.allowedRegions : []);
       setLoading(false);
     })();
     return () => {
@@ -30,4 +33,3 @@ export default function useAgentOrAdmin() {
   const canRegister = isAdmin || isAgent;
   return { isAdmin, isAgent, canRegister, allowedRegions, loading };
 }
-

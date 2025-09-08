@@ -1,24 +1,24 @@
 import { useState } from 'react';
+import type { Profile } from '../types';
 import useAdmin from '../hooks/useAdmin';
 import useAgentOrAdmin from '../hooks/useAgentOrAdmin';
 import { useUsers } from '../hooks/useUsers';
-import { functions } from '../firebase';
-import { httpsCallable } from 'firebase/functions';
+//
 import ActivateMembershipModal from '../components/ActivateMembershipModal';
 import AgentRegistrationCard from '../components/AgentRegistrationCard';
 
-const exportMembersCsv = httpsCallable(functions, 'exportMembersCsv');
+//
 
 export default function Admin() {
   const { isAdmin, loading: adminLoading } = useAdmin();
-  const { canRegister, isAgent, allowedRegions, loading: roleLoading } = useAgentOrAdmin();
-  const { users, loading: usersLoading, error: usersError } = useUsers();
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const { canRegister, allowedRegions, loading: roleLoading } = useAgentOrAdmin();
+  const { users, loading: usersLoading, error: usersError, refresh } = useUsers({ allowedRegions });
+  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleActivateClick = (user: any) => {
+  const handleActivateClick = (user: Profile) => {
     setSelectedUser(user);
     setIsModalOpen(true);
   };
@@ -35,8 +35,17 @@ export default function Admin() {
 
   const handleDownloadCsv = async () => {
     try {
-      const result = await exportMembersCsv();
-      const csvContent = result.data as string;
+      const isLocal = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+      const projectId = 'demo-interdomestik';
+      const url = isLocal ? `http://127.0.0.1:5001/${projectId}/europe-west1/exportMembersCsv` : '/exportMembersCsv';
+      const { getAuth } = await import('firebase/auth');
+      const user = getAuth().currentUser;
+      const idToken = await user?.getIdToken();
+      const res = await fetch(url, {
+        headers: idToken ? { Authorization: `Bearer ${idToken}` } : {},
+      });
+      if (!res.ok) throw new Error(`CSV export failed: ${res.status}`);
+      const csvContent = await res.text();
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
@@ -45,10 +54,37 @@ export default function Admin() {
       link.click();
       document.body.removeChild(link);
       handleSuccess('CSV downloaded successfully');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
     }
   }
+
+  // Emulator utilities (visible only when running locally)
+  const isLocal = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  const EMU_BASE = 'http://127.0.0.1:5001/demo-interdomestik/europe-west1';
+
+  const handleSeedEmulator = async () => {
+    try {
+      const res = await fetch(`${EMU_BASE}/seedDatabase`);
+      if (!res.ok) throw new Error(`Seed failed: ${res.status}`);
+      handleSuccess('Emulator seeded with test users');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed seeding emulator';
+      setError(msg);
+    }
+  };
+
+  const handleClearEmulator = async () => {
+    try {
+      const res = await fetch(`${EMU_BASE}/clearDatabase`);
+      if (!res.ok) throw new Error(`Clear failed: ${res.status}`);
+      handleSuccess('Emulator database cleared');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed clearing emulator';
+      setError(msg);
+    }
+  };
 
   if (adminLoading || roleLoading || usersLoading) {
     return <div className="flex justify-center items-center h-screen"><p>Loading...</p></div>;
@@ -66,6 +102,17 @@ export default function Admin() {
           </button>
         )}
       </div>
+
+      {isLocal && (
+        <div className="mb-6 p-4 border rounded bg-yellow-50">
+          <p className="font-medium mb-2">Emulator Utilities (local only)</p>
+          <div className="flex gap-3">
+            <button onClick={handleSeedEmulator} className="bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600">Seed Data</button>
+            <button onClick={handleClearEmulator} className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600">Clear Data</button>
+            <button data-testid="refresh-users" onClick={refresh} className="bg-gray-600 text-white px-3 py-2 rounded hover:bg-gray-700">Refresh list</button>
+          </div>
+        </div>
+      )}
 
       {canRegister && (
         <AgentRegistrationCard allowedRegions={allowedRegions} onSuccess={handleSuccess} onError={setError} />
@@ -95,7 +142,7 @@ export default function Admin() {
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.memberNo}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.region}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-right">
-                  <button onClick={() => handleActivateClick(user)} className="text-indigo-600 hover:text-indigo-900">
+                  <button data-testid="activate-btn" onClick={() => handleActivateClick(user)} className="text-indigo-600 hover:text-indigo-900">
                     Activate Membership
                   </button>
                 </td>
@@ -107,10 +154,10 @@ export default function Admin() {
       )}
 
       {isModalOpen && selectedUser && (
-        <ActivateMembershipModal 
-          user={selectedUser} 
-          onClose={handleCloseModal} 
-          onSuccess={handleSuccess} 
+        <ActivateMembershipModal
+          user={{ id: selectedUser.id!, email: selectedUser.email }}
+          onClose={handleCloseModal}
+          onSuccess={handleSuccess}
         />
       )}
     </div>

@@ -4,15 +4,16 @@
   "description": "Member portal for Interdomestik organization",
   "main": "index.js",
   "scripts": {
-    "build": "echo 'No build step required for vanilla JS'",
+    "build": "npm --prefix frontend run build && npm --prefix functions run build",
     "test": "npm run test:rules",
-    "test:rules": "mocha --require ts-node/register test/**/*.test.ts",
-    "lint": "echo 'Linting will be implemented'",
+    "test:rules": "firebase emulators:exec --only firestore \"mocha --require ts-node/register test/**/*.test.ts\"",
+    "lint": "npm --prefix frontend run lint && npm --prefix functions run lint",
     "deploy": "firebase deploy",
     "serve": "firebase serve",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "e2e:local": "cypress run --config baseUrl=http://localhost:5000"
+    "e2e:local": "cypress run --config baseUrl=http://localhost:5000",
+    "prepare": "husky install"
   },
   "keywords": [
     "member-portal",
@@ -33,6 +34,18 @@
     "firebase-tools": "^14.15.1",
     "mocha": "^10.7.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10"
+  },
+  "lint-staged": {
+    "frontend/src/**/*.{ts,tsx}": [
+      "npm --prefix frontend run lint",
+      "npm --prefix frontend run typecheck"
+    ],
+    "functions/src/**/*.ts": [
+      "npm --prefix functions run lint",
+      "npm --prefix functions run typecheck"
+    ]
   }
 }

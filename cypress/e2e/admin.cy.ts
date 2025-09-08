@@ -1,28 +1,21 @@
 const ADMIN_EMAIL = "admin@example.com";
-const ADMIN_PASS = "Admin123!";
+const ADMIN_PASS = "password123";
 
 describe("Admin dashboard", () => {
+  const PROJECT_ID = Cypress.env('FB_PROJECT_ID') || 'demo-interdomestik';
   before(() => {
-    cy.task("resetAuth");
-    cy.task("resetFirestore");
+    cy.task('assertEmulators');
+    cy.task('resetAuth');
+    cy.task('resetFirestore');
+    cy.request(`http://127.0.0.1:5001/${PROJECT_ID}/europe-west1/seedDatabase`);
   });
 
   it("shows admin controls for an admin user", () => {
-    cy.task("createUser", { email: ADMIN_EMAIL, password: ADMIN_PASS }).then((creds: any) => {
-      // Promote to admin via emulator custom claims
-      return cy.task("setCustomClaims", { localId: creds.localId, claims: { role: "admin", allowedRegions: ["PRISHTINA"] } });
-    });
-
-    cy.visit("/admin.html");
-    cy.uiSignIn(ADMIN_EMAIL, ADMIN_PASS);
-
-    // After sign-in, refresh token to pick up claims (many apps do this on their own)
-    cy.window().then(async (win) => {
-      const user = win.firebase.auth().currentUser;
-      await user?.getIdToken(true);
-    });
+    cy.signInUI(ADMIN_EMAIL, ADMIN_PASS);
+    cy.visit("/admin");
+    cy.reload();
 
     // Assert admin controls are visible (adjust to your DOM)
-    cy.contains(/Set User Role|Activate Membership|Export CSV/i).should("exist");
+    cy.contains(/Activate Membership|Download Members CSV/i).should("exist");
   });
 });

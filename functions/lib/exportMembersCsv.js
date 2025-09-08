@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.exportMembersCsv = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
+const firestore_1 = require("firebase-admin/firestore");
 try {
     admin.app();
 }
@@ -87,7 +88,7 @@ exports.exportMembersCsv = functions
             membersMap.set(doc.id, m);
         }
         // 2) Load all active memberships (single collectionGroup query)
-        const now = admin.firestore.Timestamp.now();
+        const now = firestore_1.Timestamp.now();
         const activeSnap = await db
             .collectionGroup("memberships")
             .where("status", "==", "active")
@@ -105,7 +106,7 @@ exports.exportMembersCsv = functions
         const safe = (s) => (s == null ? "" : String(s).replace(/"/g, '""'));
         for (const { uid, data: m } of membersOrdered) {
             const active = activeUidSet.has(uid) ? "yes" : "no";
-            lines.push(`"${safe(m.memberNo)}","${safe(m.name)}","${safe(m.email_norm)}","${safe(m.phone_e164)}","${safe(m.region)}","${safe(m.orgId)}","${active}"`);
+            lines.push(`"${safe(m.memberNo)}","${safe(m.name)}","${safe(m.email)}","${safe(m.phone)}","${safe(m.region)}","${safe(m.orgId)}","${active}"`);
         }
         // Return CSV
         const csv = lines.join("\n");

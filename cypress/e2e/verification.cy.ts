@@ -2,7 +2,7 @@ describe('Verification Page', () => {
   beforeEach(() => {
     cy.clearDatabase();
     cy.seedDatabase();
-    cy.visit('/verify.html');
+    cy.visit('/verify');
   });
 
   it('should display the verification page', () => {
