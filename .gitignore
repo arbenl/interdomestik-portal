@@ -2,6 +2,10 @@
 .env
 .env.*
 
+# Dependencies
+node_modules/
+functions/node_modules/
+
 # Package envs
 frontend/.env*
 functions/.env*
