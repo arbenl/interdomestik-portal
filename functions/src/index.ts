@@ -9,6 +9,7 @@ import { startMembershipLogic } from "./lib/startMembership";
 import { agentCreateMemberLogic } from "./lib/agent";
 import { sendRenewalReminder } from "./lib/membership";
 import { cleanupOldAuditLogs, cleanupOldMetrics } from './lib/cleanup';
+import { createPaymentIntentLogic } from './lib/payments';
 export { exportMembersCsv } from './exportMembersCsv';
 
 // Region constant for consistency
@@ -46,6 +47,10 @@ export const importMembersCsv = functions
 export const backfillNameLower = functions
   .region(REGION)
   .https.onCall((data, context) => backfillNameLowerLogic(data, context));
+
+export const createPaymentIntent = functions
+  .region(REGION)
+  .https.onCall((data, context) => createPaymentIntentLogic(data as any, context));
 
 // HTTP utilities -------------------------------------------------------------
 export const clearDatabase = functions

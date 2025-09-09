@@ -28,6 +28,7 @@ export default function Billing() {
   const { invoices, loading, error } = useInvoices(user?.uid);
   const [busy, setBusy] = useState(false);
   const projectId = 'demo-interdomestik';
+  const ENABLE_PAYMENTS_UI = true; // scaffold toggle
 
   async function simulatePayment() {
     if (!user) return;
@@ -76,6 +77,32 @@ export default function Billing() {
     <div className="max-w-3xl">
       <h1 className="text-2xl font-bold mb-1">Billing & Subscription</h1>
       <p className="text-gray-600 mb-4">Manage your membership payments and invoices.</p>
+
+      {ENABLE_PAYMENTS_UI && (
+        <div className="border rounded p-4 mb-6 bg-white">
+          <h2 className="text-lg font-semibold mb-2">Pay with card (Beta)</h2>
+          <p className="text-sm text-gray-600">This is a scaffold for Stripe Payment Element. In emulator mode it returns a test client secret.</p>
+          <div className="mt-3 flex items-center gap-3">
+            <Button onClick={async ()=>{
+              if (!user) return;
+              setBusy(true);
+              try {
+                const { httpsCallable } = await import('firebase/functions');
+                const { functions } = await import('../firebase');
+                const fn = httpsCallable<{ amount?: number; currency?: string; description?: string }, { ok: boolean; clientSecret?: string; mode?: string }>(functions, 'createPaymentIntent');
+                const res = await fn({ amount: 2500, currency: 'EUR', description: 'Membership renewal' });
+                const data = res.data as any;
+                alert(`Client secret: ${data.clientSecret || 'n/a'}\nMode: ${data.mode || 'live'}`);
+              } catch (e) {
+                alert(`Failed to create payment intent: ${e}`);
+              } finally {
+                setBusy(false);
+              }
+            }} disabled={busy}>{busy ? 'Creating…' : 'Create Payment Intent'}</Button>
+            <div className="text-xs text-gray-500">Next: integrate Stripe Payment Element and confirm card payment using the client secret.</div>
+          </div>
+        </div>
+      )}
 
       <div className="border rounded p-4 mb-6">
         <div className="flex items-center justify-between">
