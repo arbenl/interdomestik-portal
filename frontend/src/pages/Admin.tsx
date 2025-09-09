@@ -18,7 +18,8 @@ import AgentRegistrationCard from '../components/AgentRegistrationCard';
 export default function Admin() {
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { canRegister, allowedRegions, loading: roleLoading } = useAgentOrAdmin();
-  const { users, loading: usersLoading, error: usersError, refresh } = useUsers({ allowedRegions });
+  const [regionFilter, setRegionFilter] = useState<string>('ALL');
+  const { users, loading: usersLoading, error: usersError, refresh, nextPage, prevPage, hasNext, hasPrev, page } = useUsers({ allowedRegions, limit: 25, region: regionFilter });
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -322,7 +323,7 @@ export default function Admin() {
               let updated = bfUpdated;
               // Loop until finished or cancel requested
               while (!bfCancel) {
-                const payload: any = { pageSize: 500 };
+                const payload: { pageSize?: number; startAfter?: string } = { pageSize: 500 };
                 if (next) payload.startAfter = next;
                 const r = await fn(payload);
                 const d = r.data;
@@ -399,6 +400,20 @@ export default function Admin() {
 
       {isAdmin && (
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
+        <div className="flex items-end justify-between p-4 border-b bg-gray-50">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase">Region filter</label>
+            <select className="mt-1 border rounded px-3 py-2" value={regionFilter} onChange={(e)=> setRegionFilter(e.target.value)}>
+              <option value="ALL">All regions</option>
+              {REGIONS.map(r => (<option key={r} value={r}>{r}</option>))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="px-3 py-2 bg-gray-200 rounded disabled:opacity-50" onClick={prevPage} disabled={!hasPrev}>Prev</button>
+            <div className="text-sm text-gray-700">Page {page}</div>
+            <button className="px-3 py-2 bg-gray-200 rounded disabled:opacity-50" onClick={nextPage} disabled={!hasNext}>Next</button>
+          </div>
+        </div>
         <table className="min-w-full leading-normal">
           <thead>
             <tr>
