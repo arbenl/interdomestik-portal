@@ -16,12 +16,21 @@ function makeRes() {
 }
 
 describe('stripeWebhook (signed mode)', () => {
-  it('processes a signed invoice.payment_succeeded and is idempotent', async () => {
+  it('processes a signed invoice.payment_succeeded, activates membership, and is idempotent', async () => {
     // Arrange env + payload
     const SECRET = 'whsec_test_123';
     process.env.STRIPE_SIGNING_SECRET = SECRET;
     process.env.STRIPE_API_KEY = 'sk_test_dummy';
     const uid = 'u_stripe_1';
+    // Seed a member doc for activation
+    await db.collection('members').doc(uid).set({
+      email: 'stripe1@example.com',
+      name: 'Stripe One',
+      memberNo: 'INT-2025-123456',
+      region: 'PRISHTINA',
+      createdAt: admin.firestore.Timestamp.now(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    }, { merge: true });
     const eventId = 'evt_test_signed_1';
     const ts = Math.floor(Date.now() / 1000);
     const payload = JSON.stringify({
@@ -45,6 +54,12 @@ describe('stripeWebhook (signed mode)', () => {
     expect(invSnap.exists).to.equal(true);
     expect(invSnap.data()!.status).to.equal('paid');
 
+    // Assert membership activated for current year
+    const year = new Date().getUTCFullYear();
+    const memSnap = await db.collection('members').doc(uid).collection('memberships').doc(String(year)).get();
+    expect(memSnap.exists).to.equal(true);
+    expect(memSnap.data()!.status).to.equal('active');
+
     // Act #2 (duplicate)
     const { res: res2, get: get2 } = makeRes();
     await (stripeWebhook as any)(req, res2);
@@ -53,4 +68,3 @@ describe('stripeWebhook (signed mode)', () => {
     expect(out2.body).to.have.property('duplicate', true);
   });
 });
-

@@ -8,6 +8,7 @@ import { backfillNameLowerLogic } from './lib/backfill';
 import { startMembershipLogic } from "./lib/startMembership";
 import { agentCreateMemberLogic } from "./lib/agent";
 import { sendRenewalReminder } from "./lib/membership";
+import { activateMembership } from './lib/startMembership';
 import { cleanupOldAuditLogs, cleanupOldMetrics } from './lib/cleanup';
 import { createPaymentIntentLogic } from './lib/payments';
 export { exportMembersCsv } from './exportMembersCsv';
@@ -228,6 +229,27 @@ export const stripeWebhook = functions
             tx.set(invRef, { invoiceId, amount, currency, created, status: 'paid' }, { merge: true });
             tx.set(eventDoc, { processed: true, type: event.type, at: FieldValue.serverTimestamp() }, { merge: true });
           });
+          // Activate membership for current (or configured) year
+          const envYear = Number(process.env.MEMBER_YEAR);
+          const year = (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100)
+            ? envYear
+            : new Date().getUTCFullYear();
+          try {
+            await activateMembership(uid, year, amount / 100, currency, 'card', invoiceId);
+            // Minimal audit and metrics handled inside startMembership logic normally; here we emulate key parts
+            await db.collection('audit_logs').add({
+              action: 'startMembership',
+              actor: 'stripe-webhook',
+              target: uid,
+              year,
+              amount: amount / 100,
+              currency,
+              method: 'card',
+              ts: FieldValue.serverTimestamp(),
+            });
+          } catch (e) {
+            console.warn('[stripeWebhook] activateMembership failed', e);
+          }
           res.json({ ok: true });
           return;
         }
@@ -250,6 +272,16 @@ export const stripeWebhook = functions
         invoiceId, amount, currency, created,
         status: 'paid',
       }, { merge: true });
+      // Emulator path: also activate membership directly
+      try {
+        const envYear = Number(process.env.MEMBER_YEAR);
+        const year = (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100)
+          ? envYear
+          : new Date().getUTCFullYear();
+        await activateMembership(uid, year, amount / 100, currency, 'card', invoiceId);
+      } catch (e) {
+        console.warn('[stripeWebhook][emu] activateMembership failed', e);
+      }
       res.json({ ok: true, mode: 'emulator' });
     } catch (e) {
       console.error('[stripeWebhook] error', e);
