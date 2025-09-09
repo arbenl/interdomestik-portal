@@ -17,7 +17,7 @@ Notes:
 
 ## Phase 1 — Self‑Renewal & Payments
 - [~] (P1) Add Stripe Checkout/Payment Element on Billing/Profile (attach `metadata.uid`)
-- [~] (P1) Webhook mapping: `invoice.payment_succeeded` → `startMembership` (idempotent)
+- [x] (P1) Webhook mapping: `invoice.payment_succeeded` → `startMembership` (idempotent)
 - [ ] (P1) Renewal UX: expired/renew CTAs; success page/card re‑send; emails/receipts
 - [ ] (P2) Admin renewals: one‑click renew; bulk renew (table selection / CSV)
 
