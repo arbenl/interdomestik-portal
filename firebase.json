@@ -64,11 +64,11 @@
     "rewrites": [
       {
         "source": "/verifyMembership",
-        "function": "verifyMembership"
+        "function": { "functionId": "verifyMembership", "region": "europe-west1" }
       },
       {
         "source": "/stripeWebhook",
-        "function": "stripeWebhook"
+        "function": { "functionId": "stripeWebhook", "region": "europe-west1" }
       },
       {
         "source": "/exportMembersCsv",

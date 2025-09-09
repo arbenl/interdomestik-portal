@@ -8,8 +8,8 @@ const validators_1 = require("./validators");
 const rbac_1 = require("./rbac");
 const membership_1 = require("./membership");
 async function activateMembership(uid, year, price, currency, paymentMethod, externalRef) {
-    const startsAt = firebaseAdmin_1.admin.firestore.Timestamp.fromDate(new Date(year, 0, 1));
-    const expiresAt = firebaseAdmin_1.admin.firestore.Timestamp.fromDate(new Date(year, 11, 31, 23, 59, 59));
+    const startsAt = firestore_1.Timestamp.fromDate(new Date(year, 0, 1));
+    const expiresAt = firestore_1.Timestamp.fromDate(new Date(year, 11, 31, 23, 59, 59));
     const ref = firebaseAdmin_1.db.collection('members').doc(uid).collection('memberships').doc(String(year));
     let alreadyActive = false;
     await firebaseAdmin_1.db.runTransaction(async (tx) => {

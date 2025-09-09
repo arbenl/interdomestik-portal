@@ -53,6 +53,7 @@ export async function upsertProfileLogic(data: any, context: functions.https.Cal
 
       tx.set(memberRef, {
         ...validatedData,
+        nameLower: String(validatedData.name || '').toLowerCase().trim(),
         email: emailLower,
         memberNo,
         updatedAt: nowTs,

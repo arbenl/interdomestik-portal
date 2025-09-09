@@ -141,18 +141,38 @@ export default function Profile() {
         </div>
         <div className="md:col-span-1">
           <h2 className="text-2xl font-bold mb-4">Membership Card</h2>
-          {profile && activeMembership ? (
-            <DigitalMembershipCard 
-              name={profile.name || 'Member'}
-              memberNo={profile.memberNo || '—'}
-              region={profile.region || '—'}
-              validUntil={activeMembership.expiresAt ? new Date(activeMembership.expiresAt.seconds * 1000).toLocaleDateString() : '—'}
-            />
-          ) : (
-            <div className="bg-gray-100 rounded-2xl p-6 text-center text-gray-500">
-              <p>No active membership found.</p>
-            </div>
-          )}
+          {(() => {
+            if (!profile) return (
+              <div className="bg-gray-100 rounded-2xl p-6 text-center text-gray-500">
+                <p>No active membership found.</p>
+              </div>
+            );
+            type TS = { seconds?: number } | undefined;
+            const profileExpires = (profile as unknown as { expiresAt?: TS })?.expiresAt?.seconds;
+            const expiresAtSec = activeMembership?.expiresAt?.seconds ?? profileExpires;
+            const hasActive = typeof expiresAtSec === 'number' && expiresAtSec * 1000 > Date.now();
+            const validUntil = typeof expiresAtSec === 'number' ? new Date(expiresAtSec * 1000).toLocaleDateString() : '—';
+            const status = hasActive ? 'active' : (typeof expiresAtSec === 'number' ? 'expired' : 'none');
+            const memberNo = profile.memberNo || '—';
+            const verifyUrl = memberNo && memberNo !== '—' ? `${location.origin}/verify?memberNo=${encodeURIComponent(memberNo)}` : undefined;
+            if (hasActive) {
+              return (
+                <DigitalMembershipCard
+                  name={profile.name || 'Member'}
+                  memberNo={memberNo}
+                  region={profile.region || '—'}
+                  validUntil={validUntil}
+                  status={status}
+                  verifyUrl={verifyUrl}
+                />
+              );
+            }
+            return (
+              <div className="bg-gray-100 rounded-2xl p-6 text-center text-gray-500">
+                <p>No active membership found.</p>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

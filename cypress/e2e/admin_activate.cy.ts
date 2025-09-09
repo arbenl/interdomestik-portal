@@ -10,9 +10,8 @@ describe('Admin Activate Flow', () => {
     cy.request(`http://127.0.0.1:5001/${PROJECT_ID}/europe-west1/seedDatabase`);
   });
 
-  // NOTE: Temporarily skipped due to emulator flakiness in callable HTTP status
-  // Tracking: revisit with Firestore-based assertion or stable intercept
-  it.skip('lists users and activates membership for a seeded user', () => {
+  // Re-enabled: verify backend state only; avoid flaky HTTP status intercepts
+  it('lists users and activates membership for a seeded user', () => {
     const EMAIL = 'admin@example.com';
     const PASS = 'password123';
     cy.signInUI(EMAIL, PASS);
@@ -26,9 +25,7 @@ describe('Admin Activate Flow', () => {
     cy.get('input[placeholder="Email"]', { timeout: 10000 }).type(NEW_EMAIL);
     cy.get('input[placeholder="Full name"]').type('E2E Activate');
     cy.get('select[aria-label="Region"]').select('PRISHTINA');
-    cy.intercept({ method: 'POST', url: /agentCreateMember/i }).as('agentCreateMember');
     cy.contains('button', /Register Member/i).click();
-    cy.wait('@agentCreateMember', { timeout: 20000 }).its('response.statusCode').should('be.oneOf', [200, 204]);
     cy.contains(/Member registered successfully/i, { timeout: 15000 }).should('exist');
     // Refresh list to include the new member row
     cy.get('body').then(($b) => {
@@ -56,16 +53,23 @@ describe('Admin Activate Flow', () => {
     // Open activation modal for this row
     cy.get('@userRow').find('[data-testid="activate-btn"]').click();
 
-    // Intercept callable request and wait for success
-    cy.intercept({ method: 'POST', url: /startMembership/i }).as('startMembership');
     cy.contains('button', /^Activate$/i).click();
-    cy.wait('@startMembership', { timeout: 20000 }).its('response.statusCode').should('be.oneOf', [200, 204]);
     // Verify via public endpoint that membership is active for that memberNo (through Hosting rewrite)
     cy.get<string>('@memberNo').then((memberNo) => {
-      cy.request(`/verifyMembership?memberNo=${encodeURIComponent(memberNo)}`).its('body').then((b:any) => {
-        expect(b).to.have.property('ok', true);
-        expect(b).to.have.property('valid', true);
-        expect(b).to.have.property('memberNo', memberNo);
+      // Poll verification endpoint until valid (up to ~10s)
+      const verifyOnce = () => cy.request(`/verifyMembership?memberNo=${encodeURIComponent(memberNo)}`).its('body');
+      verifyOnce().then((b:any) => {
+        if (b?.valid === true) {
+          expect(b).to.have.property('ok', true);
+          expect(b).to.have.property('memberNo', memberNo);
+        } else {
+          cy.wait(1000);
+          verifyOnce().then((b2:any) => {
+            expect(b2).to.have.property('ok', true);
+            expect(b2).to.have.property('valid', true);
+            expect(b2).to.have.property('memberNo', memberNo);
+          });
+        }
       });
     });
   });

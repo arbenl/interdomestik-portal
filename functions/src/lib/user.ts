@@ -1,5 +1,5 @@
 import { admin, db } from "../firebaseAdmin";
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import * as functions from "firebase-functions/v1";
 import { setUserRoleSchema } from "./validators";
 import { requireAdmin } from "./rbac";
@@ -20,6 +20,7 @@ export async function setUserRoleLogic(data: any, context: functions.https.Calla
       role,
       allowedRegions: allowedRegions ?? [],
       ts: FieldValue.serverTimestamp(),
+      ttlAt: Timestamp.fromDate(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)),
     });
   } catch (e) {
     console.warn('[audit] failed to write setUserRole audit', e);

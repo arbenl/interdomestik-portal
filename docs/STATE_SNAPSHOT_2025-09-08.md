@@ -34,3 +34,29 @@ End-of-session snapshot (to be appended)
   - Rate limiting for verifyMembership (per-IP 60/min, 1000/day; emulator bypassed).
   - Audit logs on setUserRole and startMembership.
   - Admin UI: Role Management (lookup by email, set role, select allowed regions).
+
+---
+
+End-of-day snapshot
+- Timestamp (UTC): 2025-09-08T21:00:24Z
+- Branch: feat/phase-2
+- Commit: db63a136
+- Changes summary:
+  - Admin search: email, memberNo, and name prefix via nameLower.
+  - Writers populate nameLower; added backfillNameLower callable + Admin backfill dialog (start/stop/resume).
+  - Profile card shows ACTIVE using summary expiresAt; Download QR now works (canvas fallback).
+  - Bulk import (CSV) UI + callable (dry-run/import) with error reporting.
+  - Audit Logs panel and Daily Metrics panel in Admin.
+  - Stripe webhook signature verification + idempotency (earlier today), startMembership Timestamp fix.
+  - Firestore rules hardened to avoid null list errors for allowedRegions.
+
+---
+
+2025-09-09 — Session Snapshot
+- Timestamp (UTC): $(date -u +%FT%TZ)
+- Branch: feat/phase-2
+- Commit: 0fb1aa9c
+- Changes summary:
+  - Re-enabled Admin Activate E2E with backend verification (no HTTP status intercepts).
+  - Admin members list: added cursor-based pagination (Prev/Next) and region filter (uses createdAt desc ordering; respects allowedRegions).
+  - Hosting rewrites fixed to route HTTP functions to europe-west1 (verifyMembership, stripeWebhook, exportMembersCsv).

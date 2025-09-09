@@ -6,6 +6,9 @@ import { useUsers } from '../hooks/useUsers';
 import { auth, functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { REGIONS } from '../constants/regions';
+import { useAuditLogs } from '../hooks/useAuditLogs';
+import { useMemberSearch } from '../hooks/useMemberSearch';
+import { useToast } from '../components/ui/useToast';
 //
 import ActivateMembershipModal from '../components/ActivateMembershipModal';
 import AgentRegistrationCard from '../components/AgentRegistrationCard';
@@ -15,7 +18,8 @@ import AgentRegistrationCard from '../components/AgentRegistrationCard';
 export default function Admin() {
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { canRegister, allowedRegions, loading: roleLoading } = useAgentOrAdmin();
-  const { users, loading: usersLoading, error: usersError, refresh } = useUsers({ allowedRegions });
+  const [regionFilter, setRegionFilter] = useState<string>('ALL');
+  const { users, loading: usersLoading, error: usersError, refresh, nextPage, prevPage, hasNext, hasPrev, page } = useUsers({ allowedRegions, limit: 25, region: regionFilter });
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -74,6 +78,17 @@ export default function Admin() {
   const isLocal = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   const EMU_BASE = 'http://127.0.0.1:5001/demo-interdomestik/europe-west1';
   const today = new Date().toISOString().slice(0,10);
+  const { items: auditLogs, loading: auditLoading, error: auditError } = useAuditLogs(20);
+  const { push } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
+  const { results: searchResults, loading: searchLoading, error: searchError, search, clear } = useMemberSearch();
+  // Backfill dialog state
+  const [showBackfill, setShowBackfill] = useState(false);
+  const [bfRunning, setBfRunning] = useState(false);
+  const [bfCancel, setBfCancel] = useState(false);
+  const [bfPage, setBfPage] = useState(0);
+  const [bfUpdated, setBfUpdated] = useState(0);
+  const [bfNext, setBfNext] = useState<string | null>(null);
 
   const handleSeedEmulator = async () => {
     try {
@@ -228,12 +243,177 @@ export default function Admin() {
         </div>
       )}
 
+      {isAdmin && (
+        <BulkImportPanel onSuccess={handleSuccess} onError={setError} onToast={push} />
+      )}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Search Members</h3>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700">Email or Member No</label>
+              <input className="mt-1 w-full border rounded px-3 py-2" placeholder="member@example.com or INT-2025-000001" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
+            </div>
+            <button className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={searchLoading || !searchTerm.trim()} onClick={()=>search(searchTerm)}>Search</button>
+            <button className="bg-gray-600 text-white px-4 py-2 rounded" onClick={()=>{ setSearchTerm(''); clear(); }}>Clear</button>
+          </div>
+          {searchError && <div className="text-sm text-red-600 mt-2">{searchError}</div>}
+          {!searchLoading && searchResults.length > 0 && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-600">
+                    <th className="px-3 py-2">Name</th>
+                    <th className="px-3 py-2">Email</th>
+                    <th className="px-3 py-2">Member No</th>
+                    <th className="px-3 py-2">Region</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {searchResults.map(u => (
+                    <tr key={u.id} className="border-t">
+                      <td className="px-3 py-2">{u.name}</td>
+                      <td className="px-3 py-2">{u.email}</td>
+                      <td className="px-3 py-2">{u.memberNo}</td>
+                      <td className="px-3 py-2">{u.region}</td>
+                      <td className="px-3 py-2 text-right">
+                        <button className="text-indigo-600" onClick={()=>handleActivateClick(u)}>Activate Membership</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {searchLoading && <div className="text-gray-600 mt-2">Searching…</div>}
+          {!searchLoading && searchResults.length === 0 && searchTerm.trim() && !searchError && (
+            <div className="text-gray-600 mt-2 text-sm">No results</div>
+          )}
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Maintenance</h3>
+          <p className="text-sm text-gray-600 mb-2">One-off tasks for admins. These run against the current project.</p>
+          <div className="flex gap-2">
+            <button className="bg-gray-700 text-white px-3 py-2 rounded" onClick={()=>{
+              setBfPage(0); setBfUpdated(0); setBfNext(null); setBfCancel(false); setShowBackfill(true);
+            }}>Run full backfill…</button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">Repeat until nextStartAfter is null to complete backfill for all members.</p>
+        </div>
+      )}
+
+      {showBackfill && (
+        <BackfillDialog
+          onClose={()=>{ setShowBackfill(false); }}
+          running={bfRunning}
+          page={bfPage}
+          updated={bfUpdated}
+          nextStartAfter={bfNext}
+          onStart={async ()=>{
+            setBfCancel(false); setBfRunning(true);
+            try {
+              const fn = httpsCallable<{ pageSize?: number; startAfter?: string }, { page:number; updated:number; nextStartAfter:string|null }>(functions, 'backfillNameLower');
+              let next: string | null | undefined = bfNext || null;
+              let pages = bfPage;
+              let updated = bfUpdated;
+              // Loop until finished or cancel requested
+              while (!bfCancel) {
+                const payload: { pageSize?: number; startAfter?: string } = { pageSize: 500 };
+                if (next) payload.startAfter = next;
+                const r = await fn(payload);
+                const d = r.data;
+                pages += 1;
+                updated += d.updated;
+                next = d.nextStartAfter;
+                setBfPage(pages); setBfUpdated(updated); setBfNext(next ?? null);
+                if (!next) break;
+                // Let UI breathe
+                await new Promise(res => setTimeout(res, 50));
+              }
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : String(e);
+              setError(msg);
+            } finally {
+              setBfRunning(false);
+            }
+          }}
+          onStop={()=>{ setBfCancel(true); setBfRunning(false); }}
+        />
+      )}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Recent Audit Logs</h3>
+          {auditLoading && <div className="text-gray-600">Loading…</div>}
+          {auditError && <div className="text-red-600">Failed to load audit logs: {auditError.message}</div>}
+          {!auditLoading && !auditError && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-600">
+                    <th className="px-3 py-2">Time</th>
+                    <th className="px-3 py-2">Action</th>
+                    <th className="px-3 py-2">Actor</th>
+                    <th className="px-3 py-2">Target</th>
+                    <th className="px-3 py-2">Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.length === 0 ? (
+                    <tr><td className="px-3 py-2 text-gray-500" colSpan={5}>No recent entries.</td></tr>
+                  ) : (
+                    auditLogs.map(a => {
+                      const ts = a.ts && (a.ts as unknown as { seconds?: number }).seconds
+                        ? new Date(((a.ts as unknown as { seconds: number }).seconds) * 1000).toLocaleString()
+                        : '—';
+                      const details = a.action === 'setUserRole'
+                        ? `role=${a.role || ''} regions=${(a.allowedRegions||[]).join(',')}`
+                        : a.action === 'startMembership'
+                        ? `year=${a.year} amount=${a.amount} ${a.currency} method=${a.method}`
+                        : '';
+                      return (
+                        <tr key={a.id} className="border-t">
+                          <td className="px-3 py-2 whitespace-nowrap">{ts}</td>
+                          <td className="px-3 py-2">{a.action}</td>
+                          <td className="px-3 py-2">{a.actor || '—'}</td>
+                          <td className="px-3 py-2">{a.target || '—'}</td>
+                          <td className="px-3 py-2 text-gray-600">{details}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {usersError && <p className="text-red-500">{usersError.message}</p>}
       {error && <p className="text-red-500">{error}</p>}
       {success && <p className="text-green-500">{success}</p>}
 
       {isAdmin && (
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
+        <div className="flex items-end justify-between p-4 border-b bg-gray-50">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase">Region filter</label>
+            <select className="mt-1 border rounded px-3 py-2" value={regionFilter} onChange={(e)=> setRegionFilter(e.target.value)}>
+              <option value="ALL">All regions</option>
+              {REGIONS.map(r => (<option key={r} value={r}>{r}</option>))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="px-3 py-2 bg-gray-200 rounded disabled:opacity-50" onClick={prevPage} disabled={!hasPrev}>Prev</button>
+            <div className="text-sm text-gray-700">Page {page}</div>
+            <button className="px-3 py-2 bg-gray-200 rounded disabled:opacity-50" onClick={nextPage} disabled={!hasNext}>Next</button>
+          </div>
+        </div>
         <table className="min-w-full leading-normal">
           <thead>
             <tr>
@@ -318,6 +498,87 @@ function MetricsPanel({ dateKey }: { dateKey: string }) {
         )}
       </div>
       {isLocal && <div className="mt-2 text-xs text-gray-500">Note: metrics are best-effort and update on membership activation.</div>}
+    </div>
+  );
+}
+
+function BackfillDialog({ onClose, running, page, updated, nextStartAfter, onStart, onStop }: { onClose: ()=>void; running: boolean; page: number; updated: number; nextStartAfter: string | null; onStart: ()=>void; onStop: ()=>void; }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-semibold">Backfill nameLower</h3>
+          <button className="text-gray-500 hover:text-gray-700" onClick={onClose}>✕</button>
+        </div>
+        <div className="text-sm text-gray-700 space-y-2">
+          <div>Pages processed: <span className="font-medium">{page}</span></div>
+          <div>Members updated: <span className="font-medium">{updated}</span></div>
+          <div>Next startAfter: <span className="font-mono break-all">{nextStartAfter ?? '(done)'}</span></div>
+        </div>
+        <div className="mt-4 flex gap-2 justify-end">
+          {!running ? (
+            <button className="bg-indigo-600 text-white px-3 py-2 rounded" onClick={onStart}>Start / Resume</button>
+          ) : (
+            <button className="bg-gray-600 text-white px-3 py-2 rounded" onClick={onStop}>Stop</button>
+          )}
+          <button className="bg-gray-200 px-3 py-2 rounded" onClick={onClose}>Close</button>
+        </div>
+        <p className="mt-3 text-xs text-gray-500">This will iterate 500 docs per page. You can stop and resume safely; progress shows the next startAfter value.</p>
+      </div>
+    </div>
+  );
+}
+function BulkImportPanel({ onSuccess, onError, onToast }: { onSuccess: (m:string)=>void; onError:(m:string)=>void; onToast: (t:{type:'success'|'error'; message:string})=>void }) {
+  const [csv, setCsv] = useState('email,name,region\nexample1@example.com,Example One,PRISHTINA');
+  const [dryRun, setDryRun] = useState(true);
+  const [busy, setBusy] = useState(false);
+  type ImportReport = { rows:number; created:number; updated:number; errors:Array<{ line:number; email?:string; error:string }>};
+  const [report, setReport] = useState<ImportReport | null>(null);
+  const importFn = httpsCallable<{csv:string; dryRun?:boolean; defaultRegion?:string}, ImportReport>(functions, 'importMembersCsv');
+
+  async function runImport() {
+    setBusy(true); setReport(null);
+    try {
+      const res = await importFn({ csv, dryRun });
+      const data = res.data as ImportReport;
+      setReport(data);
+      if (!dryRun) {
+        onSuccess('Import completed');
+        onToast({ type: 'success', message: `Imported: ${data.created} created, ${data.updated} updated` });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      onError(msg);
+      onToast({ type: 'error', message: msg });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mb-6 p-4 border rounded bg-white">
+      <h3 className="text-lg font-semibold mb-2">Bulk Import (CSV)</h3>
+      <p className="text-sm text-gray-600 mb-2">Columns: email,name,region[,phone,orgId]</p>
+      <textarea className="w-full border rounded p-2 font-mono text-sm" rows={6} value={csv} onChange={e=>setCsv(e.target.value)} />
+      <div className="mt-2 flex items-center gap-3">
+        <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={dryRun} onChange={e=>setDryRun(e.target.checked)} />Dry run</label>
+        <button disabled={busy} className="bg-indigo-600 text-white px-4 py-2 rounded disabled:opacity-50" onClick={runImport}>{busy ? (dryRun ? 'Checking…' : 'Importing…') : (dryRun ? 'Dry Run' : 'Import')}</button>
+      </div>
+      {report && (
+        <div className="mt-3 text-sm">
+          <div className="mb-1">Rows: {report.rows} • Created: {report.created} • Updated: {report.updated}</div>
+          {report.errors && report.errors.length > 0 && (
+            <div className="border rounded p-2 bg-red-50 text-red-800">
+              <div className="font-medium mb-1">Errors ({report.errors.length}):</div>
+              <ul className="list-disc pl-5">
+                {report.errors.map((e, i) => (
+                  <li key={i}>line {e.line}{e.email ? ` (${e.email})` : ''}: {e.error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

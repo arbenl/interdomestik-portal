@@ -1,5 +1,5 @@
 import { admin, db } from "../firebaseAdmin";
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import * as functions from "firebase-functions/v1";
 import { startMembershipSchema } from "./validators";
 import { requireAdmin } from "./rbac";
@@ -13,8 +13,8 @@ export async function activateMembership(
   paymentMethod: string,
   externalRef: string | null | undefined
 ): Promise<{ refPath: string; alreadyActive: boolean }> {
-  const startsAt = admin.firestore.Timestamp.fromDate(new Date(year, 0, 1));
-  const expiresAt = admin.firestore.Timestamp.fromDate(new Date(year, 11, 31, 23, 59, 59));
+  const startsAt = Timestamp.fromDate(new Date(year, 0, 1));
+  const expiresAt = Timestamp.fromDate(new Date(year, 11, 31, 23, 59, 59));
 
   const ref = db.collection('members').doc(uid).collection('memberships').doc(String(year));
 
@@ -103,6 +103,7 @@ export async function startMembershipLogic(data: any, context: functions.https.C
       currency,
       method: paymentMethod,
       ts: FieldValue.serverTimestamp(),
+      ttlAt: Timestamp.fromDate(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)),
     });
   } catch (e) {
     console.warn('[audit] failed to write startMembership audit', e);
@@ -113,10 +114,14 @@ export async function startMembershipLogic(data: any, context: functions.https.C
     const dateKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (local UTC ok for coarse metrics)
     const ref = db.collection('metrics').doc(`daily-${dateKey}`);
     const inc = (admin.firestore.FieldValue as any).increment?.(1) || FieldValue.increment(1 as any);
+    // Set a TTL on daily metrics (retain for ~400 days)
+    const baseDay = new Date(`${dateKey}T00:00:00Z`);
+    const ttlAt = Timestamp.fromDate(new Date(baseDay.getTime() + 400 * 24 * 60 * 60 * 1000));
     await ref.set({
       activations_total: inc,
       [`activations_by_region.${region || 'UNKNOWN'}`]: inc,
       updatedAt: FieldValue.serverTimestamp(),
+      ttlAt,
     }, { merge: true });
   } catch (e) {
     console.warn('[metrics] failed to write activation metric', e);

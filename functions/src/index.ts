@@ -3,9 +3,12 @@ import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { admin, db } from "./firebaseAdmin";
 import { upsertProfileLogic } from "./lib/upsertProfile";
 import { setUserRoleLogic, searchUserByEmailLogic, getUserClaimsLogic } from "./lib/user";
+import { importMembersCsvLogic } from './lib/importCsv';
+import { backfillNameLowerLogic } from './lib/backfill';
 import { startMembershipLogic } from "./lib/startMembership";
 import { agentCreateMemberLogic } from "./lib/agent";
 import { sendRenewalReminder } from "./lib/membership";
+import { cleanupOldAuditLogs, cleanupOldMetrics } from './lib/cleanup';
 export { exportMembersCsv } from './exportMembersCsv';
 
 // Region constant for consistency
@@ -35,6 +38,14 @@ export const agentCreateMember = functions
 export const getUserClaims = functions
   .region(REGION)
   .https.onCall((data, context) => getUserClaimsLogic(data, context));
+
+export const importMembersCsv = functions
+  .region(REGION)
+  .https.onCall((data, context) => importMembersCsvLogic(data, context));
+
+export const backfillNameLower = functions
+  .region(REGION)
+  .https.onCall((data, context) => backfillNameLowerLogic(data, context));
 
 // HTTP utilities -------------------------------------------------------------
 export const clearDatabase = functions
@@ -371,6 +382,19 @@ export const dailyRenewalReminders = functions
     }
 
     await Promise.all([runForOffset(30), runForOffset(7), runForOffset(1)]);
+  });
+
+// Daily cleanup of old audit logs and metrics
+export const cleanupExpiredData = functions
+  .region(REGION)
+  .pubsub.schedule('15 3 * * *')
+  .timeZone('UTC')
+  .onRun(async () => {
+    const [aud, met] = await Promise.all([
+      cleanupOldAuditLogs(180, 2000),
+      cleanupOldMetrics(400, 2000),
+    ]);
+    console.log('[cleanup] audit_logs deleted:', aud.deleted, 'metrics deleted:', met.deleted);
   });
 
 //       if (q.empty) {
