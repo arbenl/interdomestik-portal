@@ -82,6 +82,18 @@ export default function Admin() {
   const { push } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const { results: searchResults, loading: searchLoading, error: searchError, search, clear } = useMemberSearch();
+  // Live search as user types (debounced)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const term = searchTerm.trim();
+      if (term) {
+        search(term);
+      } else {
+        clear();
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
   // Backfill dialog state
   const [showBackfill, setShowBackfill] = useState(false);
   const [bfRunning, setBfRunning] = useState(false);

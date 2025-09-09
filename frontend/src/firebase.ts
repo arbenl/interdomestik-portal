@@ -22,14 +22,17 @@ const auth = initializeAuth(app, {
 
 // Enable persistent local cache to speed up reads and offline
 const db = initializeFirestore(app, {
-  localCache: persistentLocalCache()
+  // Use persistent local cache; keep simple to play nicely with test mocks
+  localCache: persistentLocalCache(),
+  // Helps in some dev networks/proxies where streaming fails
+  experimentalAutoDetectLongPolling: true,
 });
 
 // Match backend region
 const functions = getFunctions(app, 'europe-west1');
 
 // Emulator config from Vite env (optional) or defaults
-const host = import.meta.env.VITE_EMULATOR_HOST ?? 'localhost';
+const host = import.meta.env.VITE_EMULATOR_HOST ?? '127.0.0.1';
 const fsPort = Number(import.meta.env.VITE_FIRESTORE_PORT ?? 8085);
 const fnPort = Number(import.meta.env.VITE_FUNCTIONS_PORT ?? 5001);
 const authPort = Number(import.meta.env.VITE_AUTH_PORT ?? 9099);
