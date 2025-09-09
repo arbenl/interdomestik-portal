@@ -49,3 +49,14 @@ End-of-day snapshot
   - Audit Logs panel and Daily Metrics panel in Admin.
   - Stripe webhook signature verification + idempotency (earlier today), startMembership Timestamp fix.
   - Firestore rules hardened to avoid null list errors for allowedRegions.
+
+---
+
+2025-09-09 — Session Snapshot
+- Timestamp (UTC): $(date -u +%FT%TZ)
+- Branch: feat/phase-2
+- Commit: 0fb1aa9c
+- Changes summary:
+  - Re-enabled Admin Activate E2E with backend verification (no HTTP status intercepts).
+  - Admin members list: added cursor-based pagination (Prev/Next) and region filter (uses createdAt desc ordering; respects allowedRegions).
+  - Hosting rewrites fixed to route HTTP functions to europe-west1 (verifyMembership, stripeWebhook, exportMembersCsv).
