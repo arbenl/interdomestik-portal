@@ -5,8 +5,8 @@ Branch: feat/phase-2
 Legend: [ ] TODO • [~] In Progress • [x] Done • (P1/P2/P3) Priority
 
 ## Phase 0 — Stabilize & Baseline
-- [ ] (P1) Re‑enable admin_activate E2E with backend verification only
-- [ ] (P1) Admin members list: add cursor‑based pagination + region filters
+- [x] (P1) Re‑enable admin_activate E2E with backend verification only
+- [x] (P1) Admin members list: add cursor‑based pagination + region filters
 - [ ] (P2) Run nameLower backfill to completion (via Admin dialog) and note final state
 - [ ] (P2) TTL/cleanup plan for `audit_logs` (>180 days) and `metrics` rollups
 
@@ -62,4 +62,3 @@ Legend: [ ] TODO • [~] In Progress • [x] Done • (P1/P2/P3) Priority
 ---
 
 Owners: assign per task in PRs. Update progress with [ ] → [~] → [x].
-
