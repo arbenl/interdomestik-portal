@@ -8,6 +8,7 @@ import { backfillNameLowerLogic } from './lib/backfill';
 import { startMembershipLogic } from "./lib/startMembership";
 import { agentCreateMemberLogic } from "./lib/agent";
 import { sendRenewalReminder } from "./lib/membership";
+import { cleanupOldAuditLogs, cleanupOldMetrics } from './lib/cleanup';
 export { exportMembersCsv } from './exportMembersCsv';
 
 // Region constant for consistency
@@ -381,6 +382,19 @@ export const dailyRenewalReminders = functions
     }
 
     await Promise.all([runForOffset(30), runForOffset(7), runForOffset(1)]);
+  });
+
+// Daily cleanup of old audit logs and metrics
+export const cleanupExpiredData = functions
+  .region(REGION)
+  .pubsub.schedule('15 3 * * *')
+  .timeZone('UTC')
+  .onRun(async () => {
+    const [aud, met] = await Promise.all([
+      cleanupOldAuditLogs(180, 2000),
+      cleanupOldMetrics(400, 2000),
+    ]);
+    console.log('[cleanup] audit_logs deleted:', aud.deleted, 'metrics deleted:', met.deleted);
   });
 
 //       if (q.empty) {

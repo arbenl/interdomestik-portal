@@ -8,7 +8,12 @@ Legend: [ ] TODO • [~] In Progress • [x] Done • (P1/P2/P3) Priority
 - [x] (P1) Re‑enable admin_activate E2E with backend verification only
 - [x] (P1) Admin members list: add cursor‑based pagination + region filters
 - [ ] (P2) Run nameLower backfill to completion (via Admin dialog) and note final state
-- [ ] (P2) TTL/cleanup plan for `audit_logs` (>180 days) and `metrics` rollups
+- [x] (P2) TTL/cleanup plan for `audit_logs` (>180 days) and `metrics` rollups
+
+Notes:
+- Audit logs now include `ttlAt` (+180 days); metrics daily docs include `ttlAt` (+400 days).
+- Scheduled cleanup job `cleanupExpiredData` runs daily 03:15 UTC and deletes expired docs.
+- Recommended (prod): enable Firestore TTL on `audit_logs.ttlAt` and `metrics.ttlAt` for automatic cleanup.
 
 ## Phase 1 — Self‑Renewal & Payments
 - [ ] (P1) Add Stripe Checkout/Payment Element on Billing/Profile (attach `metadata.uid`)

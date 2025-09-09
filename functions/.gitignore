@@ -1,4 +1,4 @@
 # Functions runtime config and env files
 .runtimeconfig.json
 .env*
-lib/
+/lib/
