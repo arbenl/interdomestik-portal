@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useMemberProfile } from '../hooks/useMemberProfile';
 import { useInvoices } from '../hooks/useInvoices';
+import useToast from '../components/ui/useToast';
 import Button from '../components/ui/Button';
+import PaymentElementBox from '../components/payments/PaymentElementBox';
 
 function formatMoney(amount: number, currency: string) {
   try {
@@ -25,10 +27,11 @@ function getStripeWebhookUrl(projectId: string) {
 export default function Billing() {
   const { user } = useAuth();
   const { profile } = useMemberProfile(user?.uid);
-  const { invoices, loading, error } = useInvoices(user?.uid);
+  const { invoices, loading, error, refresh } = useInvoices(user?.uid);
+  const { push } = useToast();
   const [busy, setBusy] = useState(false);
   const projectId = 'demo-interdomestik';
-  const ENABLE_PAYMENTS_UI = true; // scaffold toggle
+  const ENABLE_PAYMENTS_UI = true; // feature flag scaffolding
 
   async function simulatePayment() {
     if (!user) return;
@@ -48,12 +51,13 @@ export default function Billing() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`Webhook error: ${res.status}`);
-      // Re-fetch by triggering hook again (uid dependency is constant); simple approach: noop delay
       await new Promise((r) => setTimeout(r, 300));
-      location.reload();
+      localStorage.setItem('renewed_at', String(Date.now()));
+      await refresh();
+      push({ type: 'success', message: 'Payment recorded. Membership activated.' });
     } catch (e) {
       console.error(e);
-      alert(`Failed to simulate payment: ${e}`);
+      push({ type: 'error', message: `Failed to simulate payment` });
     } finally {
       setBusy(false);
     }
@@ -79,28 +83,8 @@ export default function Billing() {
       <p className="text-gray-600 mb-4">Manage your membership payments and invoices.</p>
 
       {ENABLE_PAYMENTS_UI && (
-        <div className="border rounded p-4 mb-6 bg-white">
-          <h2 className="text-lg font-semibold mb-2">Pay with card (Beta)</h2>
-          <p className="text-sm text-gray-600">This is a scaffold for Stripe Payment Element. In emulator mode it returns a test client secret.</p>
-          <div className="mt-3 flex items-center gap-3">
-            <Button onClick={async ()=>{
-              if (!user) return;
-              setBusy(true);
-              try {
-                const { httpsCallable } = await import('firebase/functions');
-                const { functions } = await import('../firebase');
-                const fn = httpsCallable<{ amount?: number; currency?: string; description?: string }, { ok: boolean; clientSecret?: string; mode?: string }>(functions, 'createPaymentIntent');
-                const res = await fn({ amount: 2500, currency: 'EUR', description: 'Membership renewal' });
-                const data = res.data as any;
-                alert(`Client secret: ${data.clientSecret || 'n/a'}\nMode: ${data.mode || 'live'}`);
-              } catch (e) {
-                alert(`Failed to create payment intent: ${e}`);
-              } finally {
-                setBusy(false);
-              }
-            }} disabled={busy}>{busy ? 'Creating…' : 'Create Payment Intent'}</Button>
-            <div className="text-xs text-gray-500">Next: integrate Stripe Payment Element and confirm card payment using the client secret.</div>
-          </div>
+        <div className="mb-6">
+          <PaymentElementBox amountCents={2500} currency="EUR" />
         </div>
       )}
 
@@ -116,10 +100,21 @@ export default function Billing() {
           </div>
         </div>
         <div className="mt-3 text-sm text-gray-500">For local testing, use the button below to simulate a paid invoice via the emulator-friendly webhook.</div>
-        <div className="mt-3">
+        <div className="mt-3 flex items-center gap-2">
           <Button onClick={simulatePayment} disabled={busy}>
             {busy ? 'Simulating…' : 'Add test paid invoice'}
           </Button>
+          <Button variant="ghost" onClick={async ()=>{
+            try {
+              const { httpsCallable } = await import('firebase/functions');
+              const { functions } = await import('../firebase');
+              const fn = httpsCallable<{ uid?: string; year?: number }, { ok: boolean }>(functions, 'resendMembershipCard');
+              await fn({});
+              alert('Card email queued. Check your inbox.');
+            } catch (e) {
+              alert(`Failed to resend card: ${e}`);
+            }
+          }}>Resend card email</Button>
         </div>
       </div>
 

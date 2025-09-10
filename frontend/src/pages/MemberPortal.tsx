@@ -64,6 +64,14 @@ export default function MemberPortal() {
     <div className="max-w-6xl mx-auto">
       <PortalHero name={name} status={status} memberNo={memberNo !== '—' ? memberNo : undefined} expiresOn={expiry !== '—' ? expiry : undefined} verifyUrl={verifyUrl} />
 
+      {status !== 'active' && (
+        <div className="mt-4 border rounded p-4 bg-yellow-50">
+          <div className="font-medium mb-1">Your membership is {status === 'expired' ? 'expired' : 'not active'}.</div>
+          <div className="text-sm text-gray-700">Renew now to re-activate your digital membership card.</div>
+          <div className="mt-2"><Link to="/billing" className="inline-block bg-indigo-600 text-white px-3 py-2 rounded">Renew Membership</Link></div>
+        </div>
+      )}
+
       {error && (
         <div className="mt-4 border border-red-300 bg-red-50 text-red-800 rounded p-3">
           Failed to load profile: {error.message}

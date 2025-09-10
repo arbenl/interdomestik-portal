@@ -24,8 +24,8 @@ const auth = initializeAuth(app, {
 const db = initializeFirestore(app, {
   // Use persistent local cache; keep simple to play nicely with test mocks
   localCache: persistentLocalCache(),
-  // Helps in some dev networks/proxies where streaming fails
-  experimentalAutoDetectLongPolling: true,
+  // Force long polling to eliminate stream errors in some networks
+  experimentalForceLongPolling: true,
 });
 
 // Match backend region
@@ -38,8 +38,7 @@ const fnPort = Number(import.meta.env.VITE_FUNCTIONS_PORT ?? 5001);
 const authPort = Number(import.meta.env.VITE_AUTH_PORT ?? 9099);
 
 if (typeof location !== 'undefined' && (location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  // Only connect to emulators in local dev
-  console.log("Using local emulators");
+  // Only connect to emulators in local dev (quiet logging)
   connectAuthEmulator(auth, `http://${host}:${authPort}`);
   connectFirestoreEmulator(db, host, fsPort);
   connectFunctionsEmulator(functions, host, fnPort);

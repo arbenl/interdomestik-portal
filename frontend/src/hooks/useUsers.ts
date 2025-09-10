@@ -4,7 +4,7 @@ import type { QueryConstraint, DocumentData, QueryDocumentSnapshot } from 'fireb
 import { db } from '../firebase';
 import type { Profile } from '../types';
 
-export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; region?: string | null }) => {
+export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; region?: string | null; myOnlyUid?: string | null }) => {
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -18,6 +18,7 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; reg
   const max = opts?.limit ?? 100;
   const regionFilter = opts?.region ?? null; // null => no explicit filter
 
+  const myOnlyUid = opts?.myOnlyUid ?? null;
   const regionsKey = JSON.stringify(allowedRegions);
   const regionKey = regionFilter || 'ALL';
   useEffect(() => {
@@ -29,12 +30,16 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; reg
         const constraints: QueryConstraint[] = [];
         // Preferred sort for stable pagination
         constraints.push(orderBy('createdAt', 'desc'));
-        // Region selection: if a specific region is chosen, use equality filter.
-        if (regionFilter && regionFilter !== 'ALL') {
-          constraints.push(where('region', '==', regionFilter));
-        } else if (Array.isArray(allowedRegions) && allowedRegions.length > 0) {
-          // Viewer is restricted to specific regions (agent/admin with limited regions)
-          constraints.push(where('region', 'in', allowedRegions.slice(0, 10)));
+        // Agent mode: restrict to own members by agentId
+        if (myOnlyUid) {
+          constraints.push(where('agentId', '==', myOnlyUid));
+        } else {
+          // Region selection (admin or admin with region limits)
+          if (regionFilter && regionFilter !== 'ALL') {
+            constraints.push(where('region', '==', regionFilter));
+          } else if (Array.isArray(allowedRegions) && allowedRegions.length > 0) {
+            constraints.push(where('region', 'in', allowedRegions.slice(0, 10)));
+          }
         }
         constraints.push(qLimit(max + 1)); // fetch one extra to detect next page
         const qRef = query(usersCollectionRef, ...constraints);
@@ -56,7 +61,7 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; reg
       }
     })();
     return () => { cancelled = true; };
-  }, [refreshSeq, regionsKey, regionKey, max, allowedRegions, regionFilter]);
+  }, [refreshSeq, regionsKey, regionKey, max, allowedRegions, regionFilter, myOnlyUid]);
 
   const refresh = () => setRefreshSeq((n) => n + 1);
 
@@ -65,10 +70,14 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; reg
       setLoading(true);
       const usersCollectionRef = collection(db, 'members');
       const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
-      if (regionFilter && regionFilter !== 'ALL') {
-        constraints.push(where('region', '==', regionFilter));
-      } else if (Array.isArray(allowedRegions) && allowedRegions.length > 0) {
-        constraints.push(where('region', 'in', allowedRegions.slice(0, 10)));
+      if (myOnlyUid) {
+        constraints.push(where('agentId', '==', myOnlyUid));
+      } else {
+        if (regionFilter && regionFilter !== 'ALL') {
+          constraints.push(where('region', '==', regionFilter));
+        } else if (Array.isArray(allowedRegions) && allowedRegions.length > 0) {
+          constraints.push(where('region', 'in', allowedRegions.slice(0, 10)));
+        }
       }
       if (cursors.length > 0) {
         constraints.push(startAfter(cursors[cursors.length - 1]));
@@ -102,10 +111,14 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; reg
       setLoading(true);
       const usersCollectionRef = collection(db, 'members');
       const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
-      if (regionFilter && regionFilter !== 'ALL') {
-        constraints.push(where('region', '==', regionFilter));
-      } else if (Array.isArray(allowedRegions) && allowedRegions.length > 0) {
-        constraints.push(where('region', 'in', allowedRegions.slice(0, 10)));
+      if (myOnlyUid) {
+        constraints.push(where('agentId', '==', myOnlyUid));
+      } else {
+        if (regionFilter && regionFilter !== 'ALL') {
+          constraints.push(where('region', '==', regionFilter));
+        } else if (Array.isArray(allowedRegions) && allowedRegions.length > 0) {
+          constraints.push(where('region', 'in', allowedRegions.slice(0, 10)));
+        }
       }
       // To go back, drop the last cursor and use the new last as startAfter baseline.
       const newStack = cursors.slice(0, -1);

@@ -7,7 +7,7 @@ import { importMembersCsvLogic } from './lib/importCsv';
 import { backfillNameLowerLogic } from './lib/backfill';
 import { startMembershipLogic } from "./lib/startMembership";
 import { agentCreateMemberLogic } from "./lib/agent";
-import { sendRenewalReminder } from "./lib/membership";
+import { sendRenewalReminder, membershipCardHtml, queueEmail, sendPaymentReceipt } from "./lib/membership";
 import { activateMembership } from './lib/startMembership';
 import { cleanupOldAuditLogs, cleanupOldMetrics } from './lib/cleanup';
 import { createPaymentIntentLogic } from './lib/payments';
@@ -52,6 +52,49 @@ export const backfillNameLower = functions
 export const createPaymentIntent = functions
   .region(REGION)
   .https.onCall((data, context) => createPaymentIntentLogic(data as any, context));
+// Resend digital membership card email to the authenticated user (or admin-specified uid)
+export const resendMembershipCard = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => {
+    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+    const requestedUid = String((data?.uid ?? '').toString().trim());
+    const actorUid = context.auth.uid;
+    const isAdmin = (context.auth.token as any)?.role === 'admin';
+    const uid = requestedUid && isAdmin ? requestedUid : actorUid;
+
+    const memberDoc = await db.collection('members').doc(uid).get();
+    if (!memberDoc.exists) throw new functions.https.HttpsError('not-found', 'Member not found');
+    const memberNo = memberDoc.get('memberNo') as string | undefined;
+    const name = (memberDoc.get('name') as string | undefined) || 'Member';
+    const region = (memberDoc.get('region') as string | undefined) || '—';
+    const email = (memberDoc.get('email') as string | undefined) || undefined;
+    if (!email || !memberNo) throw new functions.https.HttpsError('failed-precondition', 'Member profile missing email or memberNo');
+
+    // Determine active year (prefer explicit year from input, else latest active doc)
+    const explicitYear = Number.isFinite(Number(data?.year)) ? Number(data?.year) : undefined;
+    let yearToUse: number | undefined = explicitYear;
+    if (!yearToUse) {
+      const act = await db.collection('members').doc(uid).collection('memberships')
+        .where('status', '==', 'active').orderBy('year', 'desc').limit(1).get();
+      if (!act.empty) yearToUse = Number(act.docs[0].get('year'));
+    }
+    if (!yearToUse) throw new functions.https.HttpsError('failed-precondition', 'No active membership to resend');
+
+    const verifyUrl = `https://interdomestik.app/verify?memberNo=${encodeURIComponent(memberNo)}`;
+    const html = membershipCardHtml({ memberNo, name, region, validity: String(yearToUse), verifyUrl });
+    await queueEmail({ to: [email], subject: `Interdomestik Membership ${yearToUse}`, html });
+
+    try {
+      await db.collection('audit_logs').add({
+        action: 'resendMembershipCard',
+        actor: actorUid,
+        target: uid,
+        year: yearToUse,
+        ts: FieldValue.serverTimestamp(),
+      });
+    } catch {}
+    return { ok: true };
+  });
 
 // HTTP utilities -------------------------------------------------------------
 export const clearDatabase = functions
@@ -236,6 +279,22 @@ export const stripeWebhook = functions
             : new Date().getUTCFullYear();
           try {
             await activateMembership(uid, year, amount / 100, currency, 'card', invoiceId);
+            // Send card + receipt emails
+            try {
+              const m = await db.collection('members').doc(uid).get();
+              const email = (m.get('email') as string | undefined);
+              const name = (m.get('name') as string | undefined) || 'Member';
+              const memberNo = m.get('memberNo') as string | undefined;
+              const region = (m.get('region') as string | undefined) || '—';
+              if (email && memberNo) {
+                const verifyUrl = `https://interdomestik.app/verify?memberNo=${encodeURIComponent(memberNo)}`;
+                const html = membershipCardHtml({ memberNo, name, region, validity: String(year), verifyUrl });
+                await queueEmail({ to: [email], subject: `Interdomestik Membership ${year}`, html });
+                await sendPaymentReceipt({ email, name, memberNo, amount: amount / 100, currency, method: 'card', reference: invoiceId });
+              }
+            } catch (e) {
+              console.warn('[stripeWebhook] email dispatch failed', e);
+            }
             // Minimal audit and metrics handled inside startMembership logic normally; here we emulate key parts
             await db.collection('audit_logs').add({
               action: 'startMembership',
@@ -279,6 +338,22 @@ export const stripeWebhook = functions
           ? envYear
           : new Date().getUTCFullYear();
         await activateMembership(uid, year, amount / 100, currency, 'card', invoiceId);
+        // Also send the membership card email in emulator mode for end-to-end UX
+        try {
+          const m = await db.collection('members').doc(uid).get();
+          const email = (m.get('email') as string | undefined);
+          const name = (m.get('name') as string | undefined) || 'Member';
+          const memberNo = m.get('memberNo') as string | undefined;
+          const region = (m.get('region') as string | undefined) || '—';
+          if (email && memberNo) {
+            const verifyUrl = `https://interdomestik.app/verify?memberNo=${encodeURIComponent(memberNo)}`;
+            const html = membershipCardHtml({ memberNo, name, region, validity: String(year), verifyUrl });
+            await queueEmail({ to: [email], subject: `Interdomestik Membership ${year}`, html });
+            await sendPaymentReceipt({ email, name, memberNo, amount: amount / 100, currency, method: 'card', reference: invoiceId });
+          }
+        } catch (e) {
+          console.warn('[stripeWebhook][emu] email dispatch failed', e);
+        }
       } catch (e) {
         console.warn('[stripeWebhook][emu] activateMembership failed', e);
       }
@@ -361,6 +436,28 @@ if (process.env.FUNCTIONS_EMULATOR) {
         updatedAt: Timestamp.now(),
       });
 
+      // Create several agents for testing agent ownership flows
+      const agentDefs = [
+        { email: 'agent1@example.com', regions: ['PRISHTINA', 'FERIZAJ'], name: 'Agent One' },
+        { email: 'agent2@example.com', regions: ['PEJA', 'PRIZREN'], name: 'Agent Two' },
+        { email: 'agent3@example.com', regions: ['GJAKOVA', 'GJILAN', 'MITROVICA'], name: 'Agent Three' },
+      ] as const;
+      const agents: Array<{ uid: string; email: string; regions: string[] }> = [];
+      for (const a of agentDefs) {
+        const u = await admin.auth().createUser({ email: a.email, password: 'password123', displayName: a.name, emailVerified: true });
+        await admin.auth().setCustomUserClaims(u.uid, { role: 'agent', allowedRegions: a.regions });
+        await db.collection('members').doc(u.uid).set({
+          name: a.name,
+          email: a.email,
+          memberNo: `INT-2025-A${Math.floor(Math.random()*900+100)}`,
+          region: a.regions[0],
+          role: 'agent',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        });
+        agents.push({ uid: u.uid, email: a.email, regions: a.regions as unknown as string[] });
+      }
+
       // Seed a couple of events
       await db.collection('events').add({
         title: 'Welcome meetup — PRISHTINA',
@@ -375,7 +472,49 @@ if (process.env.FUNCTIONS_EMULATOR) {
         createdAt: Timestamp.now(),
       });
 
-      res.status(200).json({ ok: true, seeded: ['member1@example.com', 'member2@example.com', 'admin@example.com'] });
+      // Bulk-create seed members distributed across regions and agents
+      const regions = ['PRISHTINA', 'PRIZREN', 'GJAKOVA', 'PEJA', 'FERIZAJ', 'GJILAN', 'MITROVICA'] as const;
+      const regionToAgentUid = new Map<string, string>();
+      for (const a of agents) {
+        for (const r of a.regions) regionToAgentUid.set(r, a.uid);
+      }
+      const yearNow = new Date().getUTCFullYear();
+      const total = 60;
+      for (let i = 1; i <= total; i++) {
+        const seq = String(100 + i).padStart(6, '0');
+        const name = `Seed Member ${String(i).padStart(2, '0')}`;
+        const email = `seed${String(i).padStart(3, '0')}@example.com`;
+        const region = regions[(i - 1) % regions.length];
+        const agentUid = regionToAgentUid.get(region);
+        const user = await admin.auth().createUser({ email, password: 'password123', displayName: name, emailVerified: true });
+        const memberNo = `INT-${yearNow}-${seq}`;
+        const createdAt = Timestamp.fromDate(new Date(Date.now() - i * 864000));
+        await db.collection('members').doc(user.uid).set({
+          name,
+          nameLower: name.toLowerCase(),
+          email,
+          region,
+          phone: `+38349${String(100000 + i).slice(0,6)}`,
+          memberNo,
+          agentId: agentUid || null,
+          status: 'none',
+          year: null,
+          expiresAt: null,
+          createdAt,
+          updatedAt: createdAt,
+        });
+        // Activate current or previous year randomly (roughly 70% current)
+        const activeThisYear = i % 10 !== 0 && i % 3 !== 0; // skip for some variety
+        if (activeThisYear) {
+          await activateMembership(user.uid, yearNow, 25, 'EUR', 'cash', null);
+        } else {
+          await activateMembership(user.uid, yearNow - 1, 25, 'EUR', 'cash', null);
+          // Mark root doc as expired for clarity in UI
+          await db.collection('members').doc(user.uid).set({ status: 'expired' }, { merge: true });
+        }
+      }
+
+      res.status(200).json({ ok: true, seeded: ['member1@example.com', 'member2@example.com', 'admin@example.com'], agents: agents.map(a=>a.email), members: total });
     } catch (error: unknown) {
       console.error('Error seeding database:', error);
       if (error instanceof Error) {

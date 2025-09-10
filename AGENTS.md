@@ -22,7 +22,7 @@ See also: `PROJECT_GUIDE.md` for detailed architecture and end-to-end context.
 - Seed demo data (emulator only):
   - `curl -X POST http://localhost:5001/demo-interdomestik/europe-west1/seedDatabase`
 
-Test accounts after seeding: `member1@example.com`, `member2@example.com`, `admin@example.com` (password: `password123`).
+Test accounts after seeding: `member1@example.com`, `member2@example.com`, `admin@example.com`, `agent1@example.com`, `agent2@example.com`, `agent3@example.com` (password for all: `password123`).
 
 ## Build, Test, Deploy
 - Frontend unit tests: `cd frontend && npm test`

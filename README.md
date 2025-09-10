@@ -198,6 +198,12 @@ The system is designed with cost-first principles:
 
 ## Support
 
+Test accounts after seeding (password `password123`):
+- member1@example.com
+- member2@example.com
+- admin@example.com
+- agent1@example.com, agent2@example.com, agent3@example.com
+
 For technical issues or questions, refer to the documentation or contact the development team.
 
 ## License

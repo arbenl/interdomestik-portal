@@ -6,6 +6,10 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "agentId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "region",
           "order": "ASCENDING"
         },
@@ -31,5 +35,4 @@
     }
   ]
 }
-
 
