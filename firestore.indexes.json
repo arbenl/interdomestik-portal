@@ -6,7 +6,15 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "expiresAt",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "agentId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
@@ -35,4 +43,3 @@
     }
   ]
 }
-

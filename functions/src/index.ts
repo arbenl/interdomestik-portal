@@ -8,10 +8,12 @@ import { backfillNameLowerLogic } from './lib/backfill';
 import { startMembershipLogic } from "./lib/startMembership";
 import { agentCreateMemberLogic } from "./lib/agent";
 import { sendRenewalReminder, membershipCardHtml, queueEmail, sendPaymentReceipt } from "./lib/membership";
+import { signCardToken } from './lib/tokens';
 import { activateMembership } from './lib/startMembership';
 import { cleanupOldAuditLogs, cleanupOldMetrics } from './lib/cleanup';
 import { createPaymentIntentLogic } from './lib/payments';
 export { exportMembersCsv } from './exportMembersCsv';
+import { monthlyReportCsv } from './lib/reports';
 
 // Region constant for consistency
 const REGION = "europe-west1" as const;
@@ -52,6 +54,33 @@ export const backfillNameLower = functions
 export const createPaymentIntent = functions
   .region(REGION)
   .https.onCall((data, context) => createPaymentIntentLogic(data as any, context));
+
+// Returns a signed card token for QR verification links (JWT HS256)
+export const getCardToken = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => {
+    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+    const isAdmin = (context.auth.token as any)?.role === 'admin';
+    const requestedUid = data?.uid ? String(data.uid) : context.auth.uid;
+    const uid = isAdmin ? requestedUid : context.auth.uid;
+    const m = await db.collection('members').doc(uid).get();
+    if (!m.exists) throw new functions.https.HttpsError('not-found', 'Member not found');
+    const memberNo = m.get('memberNo') as string | undefined;
+    if (!memberNo) throw new functions.https.HttpsError('failed-precondition', 'MemberNo missing');
+
+    // Use membership expiration if active; else 30d from now
+    let expSec: number | undefined;
+    const activeSnap = await db.collection('members').doc(uid).collection('memberships')
+      .where('status', '==', 'active').orderBy('year', 'desc').limit(1).get();
+    if (!activeSnap.empty) {
+      const expiresAt = activeSnap.docs[0].get('expiresAt');
+      if (expiresAt?.toMillis) expSec = Math.floor(expiresAt.toMillis() / 1000);
+    }
+    if (!expSec) expSec = Math.floor(Date.now() / 1000) + 30 * 24 * 3600;
+
+    const token = signCardToken({ mno: memberNo, exp: expSec });
+    return { token };
+  });
 // Resend digital membership card email to the authenticated user (or admin-specified uid)
 export const resendMembershipCard = functions
   .region(REGION)
@@ -175,8 +204,26 @@ export const verifyMembership = functions
         }
       }
 
-      const memberNoRaw = req.query.memberNo;
-      const memberNo = String(memberNoRaw ?? "").trim();
+      const token = String((req.query.token ?? '')).trim();
+      let memberNo: string = String((req.query.memberNo ?? '')).trim();
+      if (token && !memberNo) {
+        try {
+          const { verifyCardToken } = await import('./lib/tokens');
+          const claims = verifyCardToken(token);
+          if (claims && typeof (claims as any).mno === 'string') {
+            memberNo = String((claims as any).mno);
+            // Optional: check revocation list
+            const jti = (claims as any).jti as string | undefined;
+            if (jti) {
+              const revoked = await db.collection('card_revocations').doc(jti).get();
+              if (revoked.exists) {
+                res.json({ ok: true, valid: false, memberNo, reason: 'revoked' });
+                return;
+              }
+            }
+          }
+        } catch {}
+      }
 
       if (!memberNo) {
         res.status(400).json({ ok: false, error: "memberNo required" });
@@ -287,7 +334,8 @@ export const stripeWebhook = functions
               const memberNo = m.get('memberNo') as string | undefined;
               const region = (m.get('region') as string | undefined) || '—';
               if (email && memberNo) {
-                const verifyUrl = `https://interdomestik.app/verify?memberNo=${encodeURIComponent(memberNo)}`;
+                const token = signCardToken({ mno: memberNo, exp: Math.floor(new Date(year, 11, 31, 23, 59, 59).getTime()/1000) });
+                const verifyUrl = `https://interdomestik.app/verify?token=${token}`;
                 const html = membershipCardHtml({ memberNo, name, region, validity: String(year), verifyUrl });
                 await queueEmail({ to: [email], subject: `Interdomestik Membership ${year}`, html });
                 await sendPaymentReceipt({ email, name, memberNo, amount: amount / 100, currency, method: 'card', reference: invoiceId });
@@ -346,7 +394,8 @@ export const stripeWebhook = functions
           const memberNo = m.get('memberNo') as string | undefined;
           const region = (m.get('region') as string | undefined) || '—';
           if (email && memberNo) {
-            const verifyUrl = `https://interdomestik.app/verify?memberNo=${encodeURIComponent(memberNo)}`;
+            const token = signCardToken({ mno: memberNo, exp: Math.floor(new Date(year, 11, 31, 23, 59, 59).getTime()/1000) });
+            const verifyUrl = `https://interdomestik.app/verify?token=${token}`;
             const html = membershipCardHtml({ memberNo, name, region, validity: String(year), verifyUrl });
             await queueEmail({ to: [email], subject: `Interdomestik Membership ${year}`, html });
             await sendPaymentReceipt({ email, name, memberNo, amount: amount / 100, currency, method: 'card', reference: invoiceId });
@@ -571,6 +620,156 @@ export const cleanupExpiredData = functions
       cleanupOldMetrics(400, 2000),
     ]);
     console.log('[cleanup] audit_logs deleted:', aud.deleted, 'metrics deleted:', met.deleted);
+  });
+
+// Monthly membership report aggregation for previous month
+export const monthlyMembershipReport = functions
+  .region(REGION)
+  .pubsub.schedule('10 0 1 * *') // 00:10 UTC on the 1st of each month
+  .timeZone('UTC')
+  .onRun(async () => {
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth();
+    const prev = new Date(Date.UTC(m === 0 ? y - 1 : y, m === 0 ? 11 : m - 1, 1));
+    const year = prev.getUTCFullYear();
+    const month = prev.getUTCMonth() + 1;
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+    const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+    const end = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+    const startTs = admin.firestore.Timestamp.fromDate(start);
+    const endTs = admin.firestore.Timestamp.fromDate(end);
+
+    const q = await db.collection('audit_logs')
+      .where('action', '==', 'startMembership')
+      .where('ts', '>=', startTs)
+      .where('ts', '<=', endTs)
+      .get();
+    let total = 0;
+    let revenue = 0;
+    const byRegion: Record<string, number> = {};
+    const byMethod: Record<string, number> = {};
+    q.forEach((d) => {
+      total += 1;
+      const amt = Number(d.get('amount') || 0);
+      revenue += isFinite(amt) ? amt : 0;
+      const reg = String(d.get('region') || 'UNKNOWN');
+      byRegion[reg] = (byRegion[reg] || 0) + 1;
+      const meth = String(d.get('method') || 'unknown');
+      byMethod[meth] = (byMethod[meth] || 0) + 1;
+    });
+
+    await db.collection('reports').doc(`monthly-${monthKey}`).set({
+      type: 'monthly',
+      month: monthKey,
+      range: { start: startTs, end: endTs },
+      total, revenue,
+      byRegion, byMethod,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  });
+
+// CSV export for monthly report (admin only)
+export const exportMonthlyReport = functions
+  .region(REGION)
+  .https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+    if (req.method !== 'GET') { res.status(405).send('Method not allowed'); return; }
+    const month = String(req.query.month || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(month)) { res.status(400).send('month=YYYY-MM required'); return; }
+    const doc = await db.collection('reports').doc(`monthly-${month}`).get();
+    if (!doc.exists) { res.status(404).send('Report not found'); return; }
+    const data = doc.data() as any;
+    const rows: string[] = [];
+    rows.push('metric,value');
+    rows.push(`total,${data.total || 0}`);
+    rows.push(`revenue,${data.revenue || 0}`);
+    rows.push('');
+    rows.push('region,count');
+    const byRegion = data.byRegion || {};
+    for (const k of Object.keys(byRegion)) rows.push(`${k},${byRegion[k]}`);
+    rows.push('');
+    rows.push('method,count');
+    const byMethod = data.byMethod || {};
+    for (const k of Object.keys(byMethod)) rows.push(`${k},${byMethod[k]}`);
+    const csv = rows.join('\n');
+    res.set('Content-Type', 'text/csv');
+    res.set('Content-Disposition', `attachment; filename=monthly-${month}.csv`);
+    res.status(200).send(csv);
+  });
+
+// On-demand monthly report generation (admin only, callable)
+export const generateMonthlyReportNow = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => {
+    if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
+      throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const month = String(data?.month || '').trim(); // YYYY-MM or '' => previous month
+    let target: string;
+    if (/^\d{4}-\d{2}$/.test(month)) {
+      target = month;
+    } else {
+      const now = new Date();
+      const y = now.getUTCFullYear();
+      const m = now.getUTCMonth();
+      const prev = new Date(Date.UTC(m === 0 ? y - 1 : y, m === 0 ? 11 : m - 1, 1));
+      target = `${prev.getUTCFullYear()}-${String(prev.getUTCMonth() + 1).padStart(2, '0')}`;
+    }
+    const [year, monthNum] = target.split('-').map((x) => Number(x));
+    const start = new Date(Date.UTC(year, monthNum - 1, 1, 0, 0, 0));
+    const end = new Date(Date.UTC(year, monthNum, 0, 23, 59, 59));
+    const startTs = admin.firestore.Timestamp.fromDate(start);
+    const endTs = admin.firestore.Timestamp.fromDate(end);
+    const q = await db.collection('audit_logs')
+      .where('action', '==', 'startMembership')
+      .where('ts', '>=', startTs)
+      .where('ts', '<=', endTs)
+      .get();
+    let total = 0; let revenue = 0;
+    const byRegion: Record<string, number> = {}; const byMethod: Record<string, number> = {};
+    q.forEach((d) => {
+      total += 1;
+      const amt = Number(d.get('amount') || 0); revenue += isFinite(amt) ? amt : 0;
+      const reg = String(d.get('region') || 'UNKNOWN'); byRegion[reg] = (byRegion[reg] || 0) + 1;
+      const meth = String(d.get('method') || 'unknown'); byMethod[meth] = (byMethod[meth] || 0) + 1;
+    });
+    await db.collection('reports').doc(`monthly-${target}`).set({
+      type: 'monthly', month: target, range: { start: startTs, end: endTs }, total, revenue, byRegion, byMethod,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { ok: true, month: target, total, revenue };
+  });
+
+// Token helpers: admin utilities for revocation and status
+export const revokeCardToken = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => {
+    if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
+      throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const jti = String(data?.jti || '').trim();
+    const reason = String(data?.reason || 'manual');
+    if (!jti) throw new functions.https.HttpsError('invalid-argument', 'jti required');
+    await db.collection('card_revocations').doc(jti).set({ reason, ts: FieldValue.serverTimestamp() }, { merge: true });
+    return { ok: true };
+  });
+
+export const getCardKeyStatus = functions
+  .region(REGION)
+  .https.onCall(async (_data, context) => {
+    if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
+      throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const activeKid = process.env.CARD_JWT_ACTIVE_KID || 'v1';
+    const secretsRaw = process.env.CARD_JWT_SECRETS || '';
+    let kids: string[] = [];
+    try { const m = JSON.parse(secretsRaw || '{}'); kids = Object.keys(m || {}); } catch {}
+    if (kids.length === 0) kids = ['v1'];
+    return { activeKid, kids };
   });
 
 //       if (q.empty) {

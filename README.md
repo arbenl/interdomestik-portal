@@ -2,7 +2,7 @@
 
 A cost-optimized, secure member management system built with Firebase.
 
-Note: See PROJECT_GUIDE.md for the unified project handbook (architecture, structure, local dev, testing, deployment).
+Note: See docs/PROJECT_GUIDE.md for the unified project handbook (architecture, structure, local dev, testing, deployment).
 
 ## Overview
 
@@ -195,6 +195,7 @@ The system is designed with cost-first principles:
 - [Architecture Decision Records](docs/adr.md)
 - [Operational Runbooks](docs/runbooks.md)
 - [Administrator Guide](docs/admin-guide.md)
+ - [Backlog — What’s Next](docs/NEXT_TASKS.md)
 
 ## Support
 

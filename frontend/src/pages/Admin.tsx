@@ -12,6 +12,8 @@ import { useToast } from '../components/ui/useToast';
 //
 import ActivateMembershipModal from '../components/ActivateMembershipModal';
 import AgentRegistrationCard from '../components/AgentRegistrationCard';
+import Button from '../components/ui/Button';
+import useReports from '../hooks/useReports';
 
 //
 
@@ -19,7 +21,12 @@ export default function Admin() {
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { canRegister, allowedRegions, loading: roleLoading } = useAgentOrAdmin();
   const [regionFilter, setRegionFilter] = useState<string>('ALL');
-  const { users, loading: usersLoading, error: usersError, refresh, nextPage, prevPage, hasNext, hasPrev, page } = useUsers({ allowedRegions, limit: 25, region: regionFilter });
+  const [statusFilter, setStatusFilter] = useState<'ALL'|'ACTIVE'|'INACTIVE'|'EXPIRED'>('ALL');
+  const [expiringSoon, setExpiringSoon] = useState(false);
+  const { users, loading: usersLoading, error: usersError, refresh, nextPage, prevPage, hasNext, hasPrev, page } = useUsers({ allowedRegions, limit: 25, region: regionFilter, status: statusFilter, expiringDays: expiringSoon ? 30 : null });
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const allSelected = users.length > 0 && users.every(u => selected[u.id!]);
+  const selectedIds = users.filter(u => selected[u.id!]).map(u => u.id!)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -101,6 +108,7 @@ export default function Admin() {
   const [bfPage, setBfPage] = useState(0);
   const [bfUpdated, setBfUpdated] = useState(0);
   const [bfNext, setBfNext] = useState<string | null>(null);
+  const { items: reports, loading: reportLoading } = useReports(6);
 
   const handleSeedEmulator = async () => {
     try {
@@ -279,6 +287,7 @@ export default function Admin() {
                     <th className="px-3 py-2">Name</th>
                     <th className="px-3 py-2">Email</th>
                     <th className="px-3 py-2">Member No</th>
+                    <th className="px-3 py-2">Status</th>
                     <th className="px-3 py-2">Region</th>
                     <th></th>
                   </tr>
@@ -289,9 +298,14 @@ export default function Admin() {
                       <td className="px-3 py-2">{u.name}</td>
                       <td className="px-3 py-2">{u.email}</td>
                       <td className="px-3 py-2">{u.memberNo}</td>
+                      <td className="px-3 py-2">{renderStatus(u.status, u.expiresAt)}</td>
                       <td className="px-3 py-2">{u.region}</td>
                       <td className="px-3 py-2 text-right">
-                        <button className="text-indigo-600" onClick={()=>handleActivateClick(u)}>Activate Membership</button>
+                        {isActive(u.status, u.expiresAt) ? (
+                          <span className="text-gray-500">Active</span>
+                        ) : (
+                          <button className="text-indigo-600" onClick={()=>handleActivateClick(u)}>Activate Membership</button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -302,6 +316,59 @@ export default function Admin() {
           {searchLoading && <div className="text-gray-600 mt-2">Searching…</div>}
           {!searchLoading && searchResults.length === 0 && searchTerm.trim() && !searchError && (
             <div className="text-gray-600 mt-2 text-sm">No results</div>
+          )}
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Monthly Reports</h3>
+          {reportLoading ? (
+            <div className="text-gray-600">Loading…</div>
+          ) : reports.length === 0 ? (
+            <div className="text-gray-600">No reports yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-600">
+                    <th className="px-3 py-2">Month</th>
+                    <th className="px-3 py-2">Total</th>
+                    <th className="px-3 py-2">Revenue</th>
+                    <th className="px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reports.map(r => (
+                    <tr key={r.id} className="border-t">
+                      <td className="px-3 py-2">{r.month}</td>
+                      <td className="px-3 py-2">{r.total ?? 0}</td>
+                      <td className="px-3 py-2">{r.revenue ?? 0}</td>
+                      <td className="px-3 py-2 text-right">
+                        <a className="text-indigo-600" href={`/exportMonthlyReport?month=${encodeURIComponent(r.month)}`}>Download CSV</a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {isLocal && (
+            <div className="mt-3">
+              <button className="px-3 py-2 bg-indigo-600 text-white rounded" onClick={async ()=>{
+                try {
+                  const fn = httpsCallable<{ month?: string }, { ok: boolean; month: string }>(functions, 'generateMonthlyReportNow');
+                  const r = await fn({});
+                  handleSuccess(`Report generated for ${r.data.month}`);
+                } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+              }}>Generate (emulator)</button>
+            </div>
+          )}
+          {reports.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-semibold mb-1">By Region (latest)</h4>
+              <RegionBarChart data={(reports[0] as any).byRegion || {}} />
+            </div>
           )}
         </div>
       )}
@@ -412,7 +479,7 @@ export default function Admin() {
 
       {isAdmin && (
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="flex items-end justify-between p-4 border-b bg-gray-50">
+        <div className="flex items-end justify-between p-4 border-b bg-gray-50 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-600 uppercase">Region filter</label>
             <select className="mt-1 border rounded px-3 py-2" value={regionFilter} onChange={(e)=> setRegionFilter(e.target.value)}>
@@ -420,18 +487,38 @@ export default function Admin() {
               {REGIONS.map(r => (<option key={r} value={r}>{r}</option>))}
             </select>
           </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase">Status filter</label>
+            <select className="mt-1 border rounded px-3 py-2" value={statusFilter} onChange={(e)=> setStatusFilter(e.target.value as any)}>
+              <option value="ALL">All</option>
+              <option value="ACTIVE">Active</option>
+              <option value="EXPIRED">Expired</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
+          </div>
           <div className="flex items-center gap-2">
             <button className="px-3 py-2 bg-gray-200 rounded disabled:opacity-50" onClick={prevPage} disabled={!hasPrev}>Prev</button>
             <div className="text-sm text-gray-700">Page {page}</div>
             <button className="px-3 py-2 bg-gray-200 rounded disabled:opacity-50" onClick={nextPage} disabled={!hasNext}>Next</button>
           </div>
+          <label className="inline-flex items-center gap-2 text-sm ml-2">
+            <input type="checkbox" checked={expiringSoon} onChange={(e)=> setExpiringSoon(e.target.checked)} /> Expiring in 30 days
+          </label>
         </div>
-        <table className="min-w-full leading-normal">
+        <table className="min-w-full leading-normal" data-testid="users-table">
           <thead>
             <tr>
+              <th className="px-3 py-3 border-b-2 border-gray-200 bg-gray-100">
+                <input type="checkbox" data-testid="header-select-all" aria-label="Select all" checked={allSelected} onChange={(e)=>{
+                  const on = e.target.checked; const map: Record<string, boolean> = {};
+                  if (on) users.forEach(u => { if (u.id) map[u.id] = true; });
+                  setSelected(on ? map : {});
+                }} />
+              </th>
               <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
               <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
               <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Member No</th>
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
               <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Region</th>
               <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100"></th>
             </tr>
@@ -439,19 +526,36 @@ export default function Admin() {
           <tbody>
             {users.map(user => (
               <tr key={user.id}>
+                <td className="px-3 py-2 border-b border-gray-200 bg-white text-sm">
+                  <input type="checkbox" data-testid="row-select" checked={!!selected[user.id!]} onChange={(e)=> setSelected(prev => ({ ...prev, [user.id!]: e.target.checked }))} />
+                </td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.name}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.email}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.memberNo}</td>
+                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{renderStatus(user.status, user.expiresAt)}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.region}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-right">
-                  <button data-testid="activate-btn" onClick={() => handleActivateClick(user)} className="text-indigo-600 hover:text-indigo-900">
-                    Activate Membership
-                  </button>
+                  {isActive(user.status, user.expiresAt) ? (
+                    <span className="text-gray-500">Active</span>
+                  ) : (
+                    <>
+                      <button data-testid="activate-btn" onClick={() => handleActivateClick(user)} className="text-indigo-600 hover:text-indigo-900 mr-2">
+                        Activate
+                      </button>
+                      <QuickRenew uid={user.id!} onDone={() => { refresh(); handleSuccess('Membership activated'); }} />
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {selectedIds.length > 0 && (
+          <div className="flex items-center gap-3 p-3 bg-gray-50 border-t">
+            <div className="text-sm">Selected: <span className="font-medium">{selectedIds.length}</span></div>
+            <BulkRenewBar ids={selectedIds} onDone={() => { setSelected({}); refresh(); handleSuccess('Bulk renew completed'); }} />
+          </div>
+        )}
       </div>
       )}
 
@@ -462,6 +566,103 @@ export default function Admin() {
           onSuccess={handleSuccess}
         />
       )}
+    </div>
+  );
+}
+
+function isActive(status?: string, expiresAt?: { seconds?: number | undefined } | null): boolean {
+  const s = (status || '').toString().toLowerCase();
+  if (s === 'active') return true;
+  const sec = (expiresAt as any)?.seconds;
+  if (typeof sec === 'number' && sec * 1000 > Date.now()) return true;
+  return false;
+}
+
+function renderStatus(status?: string, expiresAt?: { seconds?: number | undefined } | null) {
+  const active = isActive(status, expiresAt);
+  const label = active ? 'ACTIVE' : (status === 'expired' ? 'EXPIRED' : 'INACTIVE');
+  const cls = active
+    ? 'bg-green-100 text-green-800'
+    : (status === 'expired' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800');
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>{label}</span>;
+}
+
+function QuickRenew({ uid, onDone }: { uid: string; onDone?: ()=>void }) {
+  const year = new Date().getUTCFullYear();
+  const [price, setPrice] = useState(25);
+  const [busy, setBusy] = useState(false);
+  return (
+    <span className="inline-flex items-center gap-2">
+      <select className="border rounded px-1 py-1 text-sm" defaultValue={String(year)} disabled={busy}>
+        <option value={year}>{year}</option>
+        <option value={year+1}>{year+1}</option>
+      </select>
+      <input type="number" className="w-20 border rounded px-2 py-1 text-sm" value={price} onChange={(e)=> setPrice(Number(e.target.value))} disabled={busy} />
+      <Button className="px-2 py-1 text-xs" disabled={busy} onClick={async ()=>{
+        setBusy(true);
+        try {
+          const fn = httpsCallable<{ uid: string; year: number; price: number; currency: 'EUR'; paymentMethod: 'cash' } , any>(functions, 'startMembership');
+          await fn({ uid, year, price, currency: 'EUR', paymentMethod: 'cash' });
+          onDone && onDone();
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setBusy(false);
+        }
+      }}>Quick renew</Button>
+    </span>
+  );
+}
+
+function BulkRenewBar({ ids, onDone }: { ids: string[]; onDone?: ()=>void }) {
+  const year = new Date().getUTCFullYear();
+  const [price, setPrice] = useState(25);
+  const [busy, setBusy] = useState(false);
+  const [countDone, setCountDone] = useState(0);
+  return (
+    <span className="inline-flex items-center gap-2">
+      <label className="text-sm">Year</label>
+      <select className="border rounded px-1 py-1 text-sm" defaultValue={String(year)} disabled={busy}>
+        <option value={year}>{year}</option>
+        <option value={year+1}>{year+1}</option>
+      </select>
+      <label className="text-sm">Amount</label>
+      <input type="number" className="w-20 border rounded px-2 py-1 text-sm" value={price} onChange={(e)=> setPrice(Number(e.target.value))} disabled={busy} />
+      <Button data-testid="bulk-renew" className="px-2 py-1 text-xs" disabled={busy || ids.length === 0} onClick={async ()=>{
+        setBusy(true); setCountDone(0);
+        try {
+          const fn = httpsCallable<{ uid: string; year: number; price: number; currency: 'EUR'; paymentMethod: 'cash' } , any>(functions, 'startMembership');
+          for (const uid of ids) {
+            await fn({ uid, year, price, currency: 'EUR', paymentMethod: 'cash' });
+            setCountDone(c => c + 1);
+          }
+          onDone && onDone();
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setBusy(false);
+        }
+      }}>Renew selected</Button>
+      {busy && <span className="text-xs text-gray-600">{countDone}/{ids.length}</span>}
+    </span>
+  );
+}
+
+function RegionBarChart({ data }: { data: Record<string, number> }) {
+  const entries = Object.entries(data);
+  if (entries.length === 0) return <div className="text-gray-600 text-sm">No data.</div>;
+  const max = Math.max(...entries.map(([, v]) => v || 0), 1);
+  return (
+    <div className="space-y-1">
+      {entries.map(([k, v]) => (
+        <div key={k} className="flex items-center gap-2">
+          <div className="w-28 text-xs text-gray-600">{k}</div>
+          <div className="h-3 bg-gray-200 rounded w-full">
+            <div className="h-3 bg-indigo-500 rounded" style={{ width: `${Math.round((v || 0) / max * 100)}%` }} />
+          </div>
+          <div className="w-10 text-xs text-gray-700 text-right">{v || 0}</div>
+        </div>
+      ))}
     </div>
   );
 }

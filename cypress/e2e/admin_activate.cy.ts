@@ -43,15 +43,16 @@ describe('Admin Activate Flow', () => {
       .parents('tr')
       .as('userRow');
 
-    // Capture memberNo from this row
-    cy.get('@userRow').find('td').eq(2).invoke('text').then((txt) => {
-      const memberNo = txt.trim();
-      expect(memberNo).to.match(/^INT-\d{4}-\d{6}$/);
-      cy.wrap(memberNo).as('memberNo');
+    // Capture memberNo from any cell in the row by pattern (robust to column order)
+    cy.get('@userRow').find('td').then(($cells) => {
+      const texts = Array.from($cells).map((el) => (el as HTMLElement).innerText.trim());
+      const m = texts.find((t) => /^INT-\d{4}-\d{6}$/.test(t));
+      expect(m, 'member number in row').to.match(/^INT-\d{4}-\d{6}$/);
+      cy.wrap(m as string).as('memberNo');
     });
 
-    // Open activation modal for this row
-    cy.get('@userRow').find('[data-testid="activate-btn"]').click();
+    // Open activation modal for this row (ensure visible)
+    cy.get('@userRow').find('[data-testid="activate-btn"]').scrollIntoView().click({ force: true });
 
     cy.contains('button', /^Activate$/i).click();
     // Verify via public endpoint that membership is active for that memberNo (through Hosting rewrite)

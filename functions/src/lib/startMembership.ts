@@ -4,6 +4,7 @@ import * as functions from "firebase-functions/v1";
 import { startMembershipSchema } from "./validators";
 import { requireAdmin } from "./rbac";
 import { queueEmail, membershipCardHtml, sendPaymentReceipt } from "./membership";
+import { signCardToken } from './tokens';
 
 export async function activateMembership(
   uid: string,
@@ -66,7 +67,8 @@ export async function startMembershipLogic(data: any, context: functions.https.C
   const region = memberDoc.get('region');
   const email = memberDoc.get('email');
 
-  const verifyUrl = `https://interdomestik.app/verify?memberNo=${memberNo}`;
+  const token = signCardToken({ mno: memberNo, exp: Math.floor(new Date(year, 11, 31, 23, 59, 59).getTime()/1000) });
+  const verifyUrl = `https://interdomestik.app/verify?token=${token}`;
   const html = membershipCardHtml({
     memberNo,
     name,

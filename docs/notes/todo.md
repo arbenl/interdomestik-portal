@@ -25,4 +25,3 @@
 - [x] Generate Architecture Decision Records (docs/adr.md)
 - [x] Generate Operational Runbooks (docs/runbooks.md)
 - [x] Generate Administrator Guide (docs/admin-guide.md)
-

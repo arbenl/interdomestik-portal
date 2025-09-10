@@ -9,6 +9,7 @@ import ActivityFeed from '../components/portal/ActivityFeed';
 import { IconCalendar, IconCreditCard, IconUsers } from '../components/icons';
 import { useEvents } from '../hooks/useEvents';
 import { useDirectory } from '../hooks/useDirectory';
+import useCardToken from '../hooks/useCardToken';
 
 export default function MemberPortal() {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ export default function MemberPortal() {
   // Hooks must be declared unconditionally (before any early return)
   const { events } = useEvents(5);
   const { members: directory } = useDirectory(5);
+  const { token } = useCardToken(user?.uid || null);
 
   if (!user) {
     return (
@@ -56,9 +58,9 @@ export default function MemberPortal() {
   const computedStatus = typeof expiresAtSec === 'number' ? (expiresAtSec > nowSec ? 'active' : 'expired') : 'none';
   const status = (profile?.status as string | undefined) || computedStatus;
 
-  const verifyUrl = memberNo && memberNo !== '—'
-    ? `${location.origin}/verify?memberNo=${encodeURIComponent(memberNo)}`
-    : undefined;
+  const verifyUrl = token
+    ? `${location.origin}/verify?token=${encodeURIComponent(token)}`
+    : (memberNo && memberNo !== '—' ? `${location.origin}/verify?memberNo=${encodeURIComponent(memberNo)}` : undefined);
 
   return (
     <div className="max-w-6xl mx-auto">

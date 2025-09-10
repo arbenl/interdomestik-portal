@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.backfillNameLower = exports.importMembersCsv = exports.getUserClaims = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
+exports.getCardKeyStatus = exports.revokeCardToken = exports.generateMonthlyReportNow = exports.exportMonthlyReport = exports.monthlyMembershipReport = exports.cleanupExpiredData = exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.resendMembershipCard = exports.getCardToken = exports.createPaymentIntent = exports.backfillNameLower = exports.importMembersCsv = exports.getUserClaims = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const firestore_1 = require("firebase-admin/firestore");
 const firebaseAdmin_1 = require("./firebaseAdmin");
@@ -44,6 +44,10 @@ const backfill_1 = require("./lib/backfill");
 const startMembership_1 = require("./lib/startMembership");
 const agent_1 = require("./lib/agent");
 const membership_1 = require("./lib/membership");
+const tokens_1 = require("./lib/tokens");
+const startMembership_2 = require("./lib/startMembership");
+const cleanup_1 = require("./lib/cleanup");
+const payments_1 = require("./lib/payments");
 var exportMembersCsv_1 = require("./exportMembersCsv");
 Object.defineProperty(exports, "exportMembersCsv", { enumerable: true, get: function () { return exportMembersCsv_1.exportMembersCsv; } });
 // Region constant for consistency
@@ -73,6 +77,83 @@ exports.importMembersCsv = functions
 exports.backfillNameLower = functions
     .region(REGION)
     .https.onCall((data, context) => (0, backfill_1.backfillNameLowerLogic)(data, context));
+exports.createPaymentIntent = functions
+    .region(REGION)
+    .https.onCall((data, context) => (0, payments_1.createPaymentIntentLogic)(data, context));
+// Returns a signed card token for QR verification links (JWT HS256)
+exports.getCardToken = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => {
+    if (!context.auth)
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+    const isAdmin = context.auth.token?.role === 'admin';
+    const requestedUid = data?.uid ? String(data.uid) : context.auth.uid;
+    const uid = isAdmin ? requestedUid : context.auth.uid;
+    const m = await firebaseAdmin_1.db.collection('members').doc(uid).get();
+    if (!m.exists)
+        throw new functions.https.HttpsError('not-found', 'Member not found');
+    const memberNo = m.get('memberNo');
+    if (!memberNo)
+        throw new functions.https.HttpsError('failed-precondition', 'MemberNo missing');
+    // Use membership expiration if active; else 30d from now
+    let expSec;
+    const activeSnap = await firebaseAdmin_1.db.collection('members').doc(uid).collection('memberships')
+        .where('status', '==', 'active').orderBy('year', 'desc').limit(1).get();
+    if (!activeSnap.empty) {
+        const expiresAt = activeSnap.docs[0].get('expiresAt');
+        if (expiresAt?.toMillis)
+            expSec = Math.floor(expiresAt.toMillis() / 1000);
+    }
+    if (!expSec)
+        expSec = Math.floor(Date.now() / 1000) + 30 * 24 * 3600;
+    const token = (0, tokens_1.signCardToken)({ mno: memberNo, exp: expSec });
+    return { token };
+});
+// Resend digital membership card email to the authenticated user (or admin-specified uid)
+exports.resendMembershipCard = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => {
+    if (!context.auth)
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+    const requestedUid = String((data?.uid ?? '').toString().trim());
+    const actorUid = context.auth.uid;
+    const isAdmin = context.auth.token?.role === 'admin';
+    const uid = requestedUid && isAdmin ? requestedUid : actorUid;
+    const memberDoc = await firebaseAdmin_1.db.collection('members').doc(uid).get();
+    if (!memberDoc.exists)
+        throw new functions.https.HttpsError('not-found', 'Member not found');
+    const memberNo = memberDoc.get('memberNo');
+    const name = memberDoc.get('name') || 'Member';
+    const region = memberDoc.get('region') || '—';
+    const email = memberDoc.get('email') || undefined;
+    if (!email || !memberNo)
+        throw new functions.https.HttpsError('failed-precondition', 'Member profile missing email or memberNo');
+    // Determine active year (prefer explicit year from input, else latest active doc)
+    const explicitYear = Number.isFinite(Number(data?.year)) ? Number(data?.year) : undefined;
+    let yearToUse = explicitYear;
+    if (!yearToUse) {
+        const act = await firebaseAdmin_1.db.collection('members').doc(uid).collection('memberships')
+            .where('status', '==', 'active').orderBy('year', 'desc').limit(1).get();
+        if (!act.empty)
+            yearToUse = Number(act.docs[0].get('year'));
+    }
+    if (!yearToUse)
+        throw new functions.https.HttpsError('failed-precondition', 'No active membership to resend');
+    const verifyUrl = `https://interdomestik.app/verify?memberNo=${encodeURIComponent(memberNo)}`;
+    const html = (0, membership_1.membershipCardHtml)({ memberNo, name, region, validity: String(yearToUse), verifyUrl });
+    await (0, membership_1.queueEmail)({ to: [email], subject: `Interdomestik Membership ${yearToUse}`, html });
+    try {
+        await firebaseAdmin_1.db.collection('audit_logs').add({
+            action: 'resendMembershipCard',
+            actor: actorUid,
+            target: uid,
+            year: yearToUse,
+            ts: firestore_1.FieldValue.serverTimestamp(),
+        });
+    }
+    catch { }
+    return { ok: true };
+});
 // HTTP utilities -------------------------------------------------------------
 exports.clearDatabase = functions
     .region(REGION)
@@ -152,8 +233,27 @@ exports.verifyMembership = functions
                 return;
             }
         }
-        const memberNoRaw = req.query.memberNo;
-        const memberNo = String(memberNoRaw ?? "").trim();
+        const token = String((req.query.token ?? '')).trim();
+        let memberNo = String((req.query.memberNo ?? '')).trim();
+        if (token && !memberNo) {
+            try {
+                const { verifyCardToken } = await Promise.resolve().then(() => __importStar(require('./lib/tokens')));
+                const claims = verifyCardToken(token);
+                if (claims && typeof claims.mno === 'string') {
+                    memberNo = String(claims.mno);
+                    // Optional: check revocation list
+                    const jti = claims.jti;
+                    if (jti) {
+                        const revoked = await firebaseAdmin_1.db.collection('card_revocations').doc(jti).get();
+                        if (revoked.exists) {
+                            res.json({ ok: true, valid: false, memberNo, reason: 'revoked' });
+                            return;
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
         if (!memberNo) {
             res.status(400).json({ ok: false, error: "memberNo required" });
             return;
@@ -250,6 +350,46 @@ exports.stripeWebhook = functions
                     tx.set(invRef, { invoiceId, amount, currency, created, status: 'paid' }, { merge: true });
                     tx.set(eventDoc, { processed: true, type: event.type, at: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
                 });
+                // Activate membership for current (or configured) year
+                const envYear = Number(process.env.MEMBER_YEAR);
+                const year = (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100)
+                    ? envYear
+                    : new Date().getUTCFullYear();
+                try {
+                    await (0, startMembership_2.activateMembership)(uid, year, amount / 100, currency, 'card', invoiceId);
+                    // Send card + receipt emails
+                    try {
+                        const m = await firebaseAdmin_1.db.collection('members').doc(uid).get();
+                        const email = m.get('email');
+                        const name = m.get('name') || 'Member';
+                        const memberNo = m.get('memberNo');
+                        const region = m.get('region') || '—';
+                        if (email && memberNo) {
+                            const token = (0, tokens_1.signCardToken)({ mno: memberNo, exp: Math.floor(new Date(year, 11, 31, 23, 59, 59).getTime() / 1000) });
+                            const verifyUrl = `https://interdomestik.app/verify?token=${token}`;
+                            const html = (0, membership_1.membershipCardHtml)({ memberNo, name, region, validity: String(year), verifyUrl });
+                            await (0, membership_1.queueEmail)({ to: [email], subject: `Interdomestik Membership ${year}`, html });
+                            await (0, membership_1.sendPaymentReceipt)({ email, name, memberNo, amount: amount / 100, currency, method: 'card', reference: invoiceId });
+                        }
+                    }
+                    catch (e) {
+                        console.warn('[stripeWebhook] email dispatch failed', e);
+                    }
+                    // Minimal audit and metrics handled inside startMembership logic normally; here we emulate key parts
+                    await firebaseAdmin_1.db.collection('audit_logs').add({
+                        action: 'startMembership',
+                        actor: 'stripe-webhook',
+                        target: uid,
+                        year,
+                        amount: amount / 100,
+                        currency,
+                        method: 'card',
+                        ts: firestore_1.FieldValue.serverTimestamp(),
+                    });
+                }
+                catch (e) {
+                    console.warn('[stripeWebhook] activateMembership failed', e);
+                }
                 res.json({ ok: true });
                 return;
             }
@@ -273,6 +413,35 @@ exports.stripeWebhook = functions
             invoiceId, amount, currency, created,
             status: 'paid',
         }, { merge: true });
+        // Emulator path: also activate membership directly
+        try {
+            const envYear = Number(process.env.MEMBER_YEAR);
+            const year = (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100)
+                ? envYear
+                : new Date().getUTCFullYear();
+            await (0, startMembership_2.activateMembership)(uid, year, amount / 100, currency, 'card', invoiceId);
+            // Also send the membership card email in emulator mode for end-to-end UX
+            try {
+                const m = await firebaseAdmin_1.db.collection('members').doc(uid).get();
+                const email = m.get('email');
+                const name = m.get('name') || 'Member';
+                const memberNo = m.get('memberNo');
+                const region = m.get('region') || '—';
+                if (email && memberNo) {
+                    const token = (0, tokens_1.signCardToken)({ mno: memberNo, exp: Math.floor(new Date(year, 11, 31, 23, 59, 59).getTime() / 1000) });
+                    const verifyUrl = `https://interdomestik.app/verify?token=${token}`;
+                    const html = (0, membership_1.membershipCardHtml)({ memberNo, name, region, validity: String(year), verifyUrl });
+                    await (0, membership_1.queueEmail)({ to: [email], subject: `Interdomestik Membership ${year}`, html });
+                    await (0, membership_1.sendPaymentReceipt)({ email, name, memberNo, amount: amount / 100, currency, method: 'card', reference: invoiceId });
+                }
+            }
+            catch (e) {
+                console.warn('[stripeWebhook][emu] email dispatch failed', e);
+            }
+        }
+        catch (e) {
+            console.warn('[stripeWebhook][emu] activateMembership failed', e);
+        }
         res.json({ ok: true, mode: 'emulator' });
     }
     catch (e) {
@@ -351,6 +520,27 @@ if (process.env.FUNCTIONS_EMULATOR) {
                 createdAt: firestore_1.Timestamp.now(),
                 updatedAt: firestore_1.Timestamp.now(),
             });
+            // Create several agents for testing agent ownership flows
+            const agentDefs = [
+                { email: 'agent1@example.com', regions: ['PRISHTINA', 'FERIZAJ'], name: 'Agent One' },
+                { email: 'agent2@example.com', regions: ['PEJA', 'PRIZREN'], name: 'Agent Two' },
+                { email: 'agent3@example.com', regions: ['GJAKOVA', 'GJILAN', 'MITROVICA'], name: 'Agent Three' },
+            ];
+            const agents = [];
+            for (const a of agentDefs) {
+                const u = await firebaseAdmin_1.admin.auth().createUser({ email: a.email, password: 'password123', displayName: a.name, emailVerified: true });
+                await firebaseAdmin_1.admin.auth().setCustomUserClaims(u.uid, { role: 'agent', allowedRegions: a.regions });
+                await firebaseAdmin_1.db.collection('members').doc(u.uid).set({
+                    name: a.name,
+                    email: a.email,
+                    memberNo: `INT-2025-A${Math.floor(Math.random() * 900 + 100)}`,
+                    region: a.regions[0],
+                    role: 'agent',
+                    createdAt: firestore_1.Timestamp.now(),
+                    updatedAt: firestore_1.Timestamp.now(),
+                });
+                agents.push({ uid: u.uid, email: a.email, regions: a.regions });
+            }
             // Seed a couple of events
             await firebaseAdmin_1.db.collection('events').add({
                 title: 'Welcome meetup — PRISHTINA',
@@ -364,7 +554,50 @@ if (process.env.FUNCTIONS_EMULATOR) {
                 location: 'PEJA',
                 createdAt: firestore_1.Timestamp.now(),
             });
-            res.status(200).json({ ok: true, seeded: ['member1@example.com', 'member2@example.com', 'admin@example.com'] });
+            // Bulk-create seed members distributed across regions and agents
+            const regions = ['PRISHTINA', 'PRIZREN', 'GJAKOVA', 'PEJA', 'FERIZAJ', 'GJILAN', 'MITROVICA'];
+            const regionToAgentUid = new Map();
+            for (const a of agents) {
+                for (const r of a.regions)
+                    regionToAgentUid.set(r, a.uid);
+            }
+            const yearNow = new Date().getUTCFullYear();
+            const total = 60;
+            for (let i = 1; i <= total; i++) {
+                const seq = String(100 + i).padStart(6, '0');
+                const name = `Seed Member ${String(i).padStart(2, '0')}`;
+                const email = `seed${String(i).padStart(3, '0')}@example.com`;
+                const region = regions[(i - 1) % regions.length];
+                const agentUid = regionToAgentUid.get(region);
+                const user = await firebaseAdmin_1.admin.auth().createUser({ email, password: 'password123', displayName: name, emailVerified: true });
+                const memberNo = `INT-${yearNow}-${seq}`;
+                const createdAt = firestore_1.Timestamp.fromDate(new Date(Date.now() - i * 864000));
+                await firebaseAdmin_1.db.collection('members').doc(user.uid).set({
+                    name,
+                    nameLower: name.toLowerCase(),
+                    email,
+                    region,
+                    phone: `+38349${String(100000 + i).slice(0, 6)}`,
+                    memberNo,
+                    agentId: agentUid || null,
+                    status: 'none',
+                    year: null,
+                    expiresAt: null,
+                    createdAt,
+                    updatedAt: createdAt,
+                });
+                // Activate current or previous year randomly (roughly 70% current)
+                const activeThisYear = i % 10 !== 0 && i % 3 !== 0; // skip for some variety
+                if (activeThisYear) {
+                    await (0, startMembership_2.activateMembership)(user.uid, yearNow, 25, 'EUR', 'cash', null);
+                }
+                else {
+                    await (0, startMembership_2.activateMembership)(user.uid, yearNow - 1, 25, 'EUR', 'cash', null);
+                    // Mark root doc as expired for clarity in UI
+                    await firebaseAdmin_1.db.collection('members').doc(user.uid).set({ status: 'expired' }, { merge: true });
+                }
+            }
+            res.status(200).json({ ok: true, seeded: ['member1@example.com', 'member2@example.com', 'admin@example.com'], agents: agents.map(a => a.email), members: total });
         }
         catch (error) {
             console.error('Error seeding database:', error);
@@ -407,6 +640,187 @@ exports.dailyRenewalReminders = functions
         }
     }
     await Promise.all([runForOffset(30), runForOffset(7), runForOffset(1)]);
+});
+// Daily cleanup of old audit logs and metrics
+exports.cleanupExpiredData = functions
+    .region(REGION)
+    .pubsub.schedule('15 3 * * *')
+    .timeZone('UTC')
+    .onRun(async () => {
+    const [aud, met] = await Promise.all([
+        (0, cleanup_1.cleanupOldAuditLogs)(180, 2000),
+        (0, cleanup_1.cleanupOldMetrics)(400, 2000),
+    ]);
+    console.log('[cleanup] audit_logs deleted:', aud.deleted, 'metrics deleted:', met.deleted);
+});
+// Monthly membership report aggregation for previous month
+exports.monthlyMembershipReport = functions
+    .region(REGION)
+    .pubsub.schedule('10 0 1 * *') // 00:10 UTC on the 1st of each month
+    .timeZone('UTC')
+    .onRun(async () => {
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth();
+    const prev = new Date(Date.UTC(m === 0 ? y - 1 : y, m === 0 ? 11 : m - 1, 1));
+    const year = prev.getUTCFullYear();
+    const month = prev.getUTCMonth() + 1;
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+    const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+    const end = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+    const startTs = firebaseAdmin_1.admin.firestore.Timestamp.fromDate(start);
+    const endTs = firebaseAdmin_1.admin.firestore.Timestamp.fromDate(end);
+    const q = await firebaseAdmin_1.db.collection('audit_logs')
+        .where('action', '==', 'startMembership')
+        .where('ts', '>=', startTs)
+        .where('ts', '<=', endTs)
+        .get();
+    let total = 0;
+    let revenue = 0;
+    const byRegion = {};
+    const byMethod = {};
+    q.forEach((d) => {
+        total += 1;
+        const amt = Number(d.get('amount') || 0);
+        revenue += isFinite(amt) ? amt : 0;
+        const reg = String(d.get('region') || 'UNKNOWN');
+        byRegion[reg] = (byRegion[reg] || 0) + 1;
+        const meth = String(d.get('method') || 'unknown');
+        byMethod[meth] = (byMethod[meth] || 0) + 1;
+    });
+    await firebaseAdmin_1.db.collection('reports').doc(`monthly-${monthKey}`).set({
+        type: 'monthly',
+        month: monthKey,
+        range: { start: startTs, end: endTs },
+        total, revenue,
+        byRegion, byMethod,
+        updatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+});
+// CSV export for monthly report (admin only)
+exports.exportMonthlyReport = functions
+    .region(REGION)
+    .https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+        res.status(204).end();
+        return;
+    }
+    if (req.method !== 'GET') {
+        res.status(405).send('Method not allowed');
+        return;
+    }
+    const month = String(req.query.month || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+        res.status(400).send('month=YYYY-MM required');
+        return;
+    }
+    const doc = await firebaseAdmin_1.db.collection('reports').doc(`monthly-${month}`).get();
+    if (!doc.exists) {
+        res.status(404).send('Report not found');
+        return;
+    }
+    const data = doc.data();
+    const rows = [];
+    rows.push('metric,value');
+    rows.push(`total,${data.total || 0}`);
+    rows.push(`revenue,${data.revenue || 0}`);
+    rows.push('');
+    rows.push('region,count');
+    const byRegion = data.byRegion || {};
+    for (const k of Object.keys(byRegion))
+        rows.push(`${k},${byRegion[k]}`);
+    rows.push('');
+    rows.push('method,count');
+    const byMethod = data.byMethod || {};
+    for (const k of Object.keys(byMethod))
+        rows.push(`${k},${byMethod[k]}`);
+    const csv = rows.join('\n');
+    res.set('Content-Type', 'text/csv');
+    res.set('Content-Disposition', `attachment; filename=monthly-${month}.csv`);
+    res.status(200).send(csv);
+});
+// On-demand monthly report generation (admin only, callable)
+exports.generateMonthlyReportNow = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => {
+    if (!context.auth || context.auth.token?.role !== 'admin') {
+        throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const month = String(data?.month || '').trim(); // YYYY-MM or '' => previous month
+    let target;
+    if (/^\d{4}-\d{2}$/.test(month)) {
+        target = month;
+    }
+    else {
+        const now = new Date();
+        const y = now.getUTCFullYear();
+        const m = now.getUTCMonth();
+        const prev = new Date(Date.UTC(m === 0 ? y - 1 : y, m === 0 ? 11 : m - 1, 1));
+        target = `${prev.getUTCFullYear()}-${String(prev.getUTCMonth() + 1).padStart(2, '0')}`;
+    }
+    const [year, monthNum] = target.split('-').map((x) => Number(x));
+    const start = new Date(Date.UTC(year, monthNum - 1, 1, 0, 0, 0));
+    const end = new Date(Date.UTC(year, monthNum, 0, 23, 59, 59));
+    const startTs = firebaseAdmin_1.admin.firestore.Timestamp.fromDate(start);
+    const endTs = firebaseAdmin_1.admin.firestore.Timestamp.fromDate(end);
+    const q = await firebaseAdmin_1.db.collection('audit_logs')
+        .where('action', '==', 'startMembership')
+        .where('ts', '>=', startTs)
+        .where('ts', '<=', endTs)
+        .get();
+    let total = 0;
+    let revenue = 0;
+    const byRegion = {};
+    const byMethod = {};
+    q.forEach((d) => {
+        total += 1;
+        const amt = Number(d.get('amount') || 0);
+        revenue += isFinite(amt) ? amt : 0;
+        const reg = String(d.get('region') || 'UNKNOWN');
+        byRegion[reg] = (byRegion[reg] || 0) + 1;
+        const meth = String(d.get('method') || 'unknown');
+        byMethod[meth] = (byMethod[meth] || 0) + 1;
+    });
+    await firebaseAdmin_1.db.collection('reports').doc(`monthly-${target}`).set({
+        type: 'monthly', month: target, range: { start: startTs, end: endTs }, total, revenue, byRegion, byMethod,
+        updatedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { ok: true, month: target, total, revenue };
+});
+// Token helpers: admin utilities for revocation and status
+exports.revokeCardToken = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => {
+    if (!context.auth || context.auth.token?.role !== 'admin') {
+        throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const jti = String(data?.jti || '').trim();
+    const reason = String(data?.reason || 'manual');
+    if (!jti)
+        throw new functions.https.HttpsError('invalid-argument', 'jti required');
+    await firebaseAdmin_1.db.collection('card_revocations').doc(jti).set({ reason, ts: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
+    return { ok: true };
+});
+exports.getCardKeyStatus = functions
+    .region(REGION)
+    .https.onCall(async (_data, context) => {
+    if (!context.auth || context.auth.token?.role !== 'admin') {
+        throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const activeKid = process.env.CARD_JWT_ACTIVE_KID || 'v1';
+    const secretsRaw = process.env.CARD_JWT_SECRETS || '';
+    let kids = [];
+    try {
+        const m = JSON.parse(secretsRaw || '{}');
+        kids = Object.keys(m || {});
+    }
+    catch { }
+    if (kids.length === 0)
+        kids = ['v1'];
+    return { activeKid, kids };
 });
 //       if (q.empty) {
 //         res.json({ ok: true, valid: false, memberNo });

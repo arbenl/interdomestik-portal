@@ -7,6 +7,7 @@ const firestore_1 = require("firebase-admin/firestore");
 const validators_1 = require("./validators");
 const rbac_1 = require("./rbac");
 const membership_1 = require("./membership");
+const tokens_1 = require("./tokens");
 async function activateMembership(uid, year, price, currency, paymentMethod, externalRef) {
     const startsAt = firestore_1.Timestamp.fromDate(new Date(year, 0, 1));
     const expiresAt = firestore_1.Timestamp.fromDate(new Date(year, 11, 31, 23, 59, 59));
@@ -52,7 +53,8 @@ async function startMembershipLogic(data, context) {
     const name = memberDoc.get('name');
     const region = memberDoc.get('region');
     const email = memberDoc.get('email');
-    const verifyUrl = `https://interdomestik.app/verify?memberNo=${memberNo}`;
+    const token = (0, tokens_1.signCardToken)({ mno: memberNo, exp: Math.floor(new Date(year, 11, 31, 23, 59, 59).getTime() / 1000) });
+    const verifyUrl = `https://interdomestik.app/verify?token=${token}`;
     const html = (0, membership_1.membershipCardHtml)({
         memberNo,
         name,
@@ -86,6 +88,7 @@ async function startMembershipLogic(data, context) {
             currency,
             method: paymentMethod,
             ts: firestore_1.FieldValue.serverTimestamp(),
+            ttlAt: firestore_1.Timestamp.fromDate(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)),
         });
     }
     catch (e) {
@@ -96,10 +99,14 @@ async function startMembershipLogic(data, context) {
         const dateKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (local UTC ok for coarse metrics)
         const ref = firebaseAdmin_1.db.collection('metrics').doc(`daily-${dateKey}`);
         const inc = firebaseAdmin_1.admin.firestore.FieldValue.increment?.(1) || firestore_1.FieldValue.increment(1);
+        // Set a TTL on daily metrics (retain for ~400 days)
+        const baseDay = new Date(`${dateKey}T00:00:00Z`);
+        const ttlAt = firestore_1.Timestamp.fromDate(new Date(baseDay.getTime() + 400 * 24 * 60 * 60 * 1000));
         await ref.set({
             activations_total: inc,
             [`activations_by_region.${region || 'UNKNOWN'}`]: inc,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            ttlAt,
         }, { merge: true });
     }
     catch (e) {

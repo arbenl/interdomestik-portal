@@ -1,5 +1,7 @@
 # NEXT TASKS — Bulletproof Membership Card System
 
+Canonical backlog: This file is the single source of truth for what’s next. Phase plans and notes elsewhere are historical.
+
 Branch: feat/phase-2
 
 Legend: [ ] TODO • [~] In Progress • [x] Done • (P1/P2/P3) Priority
@@ -16,21 +18,21 @@ Notes:
 - Recommended (prod): enable Firestore TTL on `audit_logs.ttlAt` and `metrics.ttlAt` for automatic cleanup.
 
 ## Phase 1 — Self‑Renewal & Payments
-- [~] (P1) Add Stripe Checkout/Payment Element on Billing/Profile (attach `metadata.uid`)
+- [~] (P1) Add Stripe Checkout/Payment Element on Billing/Profile (attach `metadata.uid`) — scaffold done; needs prod keys
 - [x] (P1) Webhook mapping: `invoice.payment_succeeded` → `startMembership` (idempotent)
-- [ ] (P1) Renewal UX: expired/renew CTAs; success page/card re‑send; emails/receipts
-- [ ] (P2) Admin renewals: one‑click renew; bulk renew (table selection / CSV)
+- [x] (P1) Renewal UX: expired/renew CTAs; badge; card re‑send; emails/receipts
+- [x] (P2) Admin renewals: one‑click renew; bulk renew (selection bar)
 
 ## Phase 2 — Card Security & Robustness
-- [ ] (P1) Signed QR tokens (JWT with `memberNo`, `exp`, `kid`); verify validates signature + active state
-- [ ] (P2) Public verify privacy: minimal response; prod rate‑limit (Cloud Armor / captcha option)
-- [ ] (P2) Revocation/rotation: versioned keys + revocation list
+- [x] (P1) Signed QR tokens (JWT with `memberNo`, `exp`, `kid`,`jti`); verify validates signature + active state
+- [~] (P2) Public verify privacy: minimal response; prod rate‑limit (Cloud Armor / captcha option)
+- [~] (P2) Revocation/rotation: multi‑key via env + revocation check; add rotation UI next
 - [ ] (P3) Optional offline card cache (no PII), prompt re‑verify near expiration
 
 ## Phase 3 — Exports, Reporting, Admin Scale
 - [ ] (P1) Async CSV export: write to Storage, email signed URL; UI status/progress
-- [ ] (P2) Dashboard metrics: expiring next 30 days, active by region/org, renewals trend (simple charts)
-- [ ] (P2) Advanced filters: region, status, expiring windows; (P3) full‑text via search service if needed
+- [~] (P2) Dashboard metrics: expiring next 30 days, active by region/org, renewals trend — initial monthly report + chart done
+- [~] (P2) Advanced filters: region, status (done), expiring windows (30d filter added); (P3) full‑text via search service if needed
 
 ## Phase 4 — Storage & Attachments (Optional)
 - [ ] (P2) Storage rules for attachments (owner/admin/agent by region); deny public
@@ -67,3 +69,4 @@ Notes:
 ---
 
 Owners: assign per task in PRs. Update progress with [ ] → [~] → [x].
+Open test items: stabilize E2E — admin_activate, admin_bulk_renew.
