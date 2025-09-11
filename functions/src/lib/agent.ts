@@ -3,6 +3,7 @@ import { admin, db } from '../firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { agentCreateMemberSchema, regionEnum } from './validators';
 import { FieldValue as Fv, Timestamp } from 'firebase-admin/firestore';
+import type { z } from 'zod';
 
 function requireAgentOrAdmin(ctx: functions.https.CallableContext) {
   if (!ctx.auth) throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
@@ -13,7 +14,7 @@ function requireAgentOrAdmin(ctx: functions.https.CallableContext) {
   return ctx.auth;
 }
 
-function agentHasRegion(ctx: functions.https.CallableContext, region: typeof regionEnum._type): boolean {
+function agentHasRegion(ctx: functions.https.CallableContext, region: z.infer<typeof regionEnum>): boolean {
   const role = (ctx.auth!.token as any).role;
   if (role === 'admin') return true;
   const allowed = (ctx.auth!.token as any).allowedRegions as string[] | undefined;

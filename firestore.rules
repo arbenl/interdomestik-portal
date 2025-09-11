@@ -7,17 +7,34 @@ service cloud.firestore {
     function isAdmin() { return hasToken() && request.auth.token.role == 'admin'; }
     function isAgent() { return hasToken() && request.auth.token.role == 'agent'; }
     function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    // Safe helpers for region checks — never evaluate `in` on null
+    function allowedRegionsList() {
+      return (signedIn() && request.auth.token != null && (request.auth.token.allowedRegions is list))
+        ? request.auth.token.allowedRegions
+        : [];
+    }
     function adminHasRegion(region) {
-      // Admins: if allowedRegions not present as a list, treat as full access; otherwise enforce list
+      // Admins: full access if no regions are set; otherwise region must be included
+      let l = allowedRegionsList();
+      return isAdmin() && ( (l.size() == 0) || ( (region is string) && (region in l) ) );
+    }
+    function adminCanUpdateRegion(oldRegion, newRegion) {
+      // For updates, ensure both the current and new region (if provided) are within allowed set
+      let l = allowedRegionsList();
       return isAdmin() && (
-        !(request.auth.token.allowedRegions is list) ||
-        (region in request.auth.token.allowedRegions)
+        (l.size() == 0) || (
+          ((oldRegion is string) && (oldRegion in l)) &&
+          ( (newRegion is string) ? (newRegion in l) : true )
+        )
       );
     }
     function agentHasRegion(region) {
-      // Agents must have an allowedRegions list and the region must be in it
-      return isAgent() && (request.auth.token.allowedRegions is list) &&
-        (region in request.auth.token.allowedRegions);
+      // Agents must have a list and the region must be included
+      let l = allowedRegionsList();
+      return isAgent() && ( (region is string) && (l.size() > 0) && (region in l) );
+    }
+    function agentOwns(uid) {
+      return isAgent() && resource.data.agentId == request.auth.uid;
     }
 
     match /users/{uid} {
@@ -26,23 +43,30 @@ service cloud.firestore {
     }
 
     match /members/{uid} {
-      // Read self; agents/admins limited by region. Admin without allowedRegions list → full access
+      // Read self; admins (optionally region-limited); agents only their assigned members
       allow read: if isSelf(uid)
         || adminHasRegion(resource.data.region)
-        || agentHasRegion(resource.data.region);
+        || agentOwns(uid);
       // split create into separate rules to avoid evaluating agent clause for self-writes
       allow create: if isSelf(uid);
       // Agents cannot create member docs directly (must use backend callable)
-      // Admins can create/update only within allowedRegions (or full access if claim not set as list)
+      // Admins can create only within allowedRegions (or full access if claim list is empty)
       allow create: if adminHasRegion(request.resource.data.region);
-      // split update similarly
-      allow update: if adminHasRegion(resource.data.region);
+      // Admin updates: region-constrained, including when changing region
+      allow update: if adminCanUpdateRegion(resource.data.region, request.resource.data.region);
       // Members can only edit a safe subset of fields
       allow update: if isSelf(uid) &&
         request.resource.data.diff(resource.data).changedKeys().hasOnly(["name","region","phone","orgId"]);
-      // Agents can edit the same safe subset within their allowed regions
-      allow update: if agentHasRegion(resource.data.region) &&
-        request.resource.data.diff(resource.data).changedKeys().hasOnly(["name","region","phone","orgId"]);
+      // Agents can edit a safe subset within their allowed regions;
+      // region changes must remain within allowed regions as well
+      allow update: if isAgent() &&
+        agentHasRegion(resource.data.region) &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(["name","region","phone","orgId"]) &&
+        (
+          !request.resource.data.diff(resource.data).changedKeys().hasAny(["region"]) ||
+          (request.resource.data.region == resource.data.region) ||
+          agentHasRegion(request.resource.data.region)
+        );
       allow delete: if isAdmin();
     }
 
@@ -70,6 +94,18 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     match /audit_logs/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /reports/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /orgs/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /coupons/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /api_keys/{id} {
       allow read, write: if isAdmin();
     }
 

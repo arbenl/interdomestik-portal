@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const Verify: React.FC = () => {
   const [memberNo, setMemberNo] = useState('');
@@ -6,30 +6,44 @@ const Verify: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function runVerify(params: { memberNo?: string; token?: string }) {
     setLoading(true);
     setError(null);
     setResult(null);
-
     try {
-      // In a real app, you would fetch this from your config
-      const functionsBaseUrl = 'http://localhost:5001/demo-interdomestik/europe-west1';
-      const response = await fetch(`${functionsBaseUrl}/verifyMembership?memberNo=${memberNo}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
+      const qs = new URLSearchParams();
+      if (params.token) qs.set('token', params.token);
+      if (params.memberNo) qs.set('memberNo', params.memberNo);
+      const response = await fetch(`/verifyMembership?${qs.toString()}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runVerify({ memberNo });
   };
+
+  // Auto-run if token or memberNo in query string
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      const t = url.searchParams.get('token') || undefined;
+      const m = url.searchParams.get('memberNo') || undefined;
+      if (t || m) {
+        if (m) setMemberNo(m);
+        runVerify({ token: t, memberNo: m });
+      }
+    } catch {
+      // ignore malformed URLs in non-browser contexts
+    }
+  }, []);
 
   return (
     <div className="max-w-md mx-auto p-4">

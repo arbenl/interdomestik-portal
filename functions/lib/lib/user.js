@@ -55,6 +55,7 @@ async function setUserRoleLogic(data, context) {
             role,
             allowedRegions: allowedRegions ?? [],
             ts: firestore_1.FieldValue.serverTimestamp(),
+            ttlAt: firestore_1.Timestamp.fromDate(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)),
         });
     }
     catch (e) {

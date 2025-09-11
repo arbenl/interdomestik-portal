@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useMemberProfile } from '../hooks/useMemberProfile';
 import { useInvoices } from '../hooks/useInvoices';
+import useToast from '../components/ui/useToast';
 import Button from '../components/ui/Button';
+import PaymentElementBox from '../components/payments/PaymentElementBox';
 
 function formatMoney(amount: number, currency: string) {
   try {
@@ -25,9 +27,11 @@ function getStripeWebhookUrl(projectId: string) {
 export default function Billing() {
   const { user } = useAuth();
   const { profile } = useMemberProfile(user?.uid);
-  const { invoices, loading, error } = useInvoices(user?.uid);
+  const { invoices, loading, error, refresh } = useInvoices(user?.uid);
+  const { push } = useToast();
   const [busy, setBusy] = useState(false);
   const projectId = 'demo-interdomestik';
+  const ENABLE_PAYMENTS_UI = true; // feature flag scaffolding
 
   async function simulatePayment() {
     if (!user) return;
@@ -47,12 +51,13 @@ export default function Billing() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`Webhook error: ${res.status}`);
-      // Re-fetch by triggering hook again (uid dependency is constant); simple approach: noop delay
       await new Promise((r) => setTimeout(r, 300));
-      location.reload();
+      localStorage.setItem('renewed_at', String(Date.now()));
+      await refresh();
+      push({ type: 'success', message: 'Payment recorded. Membership activated.' });
     } catch (e) {
       console.error(e);
-      alert(`Failed to simulate payment: ${e}`);
+      push({ type: 'error', message: `Failed to simulate payment` });
     } finally {
       setBusy(false);
     }
@@ -77,6 +82,12 @@ export default function Billing() {
       <h1 className="text-2xl font-bold mb-1">Billing & Subscription</h1>
       <p className="text-gray-600 mb-4">Manage your membership payments and invoices.</p>
 
+      {ENABLE_PAYMENTS_UI && (
+        <div className="mb-6">
+          <PaymentElementBox amountCents={2500} currency="EUR" />
+        </div>
+      )}
+
       <div className="border rounded p-4 mb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -88,11 +99,38 @@ export default function Billing() {
             <div className="font-medium">{expiry}</div>
           </div>
         </div>
+        <div className="mt-3 flex items-center gap-3">
+          <label className="inline-flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={!!profile?.autoRenew} onChange={async (e)=>{
+              try {
+                const { httpsCallable } = await import('firebase/functions');
+                const { functions } = await import('../firebase');
+                const fn = httpsCallable<{ autoRenew: boolean }, { ok: boolean }>(functions, 'setAutoRenew');
+                await fn({ autoRenew: e.target.checked });
+                push({ type: 'success', message: e.target.checked ? 'Auto-renew enabled' : 'Auto-renew disabled' });
+              } catch {
+                push({ type: 'error', message: 'Failed to update auto-renew' });
+              }
+            }} />
+            Enable auto-renew (beta)
+          </label>
+        </div>
         <div className="mt-3 text-sm text-gray-500">For local testing, use the button below to simulate a paid invoice via the emulator-friendly webhook.</div>
-        <div className="mt-3">
+        <div className="mt-3 flex items-center gap-2">
           <Button onClick={simulatePayment} disabled={busy}>
             {busy ? 'Simulating…' : 'Add test paid invoice'}
           </Button>
+          <Button variant="ghost" onClick={async ()=>{
+            try {
+              const { httpsCallable } = await import('firebase/functions');
+              const { functions } = await import('../firebase');
+              const fn = httpsCallable<{ uid?: string; year?: number }, { ok: boolean }>(functions, 'resendMembershipCard');
+              await fn({});
+              alert('Card email queued. Check your inbox.');
+            } catch {
+              alert('Failed to resend card');
+            }
+          }}>Resend card email</Button>
         </div>
       </div>
 

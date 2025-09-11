@@ -1,6 +1,6 @@
 # Contributor Guide
 
-See also: `PROJECT_GUIDE.md` for detailed architecture and end-to-end context.
+See also: `docs/PROJECT_GUIDE.md` for detailed architecture and end-to-end context.
 
 ## Repository Map
 - `frontend/`: React + TypeScript (Vite, Tailwind). Source in `frontend/src`, tests in `frontend/src/**/*.test.ts*`, assets in `frontend/public`.
@@ -22,7 +22,7 @@ See also: `PROJECT_GUIDE.md` for detailed architecture and end-to-end context.
 - Seed demo data (emulator only):
   - `curl -X POST http://localhost:5001/demo-interdomestik/europe-west1/seedDatabase`
 
-Test accounts after seeding: `member1@example.com`, `member2@example.com`, `admin@example.com` (password: `password123`).
+Test accounts after seeding: `member1@example.com`, `member2@example.com`, `admin@example.com`, `agent1@example.com`, `agent2@example.com`, `agent3@example.com` (password for all: `password123`).
 
 ## Build, Test, Deploy
 - Frontend unit tests: `cd frontend && npm test`
@@ -78,3 +78,9 @@ Test accounts after seeding: `member1@example.com`, `member2@example.com`, `admi
 ## Quick Reference
 - Project id (emulators): `demo-interdomestik` (override in Cypress with `FB_PROJECT_ID`)
 - Webhook (emulator): `http://localhost:5001/demo-interdomestik/europe-west1/stripeWebhook` (or `/stripeWebhook` via Hosting emulator)
+
+## Docs Conventions
+- Backlog: `docs/NEXT_TASKS.md` is the single source of truth for upcoming work.
+- Runbooks: `docs/runbooks.md` (split per-topic under `docs/runbooks/` if needed); keep current.
+- Session notes: `docs/notes/sessions/` (chronological, short, with follow-ups linked in NEXT_TASKS).
+- State snapshots: latest 1–2 under `docs/snapshots/`; older ones in `docs/archive/`.

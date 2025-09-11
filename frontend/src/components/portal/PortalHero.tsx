@@ -16,6 +16,16 @@ export default function PortalHero({ name, status, memberNo, expiresOn, verifyUr
     if (s === 'expired') return { label: 'EXPIRED', cls: 'bg-yellow-100 text-yellow-800' };
     return { label: 'INACTIVE', cls: 'bg-gray-100 text-gray-800' };
   })();
+  let justRenewed = false;
+  try {
+    const tRaw = localStorage.getItem('renewed_at');
+    const t = tRaw ? Number(tRaw) : 0;
+    if (t > 0 && Date.now() - t < 30 * 60 * 1000) {
+      justRenewed = true;
+    }
+  } catch {
+    // Ignore storage errors in restricted contexts
+  }
 
   return (
     <section className="bg-white rounded-xl shadow-sm border p-5 md:p-6">
@@ -26,6 +36,7 @@ export default function PortalHero({ name, status, memberNo, expiresOn, verifyUr
             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${chip.cls}`}>{chip.label}</span>
             {memberNo && <span className="font-mono">Member No: {memberNo}</span>}
             {expiresOn && <span>Valid until: {expiresOn}</span>}
+            {justRenewed && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">RENEWED</span>}
           </div>
         </div>
         {verifyUrl && (
@@ -47,4 +58,3 @@ export default function PortalHero({ name, status, memberNo, expiresOn, verifyUr
     </section>
   );
 }
-

@@ -2,7 +2,7 @@
 
 A cost-optimized, secure member management system built with Firebase.
 
-Note: See PROJECT_GUIDE.md for the unified project handbook (architecture, structure, local dev, testing, deployment).
+Note: See docs/PROJECT_GUIDE.md for the unified project handbook (architecture, structure, local dev, testing, deployment).
 
 ## Overview
 
@@ -192,11 +192,19 @@ The system is designed with cost-first principles:
 
 ## Documentation
 
+- Active PR: Phase 1 payments (#2) — ready for review (tests, bulk renew, reports, token rotation): https://github.com/arbenl/interdomestik-portal/pull/2
 - [Architecture Decision Records](docs/adr.md)
 - [Operational Runbooks](docs/runbooks.md)
 - [Administrator Guide](docs/admin-guide.md)
+ - [Backlog — What’s Next](docs/NEXT_TASKS.md)
 
 ## Support
+
+Test accounts after seeding (password `password123`):
+- member1@example.com
+- member2@example.com
+- admin@example.com
+- agent1@example.com, agent2@example.com, agent3@example.com
 
 For technical issues or questions, refer to the documentation or contact the development team.
 

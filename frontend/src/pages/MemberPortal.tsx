@@ -9,6 +9,7 @@ import ActivityFeed from '../components/portal/ActivityFeed';
 import { IconCalendar, IconCreditCard, IconUsers } from '../components/icons';
 import { useEvents } from '../hooks/useEvents';
 import { useDirectory } from '../hooks/useDirectory';
+import useCardToken from '../hooks/useCardToken';
 
 export default function MemberPortal() {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ export default function MemberPortal() {
   // Hooks must be declared unconditionally (before any early return)
   const { events } = useEvents(5);
   const { members: directory } = useDirectory(5);
+  const { token } = useCardToken(user?.uid || null);
 
   if (!user) {
     return (
@@ -56,13 +58,21 @@ export default function MemberPortal() {
   const computedStatus = typeof expiresAtSec === 'number' ? (expiresAtSec > nowSec ? 'active' : 'expired') : 'none';
   const status = (profile?.status as string | undefined) || computedStatus;
 
-  const verifyUrl = memberNo && memberNo !== '—'
-    ? `${location.origin}/verify?memberNo=${encodeURIComponent(memberNo)}`
-    : undefined;
+  const verifyUrl = token
+    ? `${location.origin}/verify?token=${encodeURIComponent(token)}`
+    : (memberNo && memberNo !== '—' ? `${location.origin}/verify?memberNo=${encodeURIComponent(memberNo)}` : undefined);
 
   return (
     <div className="max-w-6xl mx-auto">
       <PortalHero name={name} status={status} memberNo={memberNo !== '—' ? memberNo : undefined} expiresOn={expiry !== '—' ? expiry : undefined} verifyUrl={verifyUrl} />
+
+      {status !== 'active' && (
+        <div className="mt-4 border rounded p-4 bg-yellow-50">
+          <div className="font-medium mb-1">Your membership is {status === 'expired' ? 'expired' : 'not active'}.</div>
+          <div className="text-sm text-gray-700">Renew now to re-activate your digital membership card.</div>
+          <div className="mt-2"><Link to="/billing" className="inline-block bg-indigo-600 text-white px-3 py-2 rounded">Renew Membership</Link></div>
+        </div>
+      )}
 
       {error && (
         <div className="mt-4 border border-red-300 bg-red-50 text-red-800 rounded p-3">
