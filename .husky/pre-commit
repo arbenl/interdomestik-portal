@@ -1,7 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
-# Run lint-staged for staged files in frontend and functions
-[ -f "$(dirname "$0")/_/husky.sh" ] && . "$(dirname "$0")/_/husky.sh"
-
-npx lint-staged
-
+# Husky v10: no sourcing of _/husky.sh
+# Limit lint-staged config lookup to root package.json to avoid node_modules
+npx lint-staged --config package.json
