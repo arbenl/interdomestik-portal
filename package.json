@@ -43,11 +43,11 @@
   "lint-staged": {
     "frontend/src/**/*.{ts,tsx}": [
       "npm --prefix frontend run lint",
-      "npm --prefix frontend run typecheck"
+      "sh -c 'npm --prefix frontend run typecheck'"
     ],
     "functions/src/**/*.ts": [
       "npm --prefix functions run lint",
-      "npm --prefix functions run typecheck"
+      "sh -c 'npm --prefix functions run typecheck'"
     ]
   }
 }
