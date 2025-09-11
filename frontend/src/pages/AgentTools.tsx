@@ -57,7 +57,14 @@ export default function AgentTools() {
                     <tr key={u.id} className="border-t">
                       <td className="px-3 py-2">
                         {editRow === u.id ? (
-                          <input value={editName} onChange={e=>setEditName(e.target.value)} className="border rounded px-2 py-1 w-40" />
+                          <input
+                            data-cy="agent-edit-name"
+                            value={editName}
+                            onChange={e=>setEditName(e.target.value)}
+                            className="border rounded px-2 py-1 w-40"
+                            disabled={false}
+                            readOnly={false}
+                          />
                         ) : (u.name || '—')}
                       </td>
                       <td className="px-3 py-2">{u.email || '—'}</td>
@@ -65,12 +72,26 @@ export default function AgentTools() {
                       <td className="px-3 py-2">{u.region || '—'}</td>
                       <td className="px-3 py-2">
                         {editRow === u.id ? (
-                          <input value={editPhone} onChange={e=>setEditPhone(e.target.value)} className="border rounded px-2 py-1 w-36" />
+                          <input
+                            data-cy="agent-edit-phone"
+                            value={editPhone}
+                            onChange={e=>setEditPhone(e.target.value)}
+                            className="border rounded px-2 py-1 w-36"
+                            disabled={false}
+                            readOnly={false}
+                          />
                         ) : (u.phone || '—')}
                       </td>
                       <td className="px-3 py-2">
                         {editRow === u.id ? (
-                          <input value={editOrgId} onChange={e=>setEditOrgId(e.target.value)} className="border rounded px-2 py-1 w-28" />
+                          <input
+                            data-cy="agent-edit-orgid"
+                            value={editOrgId}
+                            onChange={e=>setEditOrgId(e.target.value)}
+                            className="border rounded px-2 py-1 w-28"
+                            disabled={false}
+                            readOnly={false}
+                          />
                         ) : (u.orgId || '—')}
                       </td>
                       <td className="px-3 py-2 text-right">

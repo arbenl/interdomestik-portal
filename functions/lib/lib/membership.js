@@ -7,6 +7,7 @@ exports.sendPaymentReceipt = sendPaymentReceipt;
 exports.membershipCardHtml = membershipCardHtml;
 const firebaseAdmin_1 = require("../firebaseAdmin");
 const firestore_1 = require("firebase-admin/firestore");
+const logger_1 = require("./logger");
 const ORG_NAME = process.env.ORG_NAME || 'Interdomestik';
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@interdomestik.app';
 const ORG_ADDRESS = process.env.ORG_ADDRESS || 'Interdomestik, Prishtina, Kosovo';
@@ -39,7 +40,7 @@ async function queueEmail(mail) {
     const ref = await firebaseAdmin_1.db.collection("mail").add(doc);
     if (isEmulator()) {
         // In emulator runs, no extension processes the document; log for visibility
-        console.log("[mail:queued]", ref.id, JSON.stringify(doc));
+        (0, logger_1.log)('mail_queued', { id: ref.id, to: Array.isArray(doc.to) ? doc.to.join(',') : String(doc.to), subject: doc.message.subject });
     }
     return { id: ref.id };
 }

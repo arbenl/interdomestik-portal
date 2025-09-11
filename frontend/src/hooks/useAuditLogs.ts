@@ -1,20 +1,9 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, limit, orderBy, query, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, limit, orderBy, query } from 'firebase/firestore';
+import type { CollectionReference, Query, QuerySnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-
-export type AuditLog = {
-  id: string;
-  action: string;
-  actor?: string;
-  target?: string;
-  role?: string;
-  allowedRegions?: string[];
-  year?: number;
-  amount?: number;
-  currency?: string;
-  method?: string;
-  ts?: Timestamp;
-};
+import type { AuditLog } from '../types';
+import { auditLogConverter, maybeWithConverter } from '../lib/converters';
 
 export function useAuditLogs(max = 20) {
   const [items, setItems] = useState<AuditLog[]>([]);
@@ -22,27 +11,22 @@ export function useAuditLogs(max = 20) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const q = query(collection(db, 'audit_logs'), orderBy('ts', 'desc'), limit(max));
-        const snap = await getDocs(q);
-        if (cancelled) return;
-        const arr: AuditLog[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<AuditLog, 'id'>) }));
-        setItems(arr);
-        setError(null);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e : new Error(String(e)));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    setLoading(true);
+    const col = maybeWithConverter<AuditLog>(collection(db, 'audit_logs'), auditLogConverter) as unknown as CollectionReference<AuditLog>;
+    const q = query(col, orderBy('ts', 'desc'), limit(max)) as Query<AuditLog>;
+    const unsub = onSnapshot(q, (snap: QuerySnapshot<AuditLog>) => {
+      const arr: AuditLog[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as unknown as Omit<AuditLog, 'id'>) }));
+      setItems(arr);
+      setError(null);
+      setLoading(false);
+    }, (e: unknown) => {
+      setError(e instanceof Error ? e : new Error(String(e)));
+      setLoading(false);
+    });
+    return () => unsub();
   }, [max]);
 
   return { items, loading, error };
 }
 
 export default useAuditLogs;
-

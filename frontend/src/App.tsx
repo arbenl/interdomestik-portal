@@ -18,7 +18,7 @@ const Billing = lazy(() => import("./pages/Billing"));
 function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<div style={{padding:16}}>Loading…</div>}>
+      <Suspense fallback={<div className="p-4">Loading…</div>}>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />

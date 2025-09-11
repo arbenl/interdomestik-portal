@@ -99,6 +99,9 @@ service cloud.firestore {
     match /reports/{id} {
       allow read, write: if isAdmin();
     }
+    match /exports/{id} {
+      allow read, write: if isAdmin();
+    }
     match /orgs/{id} {
       allow read, write: if isAdmin();
     }

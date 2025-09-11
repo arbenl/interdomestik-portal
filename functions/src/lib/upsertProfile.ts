@@ -5,14 +5,13 @@ import { requireAuth } from "./rbac";
 import { nextMemberNo, reserveUniqueEmail, reserveUniqueMemberNo } from "./unique";
 import { admin, db } from "../firebaseAdmin";
 import { FieldValue } from 'firebase-admin/firestore';
+import { log } from './logger';
 
 export async function upsertProfileLogic(data: any, context: functions.https.CallableContext) {
   try {
     const auth = requireAuth(context);
     const validatedData = upsertProfileSchema.parse(data);
-    if (process.env.FUNCTIONS_EMULATOR) {
-      console.log('[upsertProfile] uid', auth.uid, 'data', JSON.stringify(validatedData));
-    }
+    if (process.env.FUNCTIONS_EMULATOR) { log('upsert_profile_start', { uid: auth.uid }); }
 
     // Resolve email once outside the transaction
     let emailLower: string | undefined = (auth.token.email as string | undefined)?.toLowerCase();
@@ -28,9 +27,7 @@ export async function upsertProfileLogic(data: any, context: functions.https.Cal
 
     await db.runTransaction(async (tx) => {
       const memberDoc = await tx.get(memberRef);
-      if (process.env.FUNCTIONS_EMULATOR) {
-        console.log('[upsertProfile] memberDoc.exists', memberDoc.exists);
-      }
+      if (process.env.FUNCTIONS_EMULATOR) { log('upsert_profile_member_exists', { uid: auth.uid, exists: memberDoc.exists }); }
 
       let memberNo = memberDoc.get('memberNo') as string | undefined;
       const nowTs = FieldValue.serverTimestamp();
@@ -46,9 +43,7 @@ export async function upsertProfileLogic(data: any, context: functions.https.Cal
         }, { merge: true });
       }
 
-      if (process.env.FUNCTIONS_EMULATOR) {
-        console.log('[upsertProfile] reserving email', emailLower);
-      }
+      if (process.env.FUNCTIONS_EMULATOR) { log('upsert_profile_reserve_email', { uid: auth.uid, emailLower }); }
       await reserveUniqueEmail(auth.uid, emailLower!, tx);
 
       tx.set(memberRef, {
@@ -65,12 +60,10 @@ export async function upsertProfileLogic(data: any, context: functions.https.Cal
       await admin.auth().updateUser(auth.uid, { displayName: validatedData.name });
     } catch (e) {
       // Non-fatal: log and continue
-      console.warn('[upsertProfile] failed to update auth displayName', e);
+      log('upsert_profile_auth_displayname_error', { uid: auth.uid, error: String(e) });
     }
 
-    if (process.env.FUNCTIONS_EMULATOR) {
-      console.log('[upsertProfile] success', auth.uid);
-    }
+    if (process.env.FUNCTIONS_EMULATOR) { log('upsert_profile_success', { uid: auth.uid }); }
     return { message: "Profile updated successfully" };
   } catch (err: any) {
     const msg = String(err?.message || err);
@@ -84,7 +77,7 @@ export async function upsertProfileLogic(data: any, context: functions.https.Cal
     if (err?.issues) {
       throw new functions.https.HttpsError('invalid-argument', 'Invalid profile data');
     }
-    console.error('[upsertProfile] unexpected', err?.stack || err);
+    log('upsert_profile_error', { uid: context?.auth?.uid, error: String(err?.stack || err) });
     throw new functions.https.HttpsError('internal', 'Profile update failed', msg);
   }
 }

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, orderBy, limit } from 'firebase/firestore';
+import type { DocumentReference, DocumentSnapshot, CollectionReference, Query, QuerySnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Profile, Membership } from '../types';
+import { profileConverter, membershipConverter, maybeWithConverter } from '../lib/converters';
 
 export const useMemberProfile = (uid: string | undefined) => {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -10,43 +12,41 @@ export const useMemberProfile = (uid: string | undefined) => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!uid) {
-      setLoading(false);
-      return;
-    }
+    if (!uid) { setLoading(false); setProfile(null); setActiveMembership(null); return; }
+    setLoading(true); setError(null);
 
-    const fetchProfile = async () => {
-      try {
-        const profileDocRef = doc(db, 'members', uid);
-        const profileSnap = await getDoc(profileDocRef);
-
-        if (profileSnap.exists()) {
-          setProfile({ id: profileSnap.id, ...(profileSnap.data() as Profile) });
-        } else {
-          // Handle case where user is authenticated but has no profile data yet
-          setProfile(null);
-        }
-
-        const membershipCollectionRef = collection(db, 'members', uid, 'memberships');
-        const q = query(membershipCollectionRef, where('status', '==', 'active'));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          // Assuming only one active membership at a time
-          const d = querySnapshot.docs[0];
-          setActiveMembership({ id: d.id, ...(d.data() as Membership) });
-        } else {
-          setActiveMembership(null);
-        }
-
-      } catch (err) {
-        setError(err as Error);
-      } finally {
-        setLoading(false);
+    const profileDocRef = maybeWithConverter<Profile>(doc(db, 'members', uid), profileConverter) as unknown as DocumentReference<Profile>;
+    const unsubProfile = onSnapshot(profileDocRef, (snap: DocumentSnapshot<Profile>) => {
+      if (snap.exists()) {
+        setProfile({ id: snap.id, ...(snap.data() as unknown as Profile) });
+      } else {
+        setProfile(null);
       }
-    };
+      setLoading(false);
+    }, (e: unknown) => {
+      setError(e as Error);
+      setLoading(false);
+    });
 
-    fetchProfile();
+    const membershipCollectionRef = maybeWithConverter<Membership>(collection(db, 'members', uid, 'memberships'), membershipConverter) as unknown as CollectionReference<Membership>;
+    const qy = query(
+      membershipCollectionRef,
+      where('status', '==', 'active'),
+      orderBy('year', 'desc'),
+      limit(1)
+    ) as Query<Membership>;
+    const unsubActive = onSnapshot(qy, (snap: QuerySnapshot<Membership>) => {
+      if (!snap.empty) {
+        const d = snap.docs[0];
+        setActiveMembership({ id: d.id, ...(d.data() as unknown as Membership) });
+      } else {
+        setActiveMembership(null);
+      }
+    }, (e: unknown) => {
+      setError(e as Error);
+    });
+
+    return () => { unsubProfile(); unsubActive(); };
   }, [uid]);
 
   return { profile, activeMembership, loading, error };

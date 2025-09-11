@@ -1,6 +1,6 @@
 Developer Progress Log
 
-Last updated: 2025-09-10
+Last updated: 2025-09-11
 
 Summary of changes completed
 - Phase 1/2 features
@@ -40,11 +40,11 @@ Summary of changes completed
 - CI and quality
   - Root `lint` script runs frontend + functions linters.
   - Added GitHub Actions workflow with jobs for lint, frontend unit, functions unit (with emulators), rules, and E2E (Cypress with emulators + hosting).
+  - Maintenance: Ran `nameLower` backfill to completion via Admin dialog (emulator seed: 1 page, 6 updates; `admin_jobs` shows `nextStartAfter=null`).
 
 Notable follow-ups (proposed)
 - Stabilize tests: admin_activate and admin_bulk_renew E2E are currently failing/flaky; selectors updated, re-run pending.
 - Finish Payment Element in prod: set Stripe keys and mark Phase 1 UI as done.
-- NameLower backfill: run to completion and record final stats in admin_jobs.
 - Token rotation: add admin UI to display/rotate active kid; optional jti revoke UI.
 - Reports: optional charts and storage-based async CSV with email link.
 - Coverage: Add `vitest --coverage` for frontend and `c8`/`nyc` for functions; publish artifacts in CI.

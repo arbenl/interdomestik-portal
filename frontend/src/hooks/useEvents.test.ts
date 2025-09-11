@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useEvents } from './useEvents';
-import { getDocs } from 'firebase/firestore';
+import { onSnapshot } from 'firebase/firestore';
 
 describe('useEvents', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -10,14 +10,14 @@ describe('useEvents', () => {
     const docs = [
       { id: 'e1', data: () => ({ title: 'Welcome', startAt: { seconds: 1 }, location: 'PRISHTINA' }) },
     ];
-    (getDocs as vi.Mock).mockResolvedValue({ docs });
+    (onSnapshot as unknown as vi.Mock).mockImplementation((_q, next) => { next({ docs }); return () => {}; });
     const { result } = renderHook(() => useEvents(5));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.events).toHaveLength(1);
   });
 
   it('handles empty list', async () => {
-    (getDocs as vi.Mock).mockResolvedValue({ docs: [] });
+    (onSnapshot as unknown as vi.Mock).mockImplementation((_q, next) => { next({ docs: [] }); return () => {}; });
     const { result } = renderHook(() => useEvents(5));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.events).toEqual([]);
@@ -25,10 +25,9 @@ describe('useEvents', () => {
 
   it('handles errors', async () => {
     const err = new Error('boom');
-    (getDocs as vi.Mock).mockRejectedValue(err);
+    (onSnapshot as unknown as vi.Mock).mockImplementation((_q, _next, error) => { error(err); return () => {}; });
     const { result } = renderHook(() => useEvents(5));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBe(err);
   });
 });
-

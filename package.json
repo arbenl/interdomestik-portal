@@ -13,7 +13,9 @@
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
     "e2e:local": "cypress run --config baseUrl=http://localhost:5000",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev:all": "(cd frontend && npm run build); (cd functions && npm run serve) & (cd frontend && npm run dev)",
+    "test:all": "npm run test:rules && npm --prefix functions run test && npm --prefix frontend run test -- --run"
   },
   "keywords": [
     "member-portal",

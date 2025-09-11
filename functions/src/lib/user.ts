@@ -2,6 +2,7 @@ import { admin, db } from "../firebaseAdmin";
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import * as functions from "firebase-functions/v1";
 import { setUserRoleSchema } from "./validators";
+import { log } from './logger';
 import { requireAdmin } from "./rbac";
 
 export async function setUserRoleLogic(data: any, context: functions.https.CallableContext) {
@@ -23,7 +24,7 @@ export async function setUserRoleLogic(data: any, context: functions.https.Calla
       ttlAt: Timestamp.fromDate(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)),
     });
   } catch (e) {
-    console.warn('[audit] failed to write setUserRole audit', e);
+    log('audit_write_failed', { action: 'setUserRole', uid, error: String(e) });
   }
 
   return { message: "User role updated successfully" };

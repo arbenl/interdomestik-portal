@@ -37,6 +37,7 @@ exports.exportMembersCsv = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const firestore_1 = require("firebase-admin/firestore");
+const logger_1 = require("./lib/logger");
 try {
     admin.app();
 }
@@ -51,6 +52,7 @@ const db = admin.firestore();
  * - Join in memory; no N+1 reads
  */
 exports.exportMembersCsv = functions
+    .runWith({ memory: '256MB', timeoutSeconds: 60 })
     .region("europe-west1")
     .https.onRequest(async (req, res) => {
     res.set("Access-Control-Allow-Origin", "*");
@@ -65,11 +67,13 @@ exports.exportMembersCsv = functions
             .replace("Bearer ", "")
             .trim();
         if (!authHeader) {
+            (0, logger_1.log)('export_csv_unauthorized', {});
             res.status(401).send("Missing Authorization");
             return;
         }
         const token = await admin.auth().verifyIdToken(authHeader);
         if (token.role !== "admin") {
+            (0, logger_1.log)('export_csv_forbidden', { uid: token.uid });
             res.status(403).send("Admins only");
             return;
         }
@@ -112,10 +116,12 @@ exports.exportMembersCsv = functions
         const csv = lines.join("\n");
         res.setHeader("Content-Type", "text/csv; charset=utf-8");
         res.setHeader("Content-Disposition", 'attachment; filename="members.csv"');
+        (0, logger_1.log)('export_csv_success', { count: membersOrdered.length });
         res.status(200).send(csv);
         return;
     }
     catch (e) {
+        (0, logger_1.log)('export_csv_error', { error: String(e) });
         res.status(500).send(String(e));
         return;
     }

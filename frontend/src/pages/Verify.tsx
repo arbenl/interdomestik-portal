@@ -1,5 +1,32 @@
 import React, { useEffect, useState } from 'react';
 
+declare global {
+  interface Window { grecaptcha?: any }
+}
+
+async function maybeGetCaptchaToken(): Promise<string | undefined> {
+  try {
+    if (typeof window === 'undefined') return undefined;
+    const siteKey = (import.meta as any)?.env?.VITE_RECAPTCHA_SITE_KEY || (import.meta as any)?.env?.VITE_APPCHECK_SITE_KEY;
+    if (!siteKey) return undefined;
+    // If grecaptcha not present, attempt to load script once
+    if (!window.grecaptcha) {
+      await new Promise<void>((resolve) => {
+        const s = document.createElement('script');
+        s.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(siteKey)}`;
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => resolve();
+        document.head.appendChild(s);
+      });
+    }
+    if (!window.grecaptcha?.execute) return undefined;
+    return await window.grecaptcha.execute(siteKey, { action: 'verify' });
+  } catch {
+    return undefined;
+  }
+}
+
 const Verify: React.FC = () => {
   const [memberNo, setMemberNo] = useState('');
   const [result, setResult] = useState<{ ok?: boolean; valid?: boolean; name?: string; memberNo?: string; region?: string } | null>(null);
@@ -14,7 +41,10 @@ const Verify: React.FC = () => {
       const qs = new URLSearchParams();
       if (params.token) qs.set('token', params.token);
       if (params.memberNo) qs.set('memberNo', params.memberNo);
-      const response = await fetch(`/verifyMembership?${qs.toString()}`);
+      const captcha = await maybeGetCaptchaToken();
+      const response = await fetch(`/verifyMembership?${qs.toString()}`, {
+        headers: captcha ? { 'x-recaptcha-token': captcha } : undefined,
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setResult(data);

@@ -8,7 +8,7 @@ See also: `docs/PROJECT_GUIDE.md` for detailed architecture and end-to-end conte
 - `cypress/`: E2E specs and support; `cypress.config.ts` at root.
 - `test/`: Firestore security rules tests (Mocha).
 - Root config: `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `tsconfig.json`, `docs/`.
-- CI: GitHub Actions not yet included in this repo; workflows TBD.
+- CI: GitHub Actions workflows are included (`ci.yml`, `ci-light.yml`, `firebase.yml`).
 
 ## Tooling & Versions
 - Package manager: `npm`

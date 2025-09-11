@@ -40,12 +40,13 @@ const rbac_1 = require("./rbac");
 const unique_1 = require("./unique");
 const firebaseAdmin_1 = require("../firebaseAdmin");
 const firestore_1 = require("firebase-admin/firestore");
+const logger_1 = require("./logger");
 async function upsertProfileLogic(data, context) {
     try {
         const auth = (0, rbac_1.requireAuth)(context);
         const validatedData = validators_1.upsertProfileSchema.parse(data);
         if (process.env.FUNCTIONS_EMULATOR) {
-            console.log('[upsertProfile] uid', auth.uid, 'data', JSON.stringify(validatedData));
+            (0, logger_1.log)('upsert_profile_start', { uid: auth.uid });
         }
         // Resolve email once outside the transaction
         let emailLower = auth.token.email?.toLowerCase();
@@ -60,7 +61,7 @@ async function upsertProfileLogic(data, context) {
         await firebaseAdmin_1.db.runTransaction(async (tx) => {
             const memberDoc = await tx.get(memberRef);
             if (process.env.FUNCTIONS_EMULATOR) {
-                console.log('[upsertProfile] memberDoc.exists', memberDoc.exists);
+                (0, logger_1.log)('upsert_profile_member_exists', { uid: auth.uid, exists: memberDoc.exists });
             }
             let memberNo = memberDoc.get('memberNo');
             const nowTs = firestore_1.FieldValue.serverTimestamp();
@@ -75,7 +76,7 @@ async function upsertProfileLogic(data, context) {
                 }, { merge: true });
             }
             if (process.env.FUNCTIONS_EMULATOR) {
-                console.log('[upsertProfile] reserving email', emailLower);
+                (0, logger_1.log)('upsert_profile_reserve_email', { uid: auth.uid, emailLower });
             }
             await (0, unique_1.reserveUniqueEmail)(auth.uid, emailLower, tx);
             tx.set(memberRef, {
@@ -92,10 +93,10 @@ async function upsertProfileLogic(data, context) {
         }
         catch (e) {
             // Non-fatal: log and continue
-            console.warn('[upsertProfile] failed to update auth displayName', e);
+            (0, logger_1.log)('upsert_profile_auth_displayname_error', { uid: auth.uid, error: String(e) });
         }
         if (process.env.FUNCTIONS_EMULATOR) {
-            console.log('[upsertProfile] success', auth.uid);
+            (0, logger_1.log)('upsert_profile_success', { uid: auth.uid });
         }
         return { message: "Profile updated successfully" };
     }
@@ -111,7 +112,7 @@ async function upsertProfileLogic(data, context) {
         if (err?.issues) {
             throw new functions.https.HttpsError('invalid-argument', 'Invalid profile data');
         }
-        console.error('[upsertProfile] unexpected', err?.stack || err);
+        (0, logger_1.log)('upsert_profile_error', { uid: context?.auth?.uid, error: String(err?.stack || err) });
         throw new functions.https.HttpsError('internal', 'Profile update failed', msg);
     }
 }

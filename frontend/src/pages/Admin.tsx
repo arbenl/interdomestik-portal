@@ -15,6 +15,8 @@ import AgentRegistrationCard from '../components/AgentRegistrationCard';
 import Button from '../components/ui/Button';
 import useReports from '../hooks/useReports';
 import type { Organization, Coupon } from '../types';
+import { collection, onSnapshot, orderBy, limit, query } from 'firebase/firestore';
+import { db, projectId, storageBucket } from '../firebase';
 
 //
 
@@ -88,6 +90,45 @@ export default function Admin() {
   const today = new Date().toISOString().slice(0,10);
   const { items: auditLogs, loading: auditLoading, error: auditError } = useAuditLogs(20);
   const { push } = useToast();
+  // Exports state
+  const [exportsList, setExportsList] = useState<Array<{ id: string; path: string; url?: string; status: string; count?: number; size?: number; createdAt?: any }>>([]);
+  const [exportsLimit, setExportsLimit] = useState<number>(5);
+  useEffect(() => {
+    const qy = query(collection(db, 'exports'), orderBy('createdAt', 'desc'), limit(exportsLimit));
+    const unsub = onSnapshot(qy, (snap) => {
+      setExportsList(snap.docs.map(d => ({ id: d.id, ...(d.data() as any) })));
+    });
+    return () => unsub();
+  }, [exportsLimit]);
+
+  function formatBytes(n?: number) {
+    if (typeof n !== 'number' || !Number.isFinite(n)) return '—';
+    if (n < 1024) return `${n} B`;
+    if (n < 1024*1024) return `${(n/1024).toFixed(1)} KB`;
+    if (n < 1024*1024*1024) return `${(n/1024/1024).toFixed(1)} MB`;
+    return `${(n/1024/1024/1024).toFixed(1)} GB`;
+  }
+
+  function statusBadge(s: string) {
+    const base = 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold';
+    if (s === 'done') return <span className={`${base} bg-green-100 text-green-800`}>done</span>;
+    if (s === 'running') return <span className={`${base} bg-yellow-100 text-yellow-800`}>running</span>;
+    if (s === 'error') return <span className={`${base} bg-red-100 text-red-800`}>error</span>;
+    return <span className={`${base} bg-gray-100 text-gray-800`}>{s || 'unknown'}</span>;
+  }
+
+  async function copy(text: string, okMsg = 'Copied to clipboard') {
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+      else {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      push({ type: 'success', message: okMsg });
+    } catch {
+      push({ type: 'error', message: 'Copy failed' });
+    }
+  }
   const [searchTerm, setSearchTerm] = useState('');
   const { results: searchResults, loading: searchLoading, error: searchError, search, clear } = useMemberSearch();
   // Live search as user types (debounced)
@@ -390,6 +431,69 @@ export default function Admin() {
 
       {isAdmin && (
         <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Exports</h3>
+          <div className="flex items-center gap-2 mb-2">
+            <Button onClick={async ()=>{
+              try {
+                const fn = httpsCallable<void, { ok: boolean; id: string }>(functions, 'startMembersExport');
+                await fn();
+                push({ type: 'success', message: 'Export started' });
+              } catch (e) {
+                push({ type: 'error', message: 'Failed to start export' });
+              }
+            }} disabled={exportsList.some(e => e.status === 'running')}>Start Members CSV Export</Button>
+            <Button variant="ghost" onClick={()=> setExportsLimit(l => l === 5 ? 20 : 5)}>{exportsLimit === 5 ? 'Show more' : 'Show less'}</Button>
+          </div>
+          {exportsList.length === 0 ? (
+            <div className="text-gray-600 text-sm">No exports yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-600">
+                    <th className="px-3 py-2">When</th>
+                    <th className="px-3 py-2">Status</th>
+                    <th className="px-3 py-2">Count</th>
+                    <th className="px-3 py-2">Size</th>
+                    <th className="px-3 py-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {exportsList.map(e => (
+                    <tr key={e.id} className="border-t">
+                      <td className="px-3 py-2">{e.createdAt?.seconds ? new Date(e.createdAt.seconds * 1000).toLocaleString() : ''}</td>
+                      <td className="px-3 py-2">{statusBadge(e.status)}</td>
+                      <td className="px-3 py-2">{e.count ?? '—'}</td>
+                      <td className="px-3 py-2">{formatBytes(e.size)}</td>
+                      <td className="px-3 py-2 flex items-center gap-2">
+                        {e.url ? (
+                          <>
+                            <a className="text-indigo-600 underline" href={e.url} target="_blank" rel="noreferrer">Download</a>
+                            <button className="text-gray-600 underline" onClick={()=>copy(e.url!, 'Link copied')}>Copy link</button>
+                          </>
+                        ) : (
+                          <span className="text-gray-500">(no link)</span>
+                        )}
+                        {e.path && (
+                          <>
+                            <button className="text-gray-600 underline" onClick={()=>copy(`gs://${storageBucket}/${e.path}`, 'gs:// path copied')}>Copy gs://</button>
+                            <a className="text-gray-600 underline" href={`https://console.cloud.google.com/storage/browser/_details/${encodeURIComponent(storageBucket)}/${encodeURIComponent(e.path)}?project=${encodeURIComponent(projectId)}`} target="_blank" rel="noreferrer">Open in GCS</a>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isAdmin && <CardKeysPanel />}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
           <h3 className="text-lg font-semibold mb-2">Maintenance</h3>
           <p className="text-sm text-gray-600 mb-2">One-off tasks for admins. These run against the current project.</p>
           <div className="flex gap-2">
@@ -673,7 +777,12 @@ function RegionBarChart({ data }: { data: Record<string, number> }) {
         <div key={k} className="flex items-center gap-2">
           <div className="w-28 text-xs text-gray-600">{k}</div>
           <div className="h-3 bg-gray-200 rounded w-full">
-            <div className="h-3 bg-indigo-500 rounded" style={{ width: `${Math.round((v || 0) / max * 100)}%` }} />
+            {(() => {
+              const ratio = Math.max(0, Math.min(1, (v || 0) / max));
+              const pct = Math.round(ratio * 100);
+              const wClass = pct >= 88 ? 'w-full' : pct >= 63 ? 'w-3/4' : pct >= 38 ? 'w-1/2' : pct >= 13 ? 'w-1/4' : 'w-0';
+              return <div className={`h-3 bg-indigo-500 rounded ${wClass}`} />;
+            })()}
           </div>
           <div className="w-10 text-xs text-gray-700 text-right">{v || 0}</div>
         </div>
@@ -930,6 +1039,64 @@ function BulkImportPanel({ onSuccess, onError, onToast }: { onSuccess: (m:string
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function CardKeysPanel() {
+  const [activeKid, setActiveKid] = useState<string>('—');
+  const [kids, setKids] = useState<string[]>([]);
+  const [jti, setJti] = useState('');
+  const [reason, setReason] = useState('');
+  const { push } = useToast();
+  useEffect(() => {
+    (async () => {
+      try {
+        const fn = httpsCallable<void, { activeKid: string; kids: string[] }>(functions, 'getCardKeyStatusCallable');
+        const r = await fn();
+        setActiveKid((r.data as any)?.activeKid || '—');
+        setKids(((r.data as any)?.kids || []) as string[]);
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
+  return (
+    <div className="mb-6 p-4 border rounded bg-white">
+      <h3 className="text-lg font-semibold mb-2">Card Keys & Tokens</h3>
+      <div className="text-sm text-gray-700 mb-2">Active key id: <span className="font-medium">{activeKid}</span></div>
+      <div className="text-sm text-gray-700 mb-3">Keys present: {kids.length === 0 ? '—' : kids.map(k => (
+        <span key={k} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold mr-1 ${k===activeKid? 'bg-green-100 text-green-800':'bg-gray-100 text-gray-800'}`}>{k}</span>
+      ))}</div>
+      <div className="mb-3 text-xs text-gray-500">Rotation is performed by updating the Functions secret <code>CARD_JWT_ACTIVE_KID</code> and redeploying.
+        <button className="ml-2 text-indigo-600 underline" onClick={async ()=>{
+          const cmd = `firebase functions:secrets:set CARD_JWT_ACTIVE_KID --data=${activeKid}\nfirebase deploy --only functions`;
+          try { await navigator.clipboard.writeText(cmd); push({ type: 'success', message: 'CLI copied' }); } catch { push({ type: 'error', message: 'Copy failed' }); }
+        }}>Copy rotation CLI</button>
+      </div>
+      <div className="mt-2">
+        <div className="text-sm font-medium mb-1">Revoke token by jti</div>
+        <div className="flex items-end gap-2">
+          <div>
+            <label className="block text-xs text-gray-600">jti</label>
+            <input className="border rounded px-2 py-1 text-sm" placeholder="abcdef123" value={jti} onChange={e=>setJti(e.target.value)} />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs text-gray-600">reason</label>
+            <input className="w-full border rounded px-2 py-1 text-sm" placeholder="lost device" value={reason} onChange={e=>setReason(e.target.value)} />
+          </div>
+          <Button onClick={async ()=>{
+            try {
+              const fn = httpsCallable<{ jti: string; reason?: string }, { ok: boolean }>(functions, 'revokeCardToken');
+              await fn({ jti: jti.trim(), reason: reason.trim() });
+              push({ type: 'success', message: 'Token revoked' });
+              setJti(''); setReason('');
+            } catch {
+              push({ type: 'error', message: 'Failed to revoke' });
+            }
+          }}>Revoke</Button>
+        </div>
+      </div>
     </div>
   );
 }

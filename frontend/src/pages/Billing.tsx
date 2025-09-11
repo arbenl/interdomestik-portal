@@ -5,6 +5,7 @@ import { useInvoices } from '../hooks/useInvoices';
 import useToast from '../components/ui/useToast';
 import Button from '../components/ui/Button';
 import PaymentElementBox from '../components/payments/PaymentElementBox';
+import { projectId as FB_PROJECT_ID } from '../firebase';
 
 function formatMoney(amount: number, currency: string) {
   try {
@@ -30,8 +31,8 @@ export default function Billing() {
   const { invoices, loading, error, refresh } = useInvoices(user?.uid);
   const { push } = useToast();
   const [busy, setBusy] = useState(false);
-  const projectId = 'demo-interdomestik';
-  const ENABLE_PAYMENTS_UI = true; // feature flag scaffolding
+  const projectId = FB_PROJECT_ID || 'demo-interdomestik';
+  const ENABLE_PAYMENTS_UI = String(import.meta.env.VITE_ENABLE_PAYMENTS_UI ?? 'true') === 'true';
 
   async function simulatePayment() {
     if (!user) return;

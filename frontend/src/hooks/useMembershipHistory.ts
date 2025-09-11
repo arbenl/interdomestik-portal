@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import type { CollectionReference, Query, QuerySnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Membership } from '../types';
+import { membershipConverter, maybeWithConverter } from '../lib/converters';
 
 export const useMembershipHistory = (uid: string | undefined) => {
   const [history, setHistory] = useState<Membership[]>([]);
@@ -9,28 +11,20 @@ export const useMembershipHistory = (uid: string | undefined) => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!uid) {
+    if (!uid) { setLoading(false); setHistory([]); return; }
+    setLoading(true); setError(null);
+    const historyCollectionRef = maybeWithConverter<Membership>(collection(db, 'members', uid, 'memberships'), membershipConverter) as unknown as CollectionReference<Membership>;
+    const qy = query(historyCollectionRef, orderBy('year', 'desc')) as Query<Membership>;
+    const unsub = onSnapshot(qy, (snap: QuerySnapshot<Membership>) => {
+      const historyData: Membership[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as unknown as Membership) }));
+      setHistory(historyData);
       setLoading(false);
-      return;
-    }
-
-    const fetchHistory = async () => {
-      try {
-        const historyCollectionRef = collection(db, 'members', uid, 'memberships');
-        const q = query(historyCollectionRef, orderBy('year', 'desc'));
-        const querySnapshot = await getDocs(q);
-        
-        const historyData: Membership[] = querySnapshot.docs.map(d => ({ id: d.id, ...(d.data() as Membership) }));
-        setHistory(historyData);
-
-      } catch (err) {
-        setError(err as Error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHistory();
+      setError(null);
+    }, (e: unknown) => {
+      setError(e as Error);
+      setLoading(false);
+    });
+    return () => unsub();
   }, [uid]);
 
   return { history, loading, error };

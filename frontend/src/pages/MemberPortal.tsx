@@ -10,6 +10,7 @@ import { IconCalendar, IconCreditCard, IconUsers } from '../components/icons';
 import { useEvents } from '../hooks/useEvents';
 import { useDirectory } from '../hooks/useDirectory';
 import useCardToken from '../hooks/useCardToken';
+import useOfflineCard from '../hooks/useOfflineCard';
 
 export default function MemberPortal() {
   const { user } = useAuth();
@@ -19,7 +20,8 @@ export default function MemberPortal() {
   // Hooks must be declared unconditionally (before any early return)
   const { events } = useEvents(5);
   const { members: directory } = useDirectory(5);
-  const { token } = useCardToken(user?.uid || null);
+  const { token, refresh } = useCardToken(user?.uid || null);
+  const { enabled: offlineEnabled, setEnabled: setOfflineEnabled, token: effectiveToken, nearExpiry } = useOfflineCard(token);
 
   if (!user) {
     return (
@@ -58,13 +60,23 @@ export default function MemberPortal() {
   const computedStatus = typeof expiresAtSec === 'number' ? (expiresAtSec > nowSec ? 'active' : 'expired') : 'none';
   const status = (profile?.status as string | undefined) || computedStatus;
 
-  const verifyUrl = token
-    ? `${location.origin}/verify?token=${encodeURIComponent(token)}`
+  const verifyUrl = effectiveToken
+    ? `${location.origin}/verify?token=${encodeURIComponent(effectiveToken)}`
     : (memberNo && memberNo !== '—' ? `${location.origin}/verify?memberNo=${encodeURIComponent(memberNo)}` : undefined);
 
   return (
     <div className="max-w-6xl mx-auto">
       <PortalHero name={name} status={status} memberNo={memberNo !== '—' ? memberNo : undefined} expiresOn={expiry !== '—' ? expiry : undefined} verifyUrl={verifyUrl} />
+
+      <div className="mt-3 p-3 border rounded bg-white flex items-center justify-between">
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={offlineEnabled} onChange={(e)=> setOfflineEnabled(e.target.checked)} />
+          Make my card available offline (no personal info stored)
+        </label>
+        {nearExpiry && (
+          <button className="text-sm text-indigo-600 underline" onClick={()=> refresh?.()}>Refresh token</button>
+        )}
+      </div>
 
       {status !== 'active' && (
         <div className="mt-4 border rounded p-4 bg-yellow-50">
