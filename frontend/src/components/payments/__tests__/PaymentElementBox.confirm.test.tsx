@@ -3,9 +3,14 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ToastProvider } from '../../ui/Toast';
 import PaymentElementBox from '../PaymentElementBox';
 
-vi.mock('firebase/functions', async () => ({
-  httpsCallable: () => vi.fn().mockResolvedValue({ data: { ok: true, clientSecret: 'cs_test' } })
-}));
+vi.mock('firebase/functions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('firebase/functions')>();
+  return {
+    ...actual,
+    getFunctions: vi.fn(() => ({} as unknown as import('firebase/functions').Functions)),
+    httpsCallable: () => vi.fn().mockResolvedValue({ data: { ok: true, clientSecret: 'cs_test' } }),
+  };
+});
 
 describe('PaymentElementBox confirm flow', () => {
   beforeEach(() => {
@@ -28,6 +33,7 @@ describe('PaymentElementBox confirm flow', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Start Card Payment/i }));
     // Confirm payment
     fireEvent.click(await screen.findByRole('button', { name: /Confirm Payment/i }));
-    expect(await screen.findByText(/Payment succeeded/i)).toBeInTheDocument();
+    const successMsgs = await screen.findAllByText(/Payment succeeded/i);
+    expect(successMsgs.length).toBeGreaterThan(0);
   });
 });

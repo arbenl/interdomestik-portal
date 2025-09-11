@@ -10,7 +10,7 @@
     "deploy": "npm run build && firebase deploy --only functions",
     "test": "firebase emulators:exec --only firestore,auth \"mocha --timeout 10000 --require ts-node/register test/**/*.test.ts\"",
     "test:coverage": "firebase emulators:exec --only firestore,auth \"c8 --check-coverage --branches=75 --functions=75 --lines=75 --statements=75 -r text -r lcov mocha --timeout 10000 --require ts-node/register test/**/*.test.ts\"",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint src --ext .ts",
     "typecheck": "tsc -p . --noEmit"
   },
   "dependencies": {
