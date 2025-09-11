@@ -56,6 +56,42 @@ describe('HTTP functions', () => {
     expect(out.body).to.have.property('memberNo', memberNo);
   });
 
+  it('verifyMembership supports signed token and revocation', async () => {
+    const { signCardToken } = await import('../src/lib/tokens');
+    process.env.CARD_JWT_SECRET = 'test-secret';
+    const uid = 'u_token_' + Date.now();
+    const memberNo = 'INT-2025-654321';
+    await db.collection('members').doc(uid).set({
+      email: 'vt@example.com', name: 'VT', region: 'PRISHTINA', memberNo,
+      createdAt: admin.firestore.Timestamp.now(), updatedAt: admin.firestore.Timestamp.now(),
+    });
+    const tomorrow = admin.firestore.Timestamp.fromDate(new Date(Date.now() + 24 * 3600 * 1000));
+    await db.collection('members').doc(uid).collection('memberships').doc('2025').set({
+      status: 'active', startedAt: admin.firestore.Timestamp.now(), expiresAt: tomorrow,
+    });
+
+    // valid token
+    const t = signCardToken({ mno: memberNo, exp: Math.floor(Date.now()/1000) + 3600, jti: 'test_jti_ok' });
+    const req1: any = { method: 'GET', query: { token: t }, headers: {} };
+    const { res: res1, get: get1 } = makeRes();
+    await (verifyMembership as any)(req1, res1);
+    const out1 = get1();
+    expect(out1.statusCode).to.equal(200);
+    expect(out1.body).to.have.property('ok', true);
+    expect(out1.body).to.have.property('valid', true);
+
+    // revoked token
+    await db.collection('card_revocations').doc('test_jti_rev').set({ reason: 'test' });
+    const tRev = signCardToken({ mno: memberNo, exp: Math.floor(Date.now()/1000) + 3600, jti: 'test_jti_rev' });
+    const req2: any = { method: 'GET', query: { token: tRev }, headers: {} };
+    const { res: res2, get: get2 } = makeRes();
+    await (verifyMembership as any)(req2, res2);
+    const out2 = get2();
+    expect(out2.statusCode).to.equal(200);
+    expect(out2.body).to.have.property('ok', true);
+    expect(out2.body).to.have.property('valid', false);
+  });
+
   it('stripeWebhook writes a paid invoice', async () => {
     const uid = 'u_invoice_' + Date.now();
     await admin.auth().createUser({ uid, email: `u_${Date.now()}@example.com` }).catch(() => {});
@@ -78,4 +114,3 @@ describe('HTTP functions', () => {
     expect(data.currency).to.equal('EUR');
   });
 });
-

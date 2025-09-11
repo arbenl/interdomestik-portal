@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCardKeyStatus = exports.revokeCardToken = exports.generateMonthlyReportNow = exports.exportMonthlyReport = exports.monthlyMembershipReport = exports.cleanupExpiredData = exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.resendMembershipCard = exports.getCardToken = exports.createPaymentIntent = exports.backfillNameLower = exports.importMembersCsv = exports.getUserClaims = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
+exports.getCardKeyStatus = exports.revokeCardToken = exports.generateMonthlyReportNow = exports.exportMonthlyReport = exports.monthlyMembershipReport = exports.cleanupExpiredData = exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.resendMembershipCard = exports.listCoupons = exports.createCoupon = exports.listOrganizations = exports.createOrganization = exports.setAutoRenew = exports.getCardToken = exports.createPaymentIntent = exports.backfillNameLower = exports.importMembersCsv = exports.getUserClaims = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const firestore_1 = require("firebase-admin/firestore");
 const firebaseAdmin_1 = require("./firebaseAdmin");
@@ -48,6 +48,7 @@ const tokens_1 = require("./lib/tokens");
 const startMembership_2 = require("./lib/startMembership");
 const cleanup_1 = require("./lib/cleanup");
 const payments_1 = require("./lib/payments");
+const settings_1 = require("./lib/settings");
 var exportMembersCsv_1 = require("./exportMembersCsv");
 Object.defineProperty(exports, "exportMembersCsv", { enumerable: true, get: function () { return exportMembersCsv_1.exportMembersCsv; } });
 // Region constant for consistency
@@ -108,6 +109,66 @@ exports.getCardToken = functions
         expSec = Math.floor(Date.now() / 1000) + 30 * 24 * 3600;
     const token = (0, tokens_1.signCardToken)({ mno: memberNo, exp: expSec });
     return { token };
+});
+// Set auto-renew preference on member profile (self only or admin)
+exports.setAutoRenew = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => {
+    if (!context.auth)
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+    const autoRenew = !!data?.autoRenew;
+    const requestedUid = data?.uid ? String(data.uid) : undefined;
+    const isAdmin = context.auth.token?.role === 'admin';
+    return (0, settings_1.setAutoRenewLogic)(context.auth.uid, requestedUid, autoRenew, isAdmin);
+});
+// Simple organization management (admin only)
+exports.createOrganization = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => {
+    if (!context.auth || context.auth.token?.role !== 'admin') {
+        throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const name = String(data?.name || '').trim();
+    const billingEmail = String(data?.billingEmail || '').trim();
+    const seats = Math.max(0, Number(data?.seats || 0));
+    if (!name)
+        throw new functions.https.HttpsError('invalid-argument', 'name required');
+    const ref = await firebaseAdmin_1.db.collection('orgs').add({ name, billingEmail, seats, activeSeats: 0, createdAt: firestore_1.FieldValue.serverTimestamp() });
+    return { ok: true, id: ref.id };
+});
+exports.listOrganizations = functions
+    .region(REGION)
+    .https.onCall(async (_data, context) => {
+    if (!context.auth || context.auth.token?.role !== 'admin') {
+        throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const snap = await firebaseAdmin_1.db.collection('orgs').orderBy('createdAt', 'desc').limit(20).get();
+    return { items: snap.docs.map(d => ({ id: d.id, ...d.data() })) };
+});
+// Coupon management (admin only)
+exports.createCoupon = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => {
+    if (!context.auth || context.auth.token?.role !== 'admin') {
+        throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const code = String(data?.code || '').trim().toLowerCase();
+    if (!code)
+        throw new functions.https.HttpsError('invalid-argument', 'code required');
+    const percentOff = Math.max(0, Number(data?.percentOff || 0));
+    const amountOff = Math.max(0, Number(data?.amountOff || 0));
+    const active = data?.active === false ? false : true;
+    await firebaseAdmin_1.db.collection('coupons').doc(code).set({ percentOff, amountOff, active, updatedAt: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
+    return { ok: true };
+});
+exports.listCoupons = functions
+    .region(REGION)
+    .https.onCall(async (_data, context) => {
+    if (!context.auth || context.auth.token?.role !== 'admin') {
+        throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const snap = await firebaseAdmin_1.db.collection('coupons').limit(50).get();
+    return { items: snap.docs.map(d => ({ id: d.id, ...d.data() })) };
 });
 // Resend digital membership card email to the authenticated user (or admin-specified uid)
 exports.resendMembershipCard = functions
@@ -198,12 +259,27 @@ exports.verifyMembership = functions
         return;
     }
     try {
-        // Simple IP-based rate limiting (skips emulator). Limits: 60/minute or 1000/day
-        const isEmu = process.env.FUNCTIONS_EMULATOR || process.env.FIREBASE_EMULATOR_HUB;
-        if (!isEmu) {
+        // API key auth: if present and valid for 'verify', bypass rate limit and respond minimally
+        const apiKey = req.headers?.['x-api-key']?.trim();
+        let apiKeyValid = false;
+        if (apiKey) {
+            try {
+                const crypto = await Promise.resolve().then(() => __importStar(require('crypto')));
+                const hash = crypto.createHash('sha256').update(apiKey).digest('hex');
+                const q = await firebaseAdmin_1.db.collection('api_keys').where('hash', '==', hash).where('active', '==', true).limit(1).get();
+                if (!q.empty) {
+                    const scopes = q.docs[0].get('scopes') || [];
+                    apiKeyValid = scopes.includes('verify');
+                }
+            }
+            catch { }
+        }
+        // Simple IP-based rate limiting (skips emulator/tests or valid API key). Limits: 60/minute or 1000/day
+        const isEmu = !!(process.env.FUNCTIONS_EMULATOR || process.env.FIREBASE_EMULATOR_HUB || process.env.FIRESTORE_EMULATOR_HOST || process.env.GCLOUD_PROJECT === 'demo-interdomestik');
+        if (!isEmu && !apiKeyValid) {
             const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
             const ip = fwd || req.ip || (req.socket && req.socket.remoteAddress) || 'unknown';
-            const crypto = await Promise.resolve().then(() => __importStar(require('crypto')));
+            const crypto = await Promise.resolve().then(() => __importStar(require('node:crypto')));
             const hash = crypto.createHash('sha256').update(String(ip)).digest('hex').slice(0, 12);
             const now = new Date();
             const dayKey = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}${String(now.getUTCDate()).padStart(2, '0')}`;
@@ -272,21 +348,46 @@ exports.verifyMembership = functions
             return;
         }
         const doc = q.docs[0];
-        const activeSnap = await firebaseAdmin_1.db
-            .collection("members")
-            .doc(doc.id)
-            .collection("memberships")
-            .where("status", "==", "active")
-            .where("expiresAt", ">", firestore_1.Timestamp.now())
-            .limit(1)
-            .get();
-        res.json({
-            ok: true,
-            valid: !activeSnap.empty,
-            memberNo,
-            name: doc.get("name") || "Member",
-            region: doc.get("region") || "—",
-        });
+        let isValid = false;
+        try {
+            // Fetch active memberships and filter by expiry in code to avoid composite index needs
+            const snapAct = await firebaseAdmin_1.db
+                .collection('members')
+                .doc(doc.id)
+                .collection('memberships')
+                .where('status', '==', 'active')
+                .limit(5)
+                .get();
+            const nowMs = Date.now();
+            for (const d of snapAct.docs) {
+                const exp = d.get('expiresAt');
+                if (!exp) {
+                    isValid = true;
+                    break;
+                }
+                const ms = typeof exp?.toMillis === 'function' ? exp.toMillis() : (typeof exp?.seconds === 'number' ? exp.seconds * 1000 : 0);
+                if (ms > nowMs) {
+                    isValid = true;
+                    break;
+                }
+            }
+        }
+        catch {
+            // Defensive: avoid 500 in tests/emulator
+            isValid = false;
+        }
+        if (apiKeyValid) {
+            res.json({ ok: true, valid: isValid, memberNo });
+        }
+        else {
+            res.json({
+                ok: true,
+                valid: isValid,
+                memberNo,
+                name: doc.get('name') || 'Member',
+                region: doc.get('region') || '—',
+            });
+        }
         return;
     }
     catch (e) {

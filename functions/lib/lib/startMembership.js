@@ -42,7 +42,7 @@ async function activateMembership(uid, year, price, currency, paymentMethod, ext
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         }, { merge: true });
     });
-    return { refPath: ref.path, alreadyActive };
+    return { refPath: `/${ref.path}`, alreadyActive };
 }
 async function startMembershipLogic(data, context) {
     (0, rbac_1.requireAdmin)(context);

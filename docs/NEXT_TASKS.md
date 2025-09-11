@@ -60,6 +60,7 @@ Notes:
 - [ ] (P1) Re‑enable full CI (functions/rules/E2E) once billing fixed; cache emulator deps; upload coverage
 - [ ] (P2) PR previews on Hosting; optional staging project for smoke tests
 - [ ] (P2) Deterministic seeding & fixtures for E2E; flaky test detector
+- [ ] (P1) Frontend lint cleanup: eliminate all `any`, add/expand types (Profile, Membership, Invoice, AuditLog, MonthlyReport, Organization, Coupon), fix react-hooks/exhaustive-deps warnings; keep zero lint errors
 
 ## Phase 9 — UX & Accessibility
 - [ ] (P2) A11y: focus traps, keyboard nav, contrast for badges

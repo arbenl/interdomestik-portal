@@ -14,6 +14,7 @@ import ActivateMembershipModal from '../components/ActivateMembershipModal';
 import AgentRegistrationCard from '../components/AgentRegistrationCard';
 import Button from '../components/ui/Button';
 import useReports from '../hooks/useReports';
+import type { Organization, Coupon } from '../types';
 
 //
 
@@ -100,7 +101,7 @@ export default function Admin() {
       }
     }, 250);
     return () => clearTimeout(t);
-  }, [searchTerm]);
+  }, [searchTerm, search, clear]);
   // Backfill dialog state
   const [showBackfill, setShowBackfill] = useState(false);
   const [bfRunning, setBfRunning] = useState(false);
@@ -264,6 +265,20 @@ export default function Admin() {
       )}
 
       {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Organizations</h3>
+          <OrgPanel />
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="mb-6 p-4 border rounded bg-white">
+          <h3 className="text-lg font-semibold mb-2">Coupons</h3>
+          <CouponPanel />
+        </div>
+      )}
+
+      {isAdmin && (
         <BulkImportPanel onSuccess={handleSuccess} onError={setError} onToast={push} />
       )}
 
@@ -300,7 +315,7 @@ export default function Admin() {
                       <td className="px-3 py-2">{u.memberNo}</td>
                       <td className="px-3 py-2">{renderStatus(u.status, u.expiresAt)}</td>
                       <td className="px-3 py-2">{u.region}</td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-3 py-2 text-right sticky right-0 bg-white z-10">
                         {isActive(u.status, u.expiresAt) ? (
                           <span className="text-gray-500">Active</span>
                         ) : (
@@ -367,7 +382,7 @@ export default function Admin() {
           {reports.length > 0 && (
             <div className="mt-4">
               <h4 className="text-sm font-semibold mb-1">By Region (latest)</h4>
-              <RegionBarChart data={(reports[0] as any).byRegion || {}} />
+              <RegionBarChart data={reports[0]?.byRegion || {}} />
             </div>
           )}
         </div>
@@ -489,7 +504,7 @@ export default function Admin() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 uppercase">Status filter</label>
-            <select className="mt-1 border rounded px-3 py-2" value={statusFilter} onChange={(e)=> setStatusFilter(e.target.value as any)}>
+            <select className="mt-1 border rounded px-3 py-2" value={statusFilter} onChange={(e)=> setStatusFilter(e.target.value as 'ALL'|'ACTIVE'|'EXPIRED'|'INACTIVE')}>
               <option value="ALL">All</option>
               <option value="ACTIVE">Active</option>
               <option value="EXPIRED">Expired</option>
@@ -534,7 +549,7 @@ export default function Admin() {
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.memberNo}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{renderStatus(user.status, user.expiresAt)}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.region}</td>
-                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-right">
+                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-right sticky right-0 bg-white z-10">
                   {isActive(user.status, user.expiresAt) ? (
                     <span className="text-gray-500">Active</span>
                   ) : (
@@ -573,7 +588,7 @@ export default function Admin() {
 function isActive(status?: string, expiresAt?: { seconds?: number | undefined } | null): boolean {
   const s = (status || '').toString().toLowerCase();
   if (s === 'active') return true;
-  const sec = (expiresAt as any)?.seconds;
+  const sec = typeof expiresAt?.seconds === 'number' ? expiresAt.seconds : undefined;
   if (typeof sec === 'number' && sec * 1000 > Date.now()) return true;
   return false;
 }
@@ -601,9 +616,9 @@ function QuickRenew({ uid, onDone }: { uid: string; onDone?: ()=>void }) {
       <Button className="px-2 py-1 text-xs" disabled={busy} onClick={async ()=>{
         setBusy(true);
         try {
-          const fn = httpsCallable<{ uid: string; year: number; price: number; currency: 'EUR'; paymentMethod: 'cash' } , any>(functions, 'startMembership');
+      const fn = httpsCallable<{ uid: string; year: number; price: number; currency: 'EUR'; paymentMethod: 'cash' }, { message: string; refPath: string }>(functions, 'startMembership');
           await fn({ uid, year, price, currency: 'EUR', paymentMethod: 'cash' });
-          onDone && onDone();
+          if (onDone) onDone();
         } catch (e) {
           console.error(e);
         } finally {
@@ -631,12 +646,12 @@ function BulkRenewBar({ ids, onDone }: { ids: string[]; onDone?: ()=>void }) {
       <Button data-testid="bulk-renew" className="px-2 py-1 text-xs" disabled={busy || ids.length === 0} onClick={async ()=>{
         setBusy(true); setCountDone(0);
         try {
-          const fn = httpsCallable<{ uid: string; year: number; price: number; currency: 'EUR'; paymentMethod: 'cash' } , any>(functions, 'startMembership');
+      const fn = httpsCallable<{ uid: string; year: number; price: number; currency: 'EUR'; paymentMethod: 'cash' }, { message: string; refPath: string }>(functions, 'startMembership');
           for (const uid of ids) {
             await fn({ uid, year, price, currency: 'EUR', paymentMethod: 'cash' });
             setCountDone(c => c + 1);
           }
-          onDone && onDone();
+          if (onDone) onDone();
         } catch (e) {
           console.error(e);
         } finally {
@@ -663,6 +678,129 @@ function RegionBarChart({ data }: { data: Record<string, number> }) {
           <div className="w-10 text-xs text-gray-700 text-right">{v || 0}</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function OrgPanel() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [seats, setSeats] = useState(10);
+  const [busy, setBusy] = useState(false);
+  const [items, setItems] = useState<Organization[]>([]);
+  async function refresh() {
+    const fn = httpsCallable<void, { items: Organization[] }>(functions, 'listOrganizations');
+    const r = await fn();
+    const items = (r.data.items || []).map((o) => ({
+      id: String(o.id),
+      name: String(o.name || ''),
+      seats: Number(o.seats || 0),
+      activeSeats: Number(o.activeSeats || 0),
+      billingEmail: o.billingEmail ? String(o.billingEmail) : undefined,
+    }));
+    setItems(items);
+  }
+  useEffect(() => { refresh(); }, []);
+  return (
+    <div>
+      <div className="flex gap-2 items-end mb-3">
+        <div>
+          <label htmlFor="org-name" className="block text-sm font-medium text-gray-700">Name</label>
+          <input id="org-name" className="mt-1 border rounded px-3 py-2" value={name} onChange={e=>setName(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="org-email" className="block text-sm font-medium text-gray-700">Billing Email</label>
+          <input id="org-email" className="mt-1 border rounded px-3 py-2" value={email} onChange={e=>setEmail(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="org-seats" className="block text-sm font-medium text-gray-700">Seats</label>
+          <input id="org-seats" type="number" className="mt-1 border rounded px-3 py-2 w-24" value={seats} onChange={e=>setSeats(Number(e.target.value))} />
+        </div>
+        <button disabled={busy || !name} className="px-3 py-2 bg-indigo-600 text-white rounded disabled:opacity-50" onClick={async ()=>{
+          try { setBusy(true);
+            const fn = httpsCallable<{ name: string; billingEmail?: string; seats?: number }, { ok:boolean; id:string }>(functions, 'createOrganization');
+            await fn({ name, billingEmail: email, seats });
+            setName(''); setEmail(''); setSeats(10);
+            await refresh();
+          } finally { setBusy(false); }
+        }}>Create Org</button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-600"><th className="px-3 py-2">Name</th><th className="px-3 py-2">Seats</th><th className="px-3 py-2">Active</th><th className="px-3 py-2">Billing Email</th></tr>
+          </thead>
+          <tbody>
+            {items.map(o => (
+              <tr key={o.id} className="border-t">
+                <td className="px-3 py-2">{o.name}</td>
+                <td className="px-3 py-2">{o.seats}</td>
+                <td className="px-3 py-2">{o.activeSeats || 0}</td>
+                <td className="px-3 py-2">{o.billingEmail || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function CouponPanel() {
+  const [code, setCode] = useState('WELCOME');
+  const [percent, setPercent] = useState(0);
+  const [amount, setAmount] = useState(500);
+  const [active, setActive] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [items, setItems] = useState<Coupon[]>([]);
+  async function refresh() {
+    const fn = httpsCallable<void, { items: Coupon[] }>(functions, 'listCoupons');
+    const r = await fn();
+    const items = (r.data.items || []).map((c) => ({ id: String(c.id), percentOff: Number(c.percentOff || 0), amountOff: Number(c.amountOff || 0), active: c.active !== false }));
+    setItems(items);
+  }
+  useEffect(() => { refresh(); }, []);
+  return (
+    <div>
+      <div className="flex gap-2 items-end mb-3">
+        <div>
+          <label htmlFor="coupon-code" className="block text-sm font-medium text-gray-700">Code</label>
+          <input id="coupon-code" className="mt-1 border rounded px-3 py-2" value={code} onChange={e=>setCode(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="coupon-percent" className="block text-sm font-medium text-gray-700">Percent Off</label>
+          <input id="coupon-percent" type="number" className="mt-1 border rounded px-3 py-2 w-24" value={percent} onChange={e=>setPercent(Number(e.target.value))} />
+        </div>
+        <div>
+          <label htmlFor="coupon-amount" className="block text-sm font-medium text-gray-700">Amount Off (cents)</label>
+          <input id="coupon-amount" type="number" className="mt-1 border rounded px-3 py-2 w-32" value={amount} onChange={e=>setAmount(Number(e.target.value))} />
+        </div>
+        <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={active} onChange={e=>setActive(e.target.checked)} />Active</label>
+        <button disabled={busy || !code} className="px-3 py-2 bg-indigo-600 text-white rounded disabled:opacity-50" onClick={async ()=>{
+          try { setBusy(true);
+            const fn = httpsCallable<{ code: string; percentOff?: number; amountOff?: number; active?: boolean }, { ok:boolean }>(functions, 'createCoupon');
+            await fn({ code, percentOff: percent, amountOff: amount, active });
+            await refresh();
+          } finally { setBusy(false); }
+        }}>Save Coupon</button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-600"><th className="px-3 py-2">Code</th><th className="px-3 py-2">Percent</th><th className="px-3 py-2">Amount Off</th><th className="px-3 py-2">Active</th></tr>
+          </thead>
+          <tbody>
+            {items.map(c => (
+              <tr key={c.id} className="border-t">
+                <td className="px-3 py-2 font-mono">{c.id}</td>
+                <td className="px-3 py-2">{c.percentOff || 0}</td>
+                <td className="px-3 py-2">{c.amountOff || 0}</td>
+                <td className="px-3 py-2">{c.active !== false ? 'yes' : 'no'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

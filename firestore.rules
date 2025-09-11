@@ -18,12 +18,16 @@ service cloud.firestore {
         : [];
     }
     function adminHasRegion(region) {
-      // Admins: full access if no regions are set; otherwise must include region
-      return isAdmin() && ( (region in allowedRegionsOrEmpty()) || allowedRegionsOrEmpty().hasOnly([]) );
+      // Admins: full access if no regions are set; otherwise region must be included
+      let l = allowedRegionsOrEmpty();
+      return isAdmin() && (
+        l.hasOnly([]) || ( (region is string) && (l.size() > 0) && (region in l) )
+      );
     }
     function agentHasRegion(region) {
-      // Agents must have a list and the region must be in it
-      return isAgent() && (region in allowedRegionsOrEmpty());
+      // Agents must have a list and the region must be included
+      let l = allowedRegionsOrEmpty();
+      return isAgent() && ( (region is string) && (l.size() > 0) && (region in l) );
     }
     function agentOwns(uid) {
       return isAgent() && resource.data.agentId == request.auth.uid;
@@ -82,6 +86,15 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     match /reports/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /orgs/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /coupons/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /api_keys/{id} {
       allow read, write: if isAdmin();
     }
 

@@ -2,8 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import useToast from '../ui/useToast';
 import Button from '../ui/Button';
 
+type StripeElements = { create: (type: 'payment') => { mount: (el: HTMLElement) => void } };
+type StripeJS = {
+  elements: (opts: { clientSecret: string }) => StripeElements;
+  confirmPayment: (opts: { elements: unknown; redirect: 'if_required' }) => Promise<{ error?: { message?: string }; paymentIntent?: { status?: string } }>;
+};
+
 declare global {
-  interface Window { Stripe?: any }
+  interface Window {
+    Stripe?: (key: string) => StripeJS;
+    __stripe?: StripeJS;
+    __elements?: unknown;
+  }
 }
 
 type Props = {
@@ -21,6 +31,8 @@ export default function PaymentElementBox({ amountCents, currency }: Props) {
   const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
   const hasStripeKey = !!(stripeKey && stripeKey.trim());
   const { push } = useToast();
+  const [donation, setDonation] = useState<number>(0);
+  const [coupon, setCoupon] = useState<string>('');
 
   // Dynamically load Stripe.js
   useEffect(() => {
@@ -32,7 +44,7 @@ export default function PaymentElementBox({ amountCents, currency }: Props) {
     s.onload = () => setStripeReady(true);
     s.onerror = () => setError('Failed to load Stripe.js');
     document.head.appendChild(s);
-    return () => { try { document.head.removeChild(s); } catch {} };
+    return () => { if (s.parentNode) { s.parentNode.removeChild(s); } };
   }, [hasStripeKey]);
 
   async function ensureClientSecret() {
@@ -41,9 +53,9 @@ export default function PaymentElementBox({ amountCents, currency }: Props) {
     try {
       const { httpsCallable } = await import('firebase/functions');
       const { functions } = await import('../../firebase');
-      const fn = httpsCallable<{ amount?: number; currency?: string; description?: string }, { ok: boolean; clientSecret?: string }>(functions, 'createPaymentIntent');
-      const res = await fn({ amount: amountCents, currency, description: 'Membership renewal' });
-      const cs = (res.data as any)?.clientSecret as string | undefined;
+      const fn = httpsCallable<{ amount?: number; currency?: string; description?: string; donateCents?: number; couponCode?: string }, { ok: boolean; clientSecret?: string }>(functions, 'createPaymentIntent');
+      const res = await fn({ amount: amountCents, currency, description: 'Membership renewal', donateCents: donation, couponCode: coupon || undefined });
+      const cs = res.data?.clientSecret as string | undefined;
       if (!cs) throw new Error('No client secret returned');
       setClientSecret(cs);
       return cs;
@@ -57,28 +69,28 @@ export default function PaymentElementBox({ amountCents, currency }: Props) {
     const cs = await ensureClientSecret();
     if (!cs) return;
     if (!window.Stripe) { setError('Stripe not ready'); return; }
-    const stripe = window.Stripe(stripeKey);
+    const stripe = window.Stripe(stripeKey)!;
     const elements = stripe.elements({ clientSecret: cs });
     const paymentEl = elements.create('payment');
     if (containerRef.current) {
       containerRef.current.innerHTML = '';
       paymentEl.mount(containerRef.current);
     }
-    (window as any).__stripe = stripe; // debug
-    (window as any).__elements = elements;
+    window.__stripe = stripe; // debug
+    window.__elements = elements;
   }
 
   async function confirm() {
     setError(null);
     try {
-      const stripe = (window as any).__stripe;
-      const elements = (window as any).__elements;
+      const stripe = window.__stripe;
+      const elements = window.__elements;
       if (!stripe || !elements) { setError('Payment UI not ready'); return; }
       const { error: err, paymentIntent } = await stripe.confirmPayment({ elements, redirect: 'if_required' });
       if (err) { setError(err.message || 'Payment failed'); return; }
       if (paymentIntent?.status === 'succeeded' || paymentIntent?.status === 'processing' || paymentIntent?.status === 'requires_capture') {
         setSucceeded(true);
-        try { localStorage.setItem('renewed_at', String(Date.now())); } catch {}
+    try { localStorage.setItem('renewed_at', String(Date.now())); } catch { /* ignore */ }
         push({ type: 'success', message: 'Payment succeeded. Membership will activate shortly.' });
       } else {
         setError(`Unexpected status: ${paymentIntent?.status || 'unknown'}`);
@@ -101,7 +113,23 @@ export default function PaymentElementBox({ amountCents, currency }: Props) {
     <div className="border rounded p-4 bg-white">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-lg font-semibold">Pay with card</h2>
-        <div className="text-sm text-gray-600">{(amountCents/100).toFixed(2)} {currency}</div>
+        <div className="text-sm text-gray-600">
+          Total: {((amountCents + donation)/100).toFixed(2)} {currency}
+        </div>
+      </div>
+      <div className="flex items-center gap-3 text-sm mb-3">
+        <label className="inline-flex items-center gap-2">
+          <span>Donation</span>
+          <select className="border rounded px-2 py-1" value={donation} onChange={(e)=> setDonation(Number(e.target.value))}>
+            <option value={0}>€0</option>
+            <option value={200}>€2</option>
+            <option value={500}>€5</option>
+          </select>
+        </label>
+        <label className="inline-flex items-center gap-2">
+          <span>Coupon</span>
+          <input className="border rounded px-2 py-1" placeholder="CODE" value={coupon} onChange={(e)=> setCoupon(e.target.value)} />
+        </label>
       </div>
       {!clientSecret && (
         <Button disabled={loading || !stripeReady} onClick={mountElement}>

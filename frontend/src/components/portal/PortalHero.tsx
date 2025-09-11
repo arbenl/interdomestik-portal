@@ -18,11 +18,14 @@ export default function PortalHero({ name, status, memberNo, expiresOn, verifyUr
   })();
   let justRenewed = false;
   try {
-    const t = Number(localStorage.getItem('renewed_at') || '0');
+    const tRaw = localStorage.getItem('renewed_at');
+    const t = tRaw ? Number(tRaw) : 0;
     if (t > 0 && Date.now() - t < 30 * 60 * 1000) {
       justRenewed = true;
     }
-  } catch {}
+  } catch {
+    // Ignore storage errors in restricted contexts
+  }
 
   return (
     <section className="bg-white rounded-xl shadow-sm border p-5 md:p-6">

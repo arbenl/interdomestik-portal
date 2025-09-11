@@ -52,7 +52,7 @@ export async function activateMembership(
     }, { merge: true });
   });
 
-  return { refPath: ref.path, alreadyActive };
+  return { refPath: `/${ref.path}`, alreadyActive };
 }
 
 export async function startMembershipLogic(data: any, context: functions.https.CallableContext) {

@@ -1,15 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs, orderBy, query, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
-
-export type MonthlyReport = {
-  id: string;
-  type: 'monthly';
-  month: string; // YYYY-MM
-  total?: number;
-  revenue?: number;
-  updatedAt?: { seconds: number };
-};
+import type { MonthlyReport } from '../types';
 
 export function useReports(count: number = 6) {
   const [items, setItems] = useState<MonthlyReport[]>([]);
@@ -23,7 +15,10 @@ export function useReports(count: number = 6) {
         const qy = query(collection(db, 'reports'), where('type', '==', 'monthly'), orderBy('updatedAt', 'desc'), limit(count));
         const snap = await getDocs(qy);
         if (cancelled) return;
-        const arr = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as MonthlyReport[];
+        const arr: MonthlyReport[] = snap.docs.map((d) => {
+          const data = d.data() as Partial<MonthlyReport> & { byRegion?: Record<string, number>; byMethod?: Record<string, number> };
+          return { id: d.id, type: 'monthly', month: data.month || '', total: data.total, revenue: data.revenue, byRegion: data.byRegion, byMethod: data.byMethod, updatedAt: data.updatedAt };
+        });
         setItems(arr);
       } catch (e) {
         if (!cancelled) setError(e as Error);
@@ -38,4 +33,3 @@ export function useReports(count: number = 6) {
 }
 
 export default useReports;
-

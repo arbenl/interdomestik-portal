@@ -99,6 +99,22 @@ export default function Billing() {
             <div className="font-medium">{expiry}</div>
           </div>
         </div>
+        <div className="mt-3 flex items-center gap-3">
+          <label className="inline-flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={!!profile?.autoRenew} onChange={async (e)=>{
+              try {
+                const { httpsCallable } = await import('firebase/functions');
+                const { functions } = await import('../firebase');
+                const fn = httpsCallable<{ autoRenew: boolean }, { ok: boolean }>(functions, 'setAutoRenew');
+                await fn({ autoRenew: e.target.checked });
+                push({ type: 'success', message: e.target.checked ? 'Auto-renew enabled' : 'Auto-renew disabled' });
+              } catch {
+                push({ type: 'error', message: 'Failed to update auto-renew' });
+              }
+            }} />
+            Enable auto-renew (beta)
+          </label>
+        </div>
         <div className="mt-3 text-sm text-gray-500">For local testing, use the button below to simulate a paid invoice via the emulator-friendly webhook.</div>
         <div className="mt-3 flex items-center gap-2">
           <Button onClick={simulatePayment} disabled={busy}>
@@ -111,8 +127,8 @@ export default function Billing() {
               const fn = httpsCallable<{ uid?: string; year?: number }, { ok: boolean }>(functions, 'resendMembershipCard');
               await fn({});
               alert('Card email queued. Check your inbox.');
-            } catch (e) {
-              alert(`Failed to resend card: ${e}`);
+            } catch {
+              alert('Failed to resend card');
             }
           }}>Resend card email</Button>
         </div>

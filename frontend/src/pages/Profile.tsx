@@ -104,8 +104,9 @@ export default function Profile() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Name</label>
+              <label htmlFor="name-input" className="block text-sm font-medium text-gray-700">Name</label>
               <input
+                id="name-input"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -114,8 +115,9 @@ export default function Profile() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Phone</label>
+              <label htmlFor="phone-input" className="block text-sm font-medium text-gray-700">Phone</label>
               <input
+                id="phone-input"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}

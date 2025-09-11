@@ -40,7 +40,9 @@ const Verify: React.FC = () => {
         if (m) setMemberNo(m);
         runVerify({ token: t, memberNo: m });
       }
-    } catch {}
+    } catch {
+      // ignore malformed URLs in non-browser contexts
+    }
   }, []);
 
   return (

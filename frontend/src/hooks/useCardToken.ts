@@ -15,7 +15,7 @@ export default function useCardToken(uid?: string | null) {
       try {
         const fn = httpsCallable<{ uid?: string }, { token: string }>(functions, 'getCardToken');
         const res = await fn({});
-        if (!cancelled) setToken((res.data as any)?.token || null);
+        if (!cancelled) setToken(res.data?.token || null);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -28,4 +28,3 @@ export default function useCardToken(uid?: string | null) {
 
   return { token, loading, error };
 }
-

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { collection, query, getDocs, where, limit as qLimit, orderBy, startAfter } from 'firebase/firestore';
 import type { QueryConstraint, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -14,14 +14,14 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; reg
   const [hasPrev, setHasPrev] = useState(false);
   const [cursors, setCursors] = useState<QueryDocumentSnapshot<DocumentData>[]>([]);
   const allowedRegionsInput = opts?.allowedRegions ?? [];
-  const allowedRegions = useMemo(() => allowedRegionsInput, [allowedRegionsInput.join('|')]);
+  const allowedRegions = allowedRegionsInput;
   const max = opts?.limit ?? 100;
   const regionFilter = opts?.region ?? null; // null => no explicit filter
 
   const myOnlyUid = opts?.myOnlyUid ?? null;
   const statusFilter = opts?.status ?? 'ALL';
   const expiringDays = opts?.expiringDays ?? null;
-  const regionsKey = JSON.stringify(allowedRegions);
+  const regionsKey = JSON.stringify(allowedRegionsInput);
   const regionKey = regionFilter || 'ALL';
   useEffect(() => {
     let cancelled = false;
@@ -56,9 +56,9 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; reg
         else if (statusFilter === 'EXPIRED') constraints.push(where('status', '==', 'expired'));
         else if (statusFilter === 'INACTIVE') constraints.push(where('status', '==', 'none'));
         if (useExpiringQuery && expEnd) {
-          // Range on expiresAt
-          constraints.push(where('expiresAt', '>=', { seconds: Math.floor(expStart.getTime()/1000) } as any));
-          constraints.push(where('expiresAt', '<=', { seconds: Math.floor(expEnd.getTime()/1000) } as any));
+          // Range on expiresAt (Dates are accepted by the SDK)
+          constraints.push(where('expiresAt', '>=', expStart));
+          constraints.push(where('expiresAt', '<=', expEnd));
         }
         constraints.push(qLimit(max + 1)); // fetch one extra to detect next page
         const qRef = query(usersCollectionRef, ...constraints);
@@ -80,7 +80,7 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; reg
       }
     })();
     return () => { cancelled = true; };
-  }, [refreshSeq, regionsKey, regionKey, max, allowedRegions, regionFilter, myOnlyUid, statusFilter]);
+  }, [refreshSeq, regionsKey, regionKey, max, allowedRegions, regionFilter, myOnlyUid, statusFilter, expiringDays]);
 
   const refresh = () => setRefreshSeq((n) => n + 1);
 
@@ -109,8 +109,8 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; reg
         constraints.push(startAfter(cursors[cursors.length - 1]));
       }
       if (useExpiringQuery && expEnd) {
-        constraints.push(where('expiresAt', '>=', { seconds: Math.floor(expStart.getTime()/1000) } as any));
-        constraints.push(where('expiresAt', '<=', { seconds: Math.floor(expEnd.getTime()/1000) } as any));
+        constraints.push(where('expiresAt', '>=', expStart));
+        constraints.push(where('expiresAt', '<=', expEnd));
       }
       constraints.push(qLimit(max + 1));
       const qRef = query(usersCollectionRef, ...constraints);
@@ -164,8 +164,8 @@ export const useUsers = (opts?: { allowedRegions?: string[]; limit?: number; reg
         constraints.push(startAfter(startCursor));
       }
       if (useExpiringQuery && expEnd) {
-        constraints.push(where('expiresAt', '>=', { seconds: Math.floor(expStart.getTime()/1000) } as any));
-        constraints.push(where('expiresAt', '<=', { seconds: Math.floor(expEnd.getTime()/1000) } as any));
+        constraints.push(where('expiresAt', '>=', expStart));
+        constraints.push(where('expiresAt', '<=', expEnd));
       }
       constraints.push(qLimit(max + 1));
       const qRef = query(usersCollectionRef, ...constraints);

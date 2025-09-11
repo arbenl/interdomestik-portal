@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Invoice } from '../types';
@@ -10,7 +10,7 @@ export function useInvoices(uid?: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  async function fetchNow(signal?: { cancelled?: boolean }) {
+  const fetchNow = useCallback(async (signal?: { cancelled?: boolean }) => {
     if (!uid) { setInvoices([]); return; }
     setLoading(true); setError(null);
     try {
@@ -27,13 +27,13 @@ export function useInvoices(uid?: string) {
     } finally {
       if (!signal?.cancelled) setLoading(false);
     }
-  }
+  }, [uid]);
 
   useEffect(() => {
     const sig = { cancelled: false } as { cancelled: boolean };
     fetchNow(sig);
     return () => { sig.cancelled = true; };
-  }, [uid]);
+  }, [uid, fetchNow]);
 
   const refresh = () => fetchNow();
 
