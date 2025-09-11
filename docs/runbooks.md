@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document provides operational procedures for the Interdomestik Member Portal, covering backup/restore, incident response, rollback procedures, secrets management, and cost monitoring. These runbooks are designed to ensure reliable operation and quick recovery from issues.
+This document provides operational procedures for the Interdomestik Member Portal, covering backup/restore, incident response, rollback procedures, secrets management, and cost monitoring. These runbooks are guidance and recommended setup; not all automation is implemented yet. Keep this document aligned with docs/NEXT_TASKS.md.
 
 
 
@@ -15,10 +15,10 @@ This document provides operational procedures for the Interdomestik Member Porta
 
 ### Daily Firestore Backup
 
-The system automatically performs daily Firestore exports to a European Cloud Storage bucket with 30-day retention. This process is managed through scheduled Cloud Functions and provides point-in-time recovery capability.
+Recommended: perform daily Firestore exports to a European Cloud Storage bucket with 30-day retention (via Cloud Scheduler + Cloud Functions or direct `gcloud`). This provides point-in-time recovery capability.
 
-**Automated Backup Process:**
-The daily backup runs at 03:00 CET and exports all Firestore collections to `gs://interdomestik-backups-eu/firestore/YYYY/MM/DD/`. The backup includes all member data, user roles, memberships, and audit logs while excluding temporary collections like `mail/*` which have their own TTL policies.
+**Automated Backup Process (target):**
+Run at 03:00 UTC and export all Firestore collections to `gs://<backups-bucket>/firestore/YYYY/MM/DD/`. Include member data, user roles, memberships, and audit logs; exclude temporary collections like `mail/*` which have their own TTL policies.
 
 **Monitoring Backup Success:**
 Backup completion is logged to Cloud Logging with success/failure status. Failed backups trigger alerts to the admin team via email. The backup function includes retry logic for transient failures and detailed error reporting for persistent issues.
@@ -174,4 +174,3 @@ If monthly costs exceed budget, administrators should implement recovery plans t
 ---
 
 *These runbooks should be reviewed and updated quarterly to ensure they remain current with system changes and operational experience.*
-

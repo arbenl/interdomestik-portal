@@ -192,6 +192,7 @@ The system is designed with cost-first principles:
 
 ## Documentation
 
+- Active PR: Phase 1 payments (#2) — ready for review (tests, bulk renew, reports, token rotation): https://github.com/arbenl/interdomestik-portal/pull/2
 - [Architecture Decision Records](docs/adr.md)
 - [Operational Runbooks](docs/runbooks.md)
 - [Administrator Guide](docs/admin-guide.md)

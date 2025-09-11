@@ -59,7 +59,7 @@ Adopt Firebase as the primary platform with the following services:
 **Hosting:** Firebase Hosting with CDN for static content delivery
 **Authentication:** Firebase Auth with custom claims for role-based access
 **Database:** Firestore in EU region for GDPR compliance
-**Functions:** Cloud Functions (Node 22 LTS) in europe-west1 region
+**Functions:** Cloud Functions (Node 20 LTS) in europe-west1 region
 **Email:** Trigger Email for transactional messaging
 
 ### Rationale

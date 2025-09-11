@@ -2,7 +2,7 @@
 
 Canonical backlog: This file is the single source of truth for what’s next. Phase plans and notes elsewhere are historical.
 
-Branch: feat/phase-2
+Tracking: PR #2 (feat/phase-1-payments → main)
 
 Legend: [ ] TODO • [~] In Progress • [x] Done • (P1/P2/P3) Priority
 
@@ -18,7 +18,7 @@ Notes:
 - Recommended (prod): enable Firestore TTL on `audit_logs.ttlAt` and `metrics.ttlAt` for automatic cleanup.
 
 ## Phase 1 — Self‑Renewal & Payments
-- [~] (P1) Add Stripe Checkout/Payment Element on Billing/Profile (attach `metadata.uid`) — scaffold done; needs prod keys
+- [~] (P1) Add Stripe Checkout/Payment Element on Billing/Profile (attach `metadata.uid`) — emulator scaffold done; prod keys/secrets pending
 - [x] (P1) Webhook mapping: `invoice.payment_succeeded` → `startMembership` (idempotent)
 - [x] (P1) Renewal UX: expired/renew CTAs; badge; card re‑send; emails/receipts
 - [x] (P2) Admin renewals: one‑click renew; bulk renew (selection bar)
@@ -30,7 +30,7 @@ Notes:
 - [ ] (P3) Optional offline card cache (no PII), prompt re‑verify near expiration
 
 ## Phase 3 — Exports, Reporting, Admin Scale
-- [ ] (P1) Async CSV export: write to Storage, email signed URL; UI status/progress
+- [ ] (P1) Async CSV export: write to Storage, email signed URL; UI status/progress (HTTP CSV export exists; move to async)
 - [~] (P2) Dashboard metrics: expiring next 30 days, active by region/org, renewals trend — initial monthly report + chart done
 - [~] (P2) Advanced filters: region, status (done), expiring windows (30d filter added); (P3) full‑text via search service if needed
 
@@ -70,4 +70,4 @@ Notes:
 ---
 
 Owners: assign per task in PRs. Update progress with [ ] → [~] → [x].
-Open test items: stabilize E2E — admin_activate, admin_bulk_renew.
+Open test items: admin_activate and admin_bulk_renew improved; keep monitoring for flakiness.

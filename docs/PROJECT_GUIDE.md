@@ -150,5 +150,5 @@ curl -X POST \
 
 ## Known Gaps / Next Steps
 - Finalize Firestore rules for `events` and `billing` per above expectations
-- Add Stripe signature verification in production
+- Secrets hygiene: document rotation and signed‑webhook tests in staging
 - Expand test coverage and wire CI (see testing plan)
