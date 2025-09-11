@@ -8,25 +8,29 @@ service cloud.firestore {
     function isAgent() { return hasToken() && request.auth.token.role == 'agent'; }
     function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
     // Safe helpers for region checks — never evaluate `in` on null
-    function allowedRegionsOrEmpty() {
-      return signedIn()
-        ? (request.auth.token != null
-            ? ((request.auth.token.allowedRegions is list)
-                ? request.auth.token.allowedRegions
-                : [])
-            : [])
+    function allowedRegionsList() {
+      return (signedIn() && request.auth.token != null && (request.auth.token.allowedRegions is list))
+        ? request.auth.token.allowedRegions
         : [];
     }
     function adminHasRegion(region) {
       // Admins: full access if no regions are set; otherwise region must be included
-      let l = allowedRegionsOrEmpty();
+      let l = allowedRegionsList();
+      return isAdmin() && ( (l.size() == 0) || ( (region is string) && (region in l) ) );
+    }
+    function adminCanUpdateRegion(oldRegion, newRegion) {
+      // For updates, ensure both the current and new region (if provided) are within allowed set
+      let l = allowedRegionsList();
       return isAdmin() && (
-        l.hasOnly([]) || ( (region is string) && (l.size() > 0) && (region in l) )
+        (l.size() == 0) || (
+          ((oldRegion is string) && (oldRegion in l)) &&
+          ( (newRegion is string) ? (newRegion in l) : true )
+        )
       );
     }
     function agentHasRegion(region) {
       // Agents must have a list and the region must be included
-      let l = allowedRegionsOrEmpty();
+      let l = allowedRegionsList();
       return isAgent() && ( (region is string) && (l.size() > 0) && (region in l) );
     }
     function agentOwns(uid) {
@@ -46,16 +50,23 @@ service cloud.firestore {
       // split create into separate rules to avoid evaluating agent clause for self-writes
       allow create: if isSelf(uid);
       // Agents cannot create member docs directly (must use backend callable)
-      // Admins can create/update only within allowedRegions (or full access if claim not set as list)
+      // Admins can create only within allowedRegions (or full access if claim list is empty)
       allow create: if adminHasRegion(request.resource.data.region);
-      // split update similarly
-      allow update: if adminHasRegion(resource.data.region);
+      // Admin updates: region-constrained, including when changing region
+      allow update: if adminCanUpdateRegion(resource.data.region, request.resource.data.region);
       // Members can only edit a safe subset of fields
       allow update: if isSelf(uid) &&
         request.resource.data.diff(resource.data).changedKeys().hasOnly(["name","region","phone","orgId"]);
-      // Agents can edit the same safe subset but only for their assigned members
-      allow update: if agentOwns(uid) &&
-        request.resource.data.diff(resource.data).changedKeys().hasOnly(["name","region","phone","orgId"]);
+      // Agents can edit a safe subset within their allowed regions;
+      // region changes must remain within allowed regions as well
+      allow update: if isAgent() &&
+        agentHasRegion(resource.data.region) &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(["name","region","phone","orgId"]) &&
+        (
+          !request.resource.data.diff(resource.data).changedKeys().hasAny(["region"]) ||
+          (request.resource.data.region == resource.data.region) ||
+          agentHasRegion(request.resource.data.region)
+        );
       allow delete: if isAdmin();
     }
 

@@ -100,6 +100,39 @@ describe('Firestore security rules', () => {
     await assertFails(updateNo);
   });
 
+  it('admin cannot move a member to a region outside allowedRegions', async () => {
+    // Seed a member in PRISHTINA
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const adb = ctx.firestore();
+      await setDoc(doc(adb, 'members/u_move'), { name: 'R', region: 'PRISHTINA', memberNo: 'INT-2025-000900', status: 'none', year: null, expiresAt: null });
+    });
+    const admin = testEnv.authenticatedContext('admin1', { role: 'admin', allowedRegions: ['PRISHTINA'] } as any);
+    const dbAdmin = admin.firestore();
+    // Allowed: update name and keep region in PRISHTINA
+    await assertSucceeds(setDoc(doc(dbAdmin, 'members/u_move'), { name: 'New Name', region: 'PRISHTINA' }, { merge: true }));
+    // Not allowed: change region to PEJA which is not in allowedRegions
+    await assertFails(setDoc(doc(dbAdmin, 'members/u_move'), { region: 'PEJA' }, { merge: true }));
+  });
+
+  it('agent can change region only within their allowedRegions', async () => {
+    // Seed a member owned by the agent
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const adb = ctx.firestore();
+      await setDoc(doc(adb, 'members/u_agent_region'), { name: 'A', region: 'PRISHTINA', memberNo: 'INT-2025-000901', status: 'none', year: null, expiresAt: null, agentId: 'agent1' });
+    });
+    const agent = testEnv.authenticatedContext('agent1', { role: 'agent', allowedRegions: ['PRISHTINA'] } as any);
+    const dbAgent = agent.firestore();
+    // Allowed: change phone and keep region
+    await assertSucceeds(setDoc(doc(dbAgent, 'members/u_agent_region'), { phone: '+38349123456' }, { merge: true }));
+    // Not allowed: change region to a disallowed region
+    await assertFails(setDoc(doc(dbAgent, 'members/u_agent_region'), { region: 'PEJA' }, { merge: true }));
+    // Allowed: change region to an allowed region in list
+    // Re-auth with an extra allowed region
+    const agent2 = testEnv.authenticatedContext('agent1', { role: 'agent', allowedRegions: ['PRISHTINA', 'PEJA'] } as any);
+    const dbAgent2 = agent2.firestore();
+    await assertSucceeds(setDoc(doc(dbAgent2, 'members/u_agent_region'), { region: 'PEJA' }, { merge: true }));
+  });
+
   it('events are readable by signed-in users and writable only by admins', async () => {
     const authed = testEnv.authenticatedContext('user123');
     const dbUser = authed.firestore();
