@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.startMembersExport = exports.generateMonthlyReportNow = exports.exportMonthlyReport = exports.monthlyMembershipReport = exports.cleanupExpiredData = exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.revokeCardToken = exports.getCardKeyStatusCallable = exports.resendMembershipCard = exports.listCoupons = exports.createCoupon = exports.listOrganizations = exports.createOrganization = exports.setAutoRenew = exports.getCardToken = exports.createPaymentIntent = exports.backfillNameLower = exports.importMembersCsv = exports.getUserClaims = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
+exports.exportsWorkerOnCreate = exports.startMembersExport = exports.startMembersExportLegacy = exports.generateMonthlyReportNow = exports.exportMonthlyReport = exports.monthlyMembershipReport = exports.cleanupExpiredData = exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.revokeCardToken = exports.getCardKeyStatusCallable = exports.resendMembershipCard = exports.listCoupons = exports.createCoupon = exports.listOrganizations = exports.createOrganization = exports.setAutoRenew = exports.getCardToken = exports.createPaymentIntent = exports.backfillNameLower = exports.importMembersCsv = exports.getUserClaims = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const firestore_1 = require("firebase-admin/firestore");
 const firebaseAdmin_1 = require("./firebaseAdmin");
@@ -52,6 +52,7 @@ const settings_1 = require("./lib/settings");
 var exportMembersCsv_1 = require("./exportMembersCsv");
 Object.defineProperty(exports, "exportMembersCsv", { enumerable: true, get: function () { return exportMembersCsv_1.exportMembersCsv; } });
 const exports_1 = require("./lib/exports");
+const exportsV2_1 = require("./lib/exportsV2");
 const logger_1 = require("./lib/logger");
 // Region constant for consistency
 const REGION = "europe-west1";
@@ -970,7 +971,7 @@ exports.generateMonthlyReportNow = functions
     return { ok: true, month: target, total, revenue };
 });
 // Async Members CSV export: writes to Storage, emails signed URL, and records status doc
-exports.startMembersExport = functions
+exports.startMembersExportLegacy = functions
     .runWith({ memory: '512MB', timeoutSeconds: 300 })
     .region(REGION)
     .https.onCall(async (_data, context) => {
@@ -1011,6 +1012,72 @@ exports.startMembersExport = functions
     catch (e) {
         await exportRef.set({ status: 'error', error: String(e), finishedAt: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
         throw new functions.https.HttpsError('internal', 'Export failed', String(e));
+    }
+});
+// New async export pipeline (Phase 3)
+exports.startMembersExport = functions
+    .runWith({ memory: '256MB', timeoutSeconds: 60 })
+    .region(REGION)
+    .https.onCall(async (data, context) => {
+    if (!context.auth || context.auth.token?.role !== 'admin') {
+        throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const actor = context.auth.uid;
+    const running = await firebaseAdmin_1.db.collection('exports').where('createdBy', '==', actor).where('status', '==', 'running').get();
+    if (running.size >= 2)
+        throw new functions.https.HttpsError('resource-exhausted', 'Too many concurrent exports');
+    const filters = {
+        regions: Array.isArray(data?.filters?.regions) ? data.filters.regions.map((x) => String(x)) : undefined,
+        status: data?.filters?.status ? String(data.filters.status) : undefined,
+        orgId: data?.filters?.orgId ? String(data.filters.orgId) : undefined,
+        expiringAfter: data?.filters?.expiringAfter ? firebaseAdmin_1.admin.firestore.Timestamp.fromDate(new Date(data.filters.expiringAfter)) : undefined,
+        expiringBefore: data?.filters?.expiringBefore ? firebaseAdmin_1.admin.firestore.Timestamp.fromDate(new Date(data.filters.expiringBefore)) : undefined,
+    };
+    const preset = (String(data?.preset || 'BASIC').toUpperCase() === 'FULL') ? 'FULL' : 'BASIC';
+    const columns = (0, exportsV2_1.normalizeColumns)(Array.isArray(data?.columns) ? data.columns.map((c) => String(c)) : undefined, preset);
+    const exportRef = firebaseAdmin_1.db.collection('exports').doc();
+    await exportRef.set({
+        type: 'members_csv',
+        status: 'pending',
+        createdAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp(),
+        createdBy: actor,
+        filters,
+        columns,
+        progress: { rows: 0, bytes: 0 },
+    }, { merge: true });
+    return { ok: true, id: exportRef.id };
+});
+exports.exportsWorkerOnCreate = functions
+    .runWith({ memory: '512MB', timeoutSeconds: 300 })
+    .region(REGION)
+    .firestore.document('exports/{exportId}')
+    .onCreate(async (snap, context) => {
+    const id = context.params.exportId;
+    const data = snap.data();
+    if (!data || data.type !== 'members_csv' || data.status !== 'pending')
+        return;
+    const actor = String(data.createdBy || '');
+    const ts = new Date();
+    const dateKey = `${ts.getUTCFullYear()}-${String(ts.getUTCMonth() + 1).padStart(2, '0')}-${String(ts.getUTCDate()).padStart(2, '0')}_${String(ts.getUTCHours()).padStart(2, '0')}${String(ts.getUTCMinutes()).padStart(2, '0')}`;
+    const path = data.path || `exports/members/members_${dateKey}_${id}.csv`;
+    const ref = firebaseAdmin_1.db.collection('exports').doc(id);
+    await ref.set({ status: 'running', path, startedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    try {
+        const { rows, size, url } = await (0, exportsV2_1.streamMembersCsv)({ exportId: id, filters: data.filters || {}, columns: data.columns || [], actorUid: actor, path });
+        await ref.set({ status: 'success', count: rows, size, url, finishedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        try {
+            const m = await firebaseAdmin_1.db.collection('members').doc(actor).get();
+            const email = m.get('email');
+            if (email) {
+                const subj = `Members CSV export — ${dateKey}`;
+                const html = url ? `<p>Your export is ready. <a href=\"${url}\">Download CSV</a></p>` : `<p>Your export is ready at: ${path} (no signed URL available)</p>`;
+                await (0, membership_1.queueEmail)({ to: [email], subject: subj, html });
+            }
+        }
+        catch { }
+    }
+    catch (e) {
+        await ref.set({ status: 'error', error: String(e), finishedAt: firebaseAdmin_1.admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
     }
 });
 // (removed duplicate token helper exports)

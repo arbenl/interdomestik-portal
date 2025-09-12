@@ -15,7 +15,7 @@ import AgentRegistrationCard from '../components/AgentRegistrationCard';
 import Button from '../components/ui/Button';
 import useReports from '../hooks/useReports';
 import type { Organization, Coupon } from '../types';
-import { collection, onSnapshot, orderBy, limit, query } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, limit, query, doc } from 'firebase/firestore';
 import { db, projectId, storageBucket } from '../firebase';
 
 //
@@ -93,6 +93,12 @@ export default function Admin() {
   // Exports state
   const [exportsList, setExportsList] = useState<Array<{ id: string; path: string; url?: string; status: string; count?: number; size?: number; createdAt?: any }>>([]);
   const [exportsLimit, setExportsLimit] = useState<number>(5);
+  const [expFilterRegions, setExpFilterRegions] = useState<string[]>([]);
+  const [expFilterStatus, setExpFilterStatus] = useState<string>('');
+  const [expFilterDays, setExpFilterDays] = useState<number>(0);
+  const [expColumns, setExpColumns] = useState<Record<string, boolean>>({ memberNo:true, name:true, email:true, phone:true, region:true, orgId:true, active:true, expiresAt:true });
+  const [currentExportId, setCurrentExportId] = useState<string | null>(null);
+  const [currentExport, setCurrentExport] = useState<any>(null);
   useEffect(() => {
     const qy = query(collection(db, 'exports'), orderBy('createdAt', 'desc'), limit(exportsLimit));
     const unsub = onSnapshot(qy, (snap) => {
@@ -100,6 +106,12 @@ export default function Admin() {
     });
     return () => unsub();
   }, [exportsLimit]);
+  useEffect(() => {
+    if (!currentExportId) { setCurrentExport(null); return; }
+    const ref = doc(db, 'exports', currentExportId);
+    const unsub = onSnapshot(ref, (d) => setCurrentExport({ id: d.id, ...(d.data() as any) }));
+    return () => unsub();
+  }, [currentExportId]);
 
   function formatBytes(n?: number) {
     if (typeof n !== 'number' || !Number.isFinite(n)) return '—';
@@ -435,8 +447,15 @@ export default function Admin() {
           <div className="flex items-center gap-2 mb-2">
             <Button onClick={async ()=>{
               try {
-                const fn = httpsCallable<void, { ok: boolean; id: string }>(functions, 'startMembersExport');
-                await fn();
+                const fn = httpsCallable<any, { ok: boolean; id: string }>(functions, 'startMembersExport');
+                const regions = expFilterRegions.length ? expFilterRegions : undefined;
+                const payload: any = { filters: { regions } };
+                if (expFilterStatus) payload.filters.status = expFilterStatus;
+                if (expFilterDays > 0) payload.filters.expiringBefore = new Date(Date.now() + expFilterDays*24*3600*1000).toISOString();
+                const cols = Object.entries(expColumns).filter(([,v])=>v).map(([k])=>k);
+                payload.columns = cols;
+                const r = await fn(payload);
+                setCurrentExportId((r.data as any)?.id || null);
                 push({ type: 'success', message: 'Export started' });
               } catch (e) {
                 push({ type: 'error', message: 'Failed to start export' });
@@ -444,6 +463,45 @@ export default function Admin() {
             }} disabled={exportsList.some(e => e.status === 'running')}>Start Members CSV Export</Button>
             <Button variant="ghost" onClick={()=> setExportsLimit(l => l === 5 ? 20 : 5)}>{exportsLimit === 5 ? 'Show more' : 'Show less'}</Button>
           </div>
+          <div className="border rounded p-3 mb-3 bg-white">
+            <div className="text-sm font-medium mb-2">Export builder</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">
+              <div>
+                <label className="block text-xs text-gray-600">Regions</label>
+                <select multiple className="w-full border rounded px-2 py-1 text-sm" onChange={(e)=>{
+                  const opts = Array.from(e.target.selectedOptions).map(o=>o.value);
+                  setExpFilterRegions(opts);
+                }}>
+                  {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600">Status</label>
+                <select className="w-full border rounded px-2 py-1 text-sm" value={expFilterStatus} onChange={e=>setExpFilterStatus(e.target.value)}>
+                  <option value="">(any)</option>
+                  <option value="active">active</option>
+                  <option value="expired">expired</option>
+                  <option value="none">none</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600">Expiring in ≤ days</label>
+                <input type="number" className="w-full border rounded px-2 py-1 text-sm" value={expFilterDays} onChange={e=>setExpFilterDays(Number(e.target.value||0))} />
+              </div>
+            </div>
+            <div className="text-xs text-gray-600 mb-1">Columns</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+              {Object.keys(expColumns).map(k => (
+                <label key={k} className="inline-flex items-center gap-2"><input type="checkbox" checked={!!expColumns[k]} onChange={(e)=> setExpColumns(s=>({ ...s, [k]: e.target.checked }))} />{k}</label>
+              ))}
+            </div>
+          </div>
+          {currentExport && (
+            <div className="mb-3 p-2 bg-gray-50 border rounded">
+              <div className="text-sm">Current export: <span className="font-mono">{currentExport.id}</span> — <span className="font-medium">{currentExport.status}</span></div>
+              <div className="text-xs text-gray-600">Rows: {currentExport?.progress?.rows ?? currentExport.count ?? 0} • Bytes: {currentExport?.progress?.bytes ?? currentExport.size ?? 0}</div>
+            </div>
+          )}
           {exportsList.length === 0 ? (
             <div className="text-gray-600 text-sm">No exports yet.</div>
           ) : (
