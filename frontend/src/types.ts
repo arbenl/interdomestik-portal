@@ -6,6 +6,7 @@ export type Profile = {
   phone?: string;
   orgId?: string;
   memberNo?: string;
+  role?: 'member' | 'agent' | 'admin' | string;
   status?: 'active' | 'expired' | 'none';
   year?: number | null;
   expiresAt?: { seconds: number; nanoseconds?: number } | null;

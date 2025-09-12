@@ -355,6 +355,7 @@ export default function Admin() {
                     <th className="px-3 py-2">Name</th>
                     <th className="px-3 py-2">Email</th>
                     <th className="px-3 py-2">Member No</th>
+                    <th className="px-3 py-2">Role</th>
                     <th className="px-3 py-2">Status</th>
                     <th className="px-3 py-2">Region</th>
                     <th></th>
@@ -366,6 +367,7 @@ export default function Admin() {
                       <td className="px-3 py-2">{u.name}</td>
                       <td className="px-3 py-2">{u.email}</td>
                       <td className="px-3 py-2">{u.memberNo}</td>
+                      <td className="px-3 py-2 uppercase">{(u as any).role || 'member'}</td>
                       <td className="px-3 py-2">{renderStatus(u.status, u.expiresAt)}</td>
                       <td className="px-3 py-2">{u.region}</td>
                       <td className="px-3 py-2 text-right sticky right-0 bg-white z-10">
@@ -695,6 +697,7 @@ export default function Admin() {
               <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
               <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
               <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Member No</th>
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
               <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
               <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Region</th>
               <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100"></th>
@@ -709,6 +712,7 @@ export default function Admin() {
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.name}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.email}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.memberNo}</td>
+                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm uppercase">{(user as any)?.role || 'member'}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{renderStatus(user.status, user.expiresAt)}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{user.region}</td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-right sticky right-0 bg-white z-10">

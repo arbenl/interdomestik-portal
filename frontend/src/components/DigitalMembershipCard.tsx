@@ -7,12 +7,13 @@ interface DigitalMembershipCardProps {
   validUntil: string;
   status?: 'active' | 'expired' | 'none' | string;
   verifyUrl?: string;
+  role?: 'member' | 'agent' | 'admin' | string;
 }
 
 import SimpleQr from './SimpleQr';
 import Button from './ui/Button';
 
-const DigitalMembershipCard: React.FC<DigitalMembershipCardProps> = ({ name, memberNo, region, validUntil, status = 'none', verifyUrl }) => {
+const DigitalMembershipCard: React.FC<DigitalMembershipCardProps> = ({ name, memberNo, region, validUntil, status = 'none', verifyUrl, role }) => {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const qrUrl = verifyUrl ? `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(verifyUrl)}` : undefined;
   const copyLink = async () => {
@@ -72,6 +73,12 @@ const DigitalMembershipCard: React.FC<DigitalMembershipCardProps> = ({ name, mem
           <p className="text-gray-400">Region</p>
           <p className="font-medium">{region}</p>
         </div>
+        {role && (
+          <div>
+            <p className="text-gray-400">Role</p>
+            <p className="font-medium uppercase">{String(role)}</p>
+          </div>
+        )}
         <div>
           <p className="text-gray-400">Valid Until</p>
           <p className="font-medium">{validUntil}</p>

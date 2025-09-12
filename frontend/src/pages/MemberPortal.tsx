@@ -51,6 +51,7 @@ export default function MemberPortal() {
 
   const name = profile?.name || user.displayName || 'Member';
   const region = profile?.region || '—';
+  const role = (profile as any)?.role as string | undefined;
   const memberNo = profile?.memberNo || '—';
   const expiresAtSec = activeMembership?.expiresAt?.seconds ?? profile?.expiresAt?.seconds;
   const expiry = typeof expiresAtSec === 'number'
@@ -95,7 +96,7 @@ export default function MemberPortal() {
       <div className="mt-6">
         <BentoGrid>
           <BentoCard title="Your digital card" subtitle="Show at events or checkpoints" span={1}>
-            <DigitalMembershipCard name={name} memberNo={memberNo} region={region} validUntil={expiry} status={status} verifyUrl={verifyUrl} />
+            <DigitalMembershipCard name={name} memberNo={memberNo} region={region} validUntil={expiry} status={status} verifyUrl={verifyUrl} role={role} />
           </BentoCard>
 
           <BentoCard title="Recent activity" subtitle="Announcements and events" span={2}>
