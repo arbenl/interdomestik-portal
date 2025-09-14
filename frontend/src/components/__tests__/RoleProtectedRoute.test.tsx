@@ -2,13 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderWithProviders, screen } from '@/test-utils';
 import RoleProtectedRoute from '@/components/RoleProtectedRoute';
 import { useAuth } from '@/context/auth';
+import { type User } from 'firebase/auth';
 
 vi.mock('@/context/auth');
 
 describe('RoleProtectedRoute', () => {
   it('renders children when user has the required role', () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { uid: 'admin-uid' } as any,
+      user: { uid: 'admin-uid' } as User,
       isAdmin: true,
       isAgent: false,
       allowedRegions: [],
@@ -26,7 +27,7 @@ describe('RoleProtectedRoute', () => {
 
   it('redirects when user does not have the required role', () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { uid: 'member-uid' } as any,
+      user: { uid: 'member-uid' } as User,
       isAdmin: false,
       isAgent: false,
       allowedRegions: [],

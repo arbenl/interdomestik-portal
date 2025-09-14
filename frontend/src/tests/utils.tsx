@@ -10,14 +10,8 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
-import { QueryClient, QueryClientProvider, type QueryClientConfig } from '@tanstack/react-query';
-
-export function createTestQueryClient(cfg?: QueryClientConfig) {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
-    ...cfg,
-  });
-}
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from './helpers';
 
 export function TestProviders({
   children, initialEntries, queryClient,
@@ -58,4 +52,4 @@ export function renderHookWithProviders<Result, Props>(
   return rtlRenderHook(hook, { wrapper: Wrapper, ...rtlOptions });
 }
 
-export { screen, waitFor, fireEvent, userEvent, within };
+export { screen, waitFor, fireEvent, userEvent, within, createTestQueryClient };

@@ -7,8 +7,13 @@ const emitters = new Map<string, SnapshotEmitter>();
 export function setFirestoreSnapshotEmitter(key: string, emitter: SnapshotEmitter) {
   emitters.set(key, emitter);
 }
+interface _HasKey {
+  path?: string;
+  __key?: string;
+}
 export function keyFor(refOrQuery: DocumentReference | Query): string {
-  return (refOrQuery as any)?.path ?? (refOrQuery as any)?.__key ?? String(refOrQuery);
+  const obj = refOrQuery as _HasKey;
+  return obj?.path ?? obj?.__key ?? String(refOrQuery);
 }
 
 vi.mock('firebase/firestore', async () => {

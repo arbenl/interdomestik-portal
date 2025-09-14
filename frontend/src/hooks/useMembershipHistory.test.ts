@@ -2,6 +2,7 @@ import { renderHookWithProviders, waitFor } from '@/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useMembershipHistory } from './useMembershipHistory';
 import { setFirestoreSnapshotEmitter } from '@/tests/mocks/firestore.setup';
+import { QueryDocumentSnapshot } from 'firebase/firestore';
 
 describe('useMembershipHistory', () => {
   const uid = 'test-uid';
@@ -21,7 +22,7 @@ describe('useMembershipHistory', () => {
       { id: '1', year: 2023, status: 'expired' },
       { id: '2', year: 2024, status: 'active' },
     ];
-    const mockDocs = mockHistory.map(item => ({ id: item.id, data: () => item })) as any;
+    const mockDocs = mockHistory.map(item => ({ id: item.id, data: () => item })) as unknown as QueryDocumentSnapshot[];
 
     setFirestoreSnapshotEmitter(historyKey, (next) => {
       next({ docs: mockDocs, size: mockDocs.length, empty: false });

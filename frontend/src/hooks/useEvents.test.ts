@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useEvents } from './useEvents';
 import { renderHookWithProviders, waitFor } from '@/test-utils';
 import { setFirestoreSnapshotEmitter } from '@/tests/mocks/firestore.setup';
+import { QueryDocumentSnapshot } from 'firebase/firestore';
 
 describe('useEvents', () => {
   const eventsKey = 'q:events';
@@ -13,7 +14,7 @@ describe('useEvents', () => {
   it('returns events list', async () => {
     const mockEvents = [
       { id: 'e1', data: () => ({ title: 'Welcome', startAt: { seconds: 1 }, location: 'PRISHTINA' }) },
-    ] as any;
+    ] as unknown as QueryDocumentSnapshot[];
     setFirestoreSnapshotEmitter(eventsKey, (next) => {
       next({ docs: mockEvents, size: mockEvents.length, empty: false });
     });

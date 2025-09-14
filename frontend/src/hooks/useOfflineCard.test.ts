@@ -16,7 +16,7 @@ function makeToken(expSecondsFromNow: number): string {
   const now = Math.floor(Date.now()/1000);
   const payload: JwtPayload = { mno: 'INT-2025-000001', iat: now, exp: now + expSecondsFromNow, ver: 1, jti: 'abc123' };
   const enc = (obj: Record<string, unknown>) => Buffer.from(JSON.stringify(obj)).toString('base64url');
-  return `${enc(header)}.${enc(payload as any)}.sig`;
+  return `${enc(header)}.${enc(payload as unknown as Record<string, unknown>)}.sig`;
 }
 
 describe('useOfflineCard', () => {
