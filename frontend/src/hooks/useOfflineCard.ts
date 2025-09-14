@@ -5,8 +5,11 @@ function parseJwtExp(token: string | null | undefined): number | null {
     if (!token) return null;
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-    const exp = Number(payload?.exp);
+    const payloadStr = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+    const parsed: unknown = JSON.parse(payloadStr);
+    const exp = typeof (parsed as { exp?: unknown }).exp === 'number'
+      ? (parsed as { exp: number }).exp
+      : Number((parsed as { exp?: unknown }).exp);
     return Number.isFinite(exp) ? exp : null;
   } catch {
     return null;
@@ -35,8 +38,8 @@ export function useOfflineCard(liveToken: string | null) {
     const exp = parseJwtExp(liveToken);
     setCachedToken(liveToken);
     setCachedExp(exp);
-    try { localStorage.setItem(LS_TOKEN, liveToken); } catch {}
-    try { if (exp) localStorage.setItem(LS_EXP, String(exp)); } catch {}
+    try { localStorage.setItem(LS_TOKEN, liveToken); } catch { /* ignore */ }
+    try { if (exp) localStorage.setItem(LS_EXP, String(exp)); } catch { /* ignore */ }
   }, [enabled, liveToken]);
 
   const effectiveToken = useMemo(() => liveToken || cachedToken || null, [liveToken, cachedToken]);
@@ -50,7 +53,7 @@ export function useOfflineCard(liveToken: string | null) {
     try {
       if (v) localStorage.setItem(LS_ENABLED, '1'); else localStorage.removeItem(LS_ENABLED);
       if (!v) { localStorage.removeItem(LS_TOKEN); localStorage.removeItem(LS_EXP); }
-    } catch {}
+    } catch { /* ignore */ }
     if (!v) { setCachedToken(null); setCachedExp(null); }
   }
 
@@ -58,4 +61,3 @@ export function useOfflineCard(liveToken: string | null) {
 }
 
 export default useOfflineCard;
-

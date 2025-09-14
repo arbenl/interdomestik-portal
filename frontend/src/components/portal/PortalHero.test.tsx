@@ -1,20 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { renderWithProviders, screen } from '@/test-utils';
 import PortalHero from './PortalHero';
 
 describe('PortalHero', () => {
   it('renders name, status chip, memberNo and expiry', () => {
-    render(
-      <MemoryRouter>
-        <PortalHero
-          name="Member One"
-          status="active"
-          memberNo="INT-2025-000001"
-          expiresOn="2025-12-31"
-          verifyUrl="https://example.com/verify?memberNo=INT-2025-000001"
-        />
-      </MemoryRouter>
+    renderWithProviders(
+      <PortalHero
+        name="Member One"
+        status="active"
+        memberNo="INT-2025-000001"
+        expiresOn="2025-12-31"
+        verifyUrl="https://example.com/verify?memberNo=INT-2025-000001"
+      />,
     );
     expect(screen.getByText(/Welcome, Member One/)).toBeInTheDocument();
     expect(screen.getByText(/ACTIVE/)).toBeInTheDocument();

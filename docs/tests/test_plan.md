@@ -106,7 +106,7 @@ Integration tests should verify the interaction between different parts of your 
     -   Test with different authentication contexts (unauthenticated, member, agent, admin) to verify the security rules.
 -   **HTTP Functions**:
     -   **`verifyMembership`**: Call the HTTP endpoint with a valid, invalid, and expired `memberNo` and assert the JSON response is correct.
-    -   **`exportMembersCsv`**: Call the HTTP endpoint (as an admin) and verify that it returns a CSV file with the correct content.
+    -   **Exports v2**: Call the callable `startMembersExport` (as an admin) to create an `exports/{id}` job; wait for the Firestore onCreate worker to complete, then verify the job doc has `status: 'success'` and that the generated CSV (via signed URL or `gs://` path) contains the expected rows/columns.
 
 ## 4. Firestore Security Rules Tests (`test/firestore.rules.test.ts`)
 

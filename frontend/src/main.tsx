@@ -1,16 +1,19 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
-import AuthProvider from './context/AuthContext.tsx'
-import { ToastProvider } from './components/ui/Toast.tsx'
+// ⬇️ CSS must be first so Vite injects Tailwind
+import './index.css';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <AuthProvider>
-      <ToastProvider>
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { QueryClientProvider } from '@tanstack/react-query';
+import App from './App';
+import { queryClient } from './queryClient';
+import { AppBoundary } from './components/boundaries/AppBoundary';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <AppBoundary>
         <App />
-      </ToastProvider>
-    </AuthProvider>
-  </StrictMode>,
-)
+      </AppBoundary>
+    </QueryClientProvider>
+  </React.StrictMode>
+);

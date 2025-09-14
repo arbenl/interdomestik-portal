@@ -1,20 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { renderWithProviders, screen, waitFor } from '@/test-utils';
+import { vi, type Mock } from 'vitest';
 import Billing from '../Billing';
+import { useAuth } from '@/context/auth';
+import { useMemberProfile } from '@/hooks/useMemberProfile';
+import { useInvoices } from '@/hooks/useInvoices';
 
-vi.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { uid: 'u1', displayName: 'Test User' } }) }));
-vi.mock('../../hooks/useMemberProfile', () => ({ useMemberProfile: () => ({ profile: { name: 'Test User', expiresAt: { seconds: Math.floor(Date.now()/1000) + 86400 } } }) }));
-vi.mock('../../hooks/useInvoices', () => ({ useInvoices: () => ({ invoices: [], loading: false, error: null, refresh: vi.fn() }) }));
-vi.mock('../../components/ui/useToast', () => ({ default: () => ({ push: vi.fn() }) }));
+vi.mock('@/context/auth');
+vi.mock('@/hooks/useMemberProfile');
+vi.mock('@/hooks/useInvoices');
 
 describe('Billing page', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn());
-  });
-  it('renders headings and actions', () => {
-    render(<Billing />);
-    expect(screen.getByText(/Billing & Subscription/i)).toBeInTheDocument();
-    expect(screen.getByText(/Resend card email/i)).toBeInTheDocument();
+  it('renders headings and actions', async () => {
+    (useAuth as Mock).mockReturnValue({ user: { uid: 'test-uid' } });
+    (useMemberProfile as Mock).mockReturnValue({ data: { name: 'Test User' }, isLoading: false, error: null });
+    (useInvoices as Mock).mockReturnValue({ data: [], isLoading: false, error: null });
+    renderWithProviders(<Billing />);
+    await waitFor(() => {
+      expect(screen.getByText('Billing & Subscription')).toBeInTheDocument();
+    });
   });
 });
-

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import useToast from '../ui/useToast';
-import Button from '../ui/Button';
+import { useToast } from '@/components/ui/useToast';
+import { Button } from '@/components/ui';
 
 type StripeElements = { create: (type: 'payment') => { mount: (el: HTMLElement) => void } };
 type StripeJS = {
@@ -55,7 +55,7 @@ export default function PaymentElementBox({ amountCents, currency }: Props) {
       const { functions } = await import('../../firebase');
       const fn = httpsCallable<{ amount?: number; currency?: string; description?: string; donateCents?: number; couponCode?: string }, { ok: boolean; clientSecret?: string }>(functions, 'createPaymentIntent');
       const res = await fn({ amount: amountCents, currency, description: 'Membership renewal', donateCents: donation, couponCode: coupon || undefined });
-      const cs = res.data?.clientSecret as string | undefined;
+      const cs = res.data?.clientSecret;
       if (!cs) throw new Error('No client secret returned');
       setClientSecret(cs);
       return cs;
@@ -69,7 +69,7 @@ export default function PaymentElementBox({ amountCents, currency }: Props) {
     const cs = await ensureClientSecret();
     if (!cs) return;
     if (!window.Stripe) { setError('Stripe not ready'); return; }
-    const stripe = window.Stripe(stripeKey)!;
+    const stripe = window.Stripe(stripeKey);
     const elements = stripe.elements({ clientSecret: cs });
     const paymentEl = elements.create('payment');
     if (containerRef.current) {
@@ -132,14 +132,14 @@ export default function PaymentElementBox({ amountCents, currency }: Props) {
         </label>
       </div>
       {!clientSecret && (
-        <Button disabled={loading || !stripeReady} onClick={mountElement}>
+        <Button disabled={loading || !stripeReady} onClick={() => { void mountElement(); }}>
           {loading ? 'Preparing…' : (stripeReady ? 'Start Card Payment' : 'Loading Stripe…')}
         </Button>
       )}
       <div ref={containerRef} className="mt-3" />
       {clientSecret && !succeeded && (
         <div className="mt-3 flex items-center gap-2">
-          <Button onClick={confirm}>Confirm Payment</Button>
+          <Button onClick={() => { void confirm(); }}>Confirm Payment</Button>
           {error && <div className="text-sm text-red-600">{error}</div>}
         </div>
       )}

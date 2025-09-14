@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { renderWithProviders, screen, fireEvent } from '@/test-utils';
 import { ToastProvider } from '../../ui/Toast';
 import PaymentElementBox from '../PaymentElementBox';
 
@@ -8,31 +8,33 @@ vi.mock('firebase/functions', async (importOriginal) => {
   return {
     ...actual,
     getFunctions: vi.fn(() => ({} as unknown as import('firebase/functions').Functions)),
-    httpsCallable: () => vi.fn().mockResolvedValue({ data: { ok: true, clientSecret: 'cs_test' } }),
+    httpsCallable: vi.fn(() => vi.fn().mockResolvedValue({ data: { ok: true, clientSecret: 'cs_test' } })),
   };
 });
 
 describe('PaymentElementBox confirm flow', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_STRIPE_PUBLISHABLE_KEY', 'pk_test_123');
-    (window as any).Stripe = () => ({
+    window.Stripe = () => ({
       elements: () => ({ create: () => ({ mount: () => {} }) }),
-      confirmPayment: async () => ({ paymentIntent: { status: 'succeeded' } })
+      confirmPayment: async () => ({ paymentIntent: { status: 'succeeded' } }),
     });
   });
   afterEach(() => {
     vi.unstubAllEnvs();
   });
   it('confirms payment and shows success', async () => {
-    render(
+    renderWithProviders(
       <ToastProvider>
         <PaymentElementBox amountCents={2500} currency="EUR" />
-      </ToastProvider>
+      </ToastProvider>,
     );
-    // Start card flow
-    fireEvent.click(await screen.findByRole('button', { name: /Start Card Payment/i }));
-    // Confirm payment
-    fireEvent.click(await screen.findByRole('button', { name: /Confirm Payment/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Start Card Payment/i }));
+
+    // Wait for the async operation to complete and the confirm button to appear
+    const confirmButton = await screen.findByRole('button', { name: /Confirm Payment/i });
+    fireEvent.click(confirmButton);
+
     const successMsgs = await screen.findAllByText(/Payment succeeded/i);
     expect(successMsgs.length).toBeGreaterThan(0);
   });

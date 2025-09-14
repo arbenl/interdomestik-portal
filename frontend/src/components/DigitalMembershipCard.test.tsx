@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { renderWithProviders, screen } from '@/test-utils';
 import DigitalMembershipCard from './DigitalMembershipCard';
 
 describe('DigitalMembershipCard', () => {
   it('renders member info and status', () => {
-    render(
+    renderWithProviders(
       <DigitalMembershipCard
         name="Member One"
         memberNo="INT-2025-000001"
@@ -12,7 +12,7 @@ describe('DigitalMembershipCard', () => {
         validUntil="2025-12-31"
         status="active"
         verifyUrl="https://example.com/verify?memberNo=INT-2025-000001"
-      />
+      />,
     );
     expect(screen.getByText(/Member No\./i)).toBeInTheDocument();
     expect(screen.getByText('INT-2025-000001')).toBeInTheDocument();

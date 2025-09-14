@@ -962,34 +962,50 @@ export const startMembersExport = functions
   .runWith({ memory: '256MB', timeoutSeconds: 60 })
   .region(REGION)
   .https.onCall(async (data, context) => {
-    if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
-      throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    try {
+      if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
+        throw new functions.https.HttpsError('permission-denied', 'Admin only');
+      }
+      const actor = context.auth.uid;
+      const running = await db.collection('exports').where('createdBy','==',actor).where('status','==','running').get();
+      if (running.size >= 2) throw new functions.https.HttpsError('resource-exhausted', 'Too many concurrent exports');
+
+      function tsSafe(input: any): admin.firestore.Timestamp | undefined {
+        if (!input) return undefined;
+        try {
+          const d = input instanceof Date ? input : new Date(String(input));
+          if (isNaN(d.getTime())) return undefined;
+          return admin.firestore.Timestamp.fromDate(d);
+        } catch { return undefined; }
+      }
+      const filters: any = {
+        regions: Array.isArray(data?.filters?.regions) ? data.filters.regions.map((x:any)=>String(x)).filter(Boolean) : undefined,
+        status: data?.filters?.status ? String(data.filters.status) : undefined,
+        orgId: data?.filters?.orgId ? String(data.filters.orgId) : undefined,
+        expiringAfter: tsSafe(data?.filters?.expiringAfter),
+        expiringBefore: tsSafe(data?.filters?.expiringBefore),
+      };
+      const presetRaw = String(data?.preset || 'BASIC').toUpperCase();
+      const preset = presetRaw === 'FULL' ? 'FULL' : 'BASIC';
+      const columns = normalizeColumns(Array.isArray(data?.columns) ? data.columns.map((c:any)=>String(c)) : undefined, preset as any);
+
+      const exportRef = db.collection('exports').doc();
+      await exportRef.set({
+        type: 'members_csv',
+        status: 'pending',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdBy: actor,
+        filters,
+        columns,
+        progress: { rows: 0, bytes: 0 },
+      }, { merge: true });
+      return { ok: true, id: exportRef.id };
+    } catch (e) {
+      // Map unknown errors to HttpsError with details for easier debugging in UI
+      const msg = e instanceof functions.https.HttpsError ? e.message : String(e);
+      if (e instanceof functions.https.HttpsError) throw e;
+      throw new functions.https.HttpsError('internal', `startMembersExport failed: ${msg}`);
     }
-    const actor = context.auth.uid;
-    const running = await db.collection('exports').where('createdBy','==',actor).where('status','==','running').get();
-    if (running.size >= 2) throw new functions.https.HttpsError('resource-exhausted', 'Too many concurrent exports');
-
-    const filters: any = {
-      regions: Array.isArray(data?.filters?.regions) ? data.filters.regions.map((x:any)=>String(x)) : undefined,
-      status: data?.filters?.status ? String(data.filters.status) : undefined,
-      orgId: data?.filters?.orgId ? String(data.filters.orgId) : undefined,
-      expiringAfter: data?.filters?.expiringAfter ? admin.firestore.Timestamp.fromDate(new Date(data.filters.expiringAfter)) : undefined,
-      expiringBefore: data?.filters?.expiringBefore ? admin.firestore.Timestamp.fromDate(new Date(data.filters.expiringBefore)) : undefined,
-    };
-    const preset = (String(data?.preset || 'BASIC').toUpperCase() === 'FULL') ? 'FULL' : 'BASIC';
-    const columns = normalizeColumns(Array.isArray(data?.columns) ? data.columns.map((c:any)=>String(c)) : undefined, preset as any);
-
-    const exportRef = db.collection('exports').doc();
-    await exportRef.set({
-      type: 'members_csv',
-      status: 'pending',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      createdBy: actor,
-      filters,
-      columns,
-      progress: { rows: 0, bytes: 0 },
-    }, { merge: true });
-    return { ok: true, id: exportRef.id };
   });
 
 export const exportsWorkerOnCreate = functions

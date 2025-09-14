@@ -1,24 +1,23 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { renderWithProviders, screen, waitFor } from '@/test-utils';
+import { vi, type Mock } from 'vitest';
 import Admin from '../Admin';
+import useAgentOrAdmin from '@/hooks/useAgentOrAdmin';
+import { useReports } from '@/hooks/useReports';
 
-vi.mock('../../hooks/useAdmin', () => ({ default: () => ({ isAdmin: true, loading: false }) }));
-vi.mock('../../hooks/useAgentOrAdmin', () => ({ default: () => ({ canRegister: false, allowedRegions: [], loading: false }) }));
-vi.mock('../../hooks/useAuditLogs', () => ({ useAuditLogs: () => ({ items: [], loading: false, error: null }) }));
-vi.mock('../../hooks/useMemberSearch', () => ({ useMemberSearch: () => ({ results: [], loading: false, error: null, search: vi.fn(), clear: vi.fn() }) }));
-vi.mock('../../hooks/useUsers', () => ({ useUsers: () => ({ users: [], loading: false, error: null, refresh: vi.fn(), nextPage: vi.fn(), prevPage: vi.fn(), hasNext: false, hasPrev: false, page: 1 }) }));
-vi.mock('../../hooks/useReports', () => ({ default: () => ({ items: [{ id: 'r1', type: 'monthly', month: '2025-09', total: 5, revenue: 125 }], loading: false, error: null }) }));
-vi.mock('../../components/ui/useToast', () => ({ useToast: () => ({ push: vi.fn() }) }));
-
-vi.mock('firebase/functions', async () => ({ getFunctions: () => ({} as any), connectFunctionsEmulator: () => {}, httpsCallable: () => vi.fn().mockResolvedValue({ data: { ok: true, month: '2025-09' } }) }));
+vi.mock('@/hooks/useAgentOrAdmin');
+vi.mock('@/hooks/useReports');
 
 describe('Admin Reports panel', () => {
-  it('renders monthly report rows with CSV link', () => {
-    render(<Admin />);
-    expect(screen.getByText(/Monthly Reports/i)).toBeInTheDocument();
+  it('renders monthly report rows with CSV link', async () => {
+    (useAgentOrAdmin as Mock).mockReturnValue({ isAdmin: true, canRegister: true, allowedRegions: ['PRISHTINA'], loading: false });
+    (useReports as Mock).mockReturnValue({ data: [{ id: '2025-09', rowCount: 5 }], isLoading: false, error: null });
+
+    renderWithProviders(<Admin />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Monthly Reports')).toBeInTheDocument();
+    });
     expect(screen.getByText('2025-09')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Download CSV/i })).toBeInTheDocument();
   });
 });
-

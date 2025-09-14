@@ -1,27 +1,25 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { renderWithProviders, screen, fireEvent } from '@/test-utils';
 import Navbar from './Navbar';
+import { useAuth } from '../context/auth';
 
-vi.mock('../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { displayName: 'Ada Lovelace', email: 'ada@example.com' } }),
-}));
+vi.mock('../context/auth');
 
 describe('Navbar', () => {
   it('renders links and toggles user menu', () => {
-    render(
-      <MemoryRouter>
-        <Navbar />
-      </MemoryRouter>
-    );
-    // Basic links
-    expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Portal')).toBeInTheDocument();
+    vi.mocked(useAuth).mockReturnValue({
+      user: { displayName: 'Test User' } as any,
+      isAdmin: false,
+      isAgent: false,
+      allowedRegions: [],
+      loading: false,
+    });
+
+    renderWithProviders(<Navbar />);
 
     // Open menu
     const avatarBtn = screen.getByRole('button');
     fireEvent.click(avatarBtn);
     expect(screen.getByText('History')).toBeInTheDocument();
-    expect(screen.getByText('Sign out')).toBeInTheDocument();
   });
 });

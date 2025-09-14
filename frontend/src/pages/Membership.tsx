@@ -1,12 +1,13 @@
 import React from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/auth';
 import { useMembershipHistory } from '../hooks/useMembershipHistory';
+import type { Membership } from '@/types';
 
-const Membership: React.FC = () => {
+const MembershipPage: React.FC = () => {
   const { user } = useAuth();
-  const { history, loading, error } = useMembershipHistory(user?.uid);
+  const { data: history, isLoading, error } = useMembershipHistory(user?.uid);
 
-  if (loading) {
+  if (isLoading) {
     return <div>Loading membership history...</div>;
   }
 
@@ -17,7 +18,7 @@ const Membership: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Membership History</h1>
-      {history.length === 0 ? (
+      {history?.length === 0 ? (
         <p>You have no membership history.</p>
       ) : (
         <div className="overflow-x-auto">
@@ -32,7 +33,7 @@ const Membership: React.FC = () => {
               </tr>
             </thead>
             <tbody className="text-gray-700">
-              {history.map((item) => (
+              {history?.map((item: Membership) => (
                 <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-100">
                   <td className="py-3 px-4">{item.year}</td>
                   <td className="py-3 px-4">
@@ -56,4 +57,4 @@ const Membership: React.FC = () => {
   );
 };
 
-export default Membership;
+export default MembershipPage;

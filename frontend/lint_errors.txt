@@ -1,0 +1,368 @@
+
+> frontend@0.0.0 lint
+> eslint src
+
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/ActivateMembershipModal.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/ActivateMembershipModal.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/ActivateMembershipModal.tsx
+  42:24  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/AgentRegistrationCard.error.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/AgentRegistrationCard.error.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/AgentRegistrationCard.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/AgentRegistrationCard.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/AgentRegistrationCard.tsx
+  44:22  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/DigitalMembershipCard.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/DigitalMembershipCard.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/DigitalMembershipCard.tsx
+   8:12  error  "active" is overridden by string in this union type                                @typescript-eslint/no-redundant-type-constituents
+   8:23  error  "expired" is overridden by string in this union type                               @typescript-eslint/no-redundant-type-constituents
+   8:35  error  "none" is overridden by string in this union type                                  @typescript-eslint/no-redundant-type-constituents
+  10:10  error  "member" is overridden by string in this union type                                @typescript-eslint/no-redundant-type-constituents
+  10:21  error  "agent" is overridden by string in this union type                                 @typescript-eslint/no-redundant-type-constituents
+  10:31  error  "admin" is overridden by string in this union type                                 @typescript-eslint/no-redundant-type-constituents
+  26:31  error  Async arrow function 'downloadQr' has no 'await' expression                        @typescript-eslint/require-await
+  94:47  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  96:33  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/Navbar.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/Navbar.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/Navbar.tsx
+  55:25  error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+  60:21  error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/ProtectedRoute.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/ProtectedRoute.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/payments/PaymentElementBox.tsx
+   58:18  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+   72:20  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+  135:60  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  142:27  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/payments/__tests__/PaymentElementBox.confirm.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/payments/__tests__/PaymentElementBox.confirm.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/payments/__tests__/PaymentElementBox.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/payments/__tests__/PaymentElementBox.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/portal/PortalHero.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/portal/PortalHero.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/portal/PortalHero.tsx
+   7:11  error  "active" is overridden by string in this union type                                @typescript-eslint/no-redundant-type-constituents
+   7:22  error  "expired" is overridden by string in this union type                               @typescript-eslint/no-redundant-type-constituents
+   7:34  error  "none" is overridden by string in this union type                                  @typescript-eslint/no-redundant-type-constituents
+  56:44  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  57:60  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  58:60  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/ui/Button.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/components/ui/Button.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/firebase.ts
+   7:7   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+   9:3   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  10:3   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  11:3   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  12:3   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  13:3   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  14:3   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  15:3   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  19:7   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  19:27  error  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  19:33  error  Unsafe member access .options on an `any` value                         @typescript-eslint/no-unsafe-member-access
+  20:7   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  20:31  error  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  20:37  error  Unsafe member access .options on an `any` value                         @typescript-eslint/no-unsafe-member-access
+  39:7   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  47:32  error  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+  48:39  error  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useAdmin.test.ts
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useAdmin.test.ts was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useAdmin.ts
+  11:5  error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useAgentOrAdmin.test.ts
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useAgentOrAdmin.test.ts was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useAgentOrAdmin.ts
+  13:5  error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useAuditLogs.ts
+  16:15  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useAuth.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useAuth.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useCardToken.ts
+  41:5  error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useDirectory.test.ts
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useDirectory.test.ts was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useDirectory.ts
+  13:5  error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useEvents.test.ts
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useEvents.test.ts was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useEvents.ts
+  15:15  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useInvoices.test.ts
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useInvoices.test.ts was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useInvoices.ts
+  19:16  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useMemberProfile.test.ts
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useMemberProfile.test.ts was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useMemberProfile.ts
+  32:16  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useMembershipHistory.test.ts
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useMembershipHistory.test.ts was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useMembershipHistory.ts
+  17:16  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useOfflineCard.test.ts
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useOfflineCard.test.ts was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useOfflineCard.ts
+   8:11  error  Unsafe assignment of an `any` value          @typescript-eslint/no-unsafe-assignment
+   9:33  error  Unsafe member access .exp on an `any` value  @typescript-eslint/no-unsafe-member-access
+  38:62  error  Empty block statement                        no-empty
+  39:71  error  Empty block statement                        no-empty
+  53:13  error  Empty block statement                        no-empty
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useReports.ts
+  15:16  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useUsers.test.ts
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useUsers.test.ts was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/hooks/useUsers.ts
+  28:5  error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/lib/converters.ts
+   5:44  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+   5:88  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+   7:27  error  Unsafe member access .withConverter on an `any` value  @typescript-eslint/no-unsafe-member-access
+   8:14  error  Unsafe call of a(n) `any` typed value                  @typescript-eslint/no-unsafe-call
+   8:18  error  Unsafe member access .withConverter on an `any` value  @typescript-eslint/no-unsafe-member-access
+  10:11  error  Empty block statement                                  no-empty
+  17:13  error  'id' is assigned a value but never used                @typescript-eslint/no-unused-vars
+  18:5   error  Unsafe return of a value of type `any`                 @typescript-eslint/no-unsafe-return
+  18:20  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  21:31  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  27:13  error  'id' is assigned a value but never used                @typescript-eslint/no-unused-vars
+  28:5   error  Unsafe return of a value of type `any`                 @typescript-eslint/no-unsafe-return
+  28:20  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  31:31  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  37:13  error  'id' is assigned a value but never used                @typescript-eslint/no-unused-vars
+  38:5   error  Unsafe return of a value of type `any`                 @typescript-eslint/no-unsafe-return
+  38:20  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  41:31  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  47:13  error  'id' is assigned a value but never used                @typescript-eslint/no-unused-vars
+  48:5   error  Unsafe return of a value of type `any`                 @typescript-eslint/no-unsafe-return
+  48:20  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  51:31  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  57:13  error  'id' is assigned a value but never used                @typescript-eslint/no-unused-vars
+  58:5   error  Unsafe return of a value of type `any`                 @typescript-eslint/no-unsafe-return
+  58:20  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  61:31  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  67:13  error  'id' is assigned a value but never used                @typescript-eslint/no-unused-vars
+  68:5   error  Unsafe return of a value of type `any`                 @typescript-eslint/no-unsafe-return
+  68:20  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  71:31  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  77:13  error  'id' is assigned a value but never used                @typescript-eslint/no-unused-vars
+  78:5   error  Unsafe return of a value of type `any`                 @typescript-eslint/no-unsafe-return
+  78:20  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  81:31  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  87:13  error  'id' is assigned a value but never used                @typescript-eslint/no-unused-vars
+  88:5   error  Unsafe return of a value of type `any`                 @typescript-eslint/no-unsafe-return
+  88:20  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  91:31  error  Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/Admin.tsx
+    94:157  error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+   101:10   error  Unsafe array destructuring of a tuple element with an `any` value                                                                                                   @typescript-eslint/no-unsafe-assignment
+   101:54   error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+   105:42   error  Unsafe return of a value of type `any`                                                                                                                              @typescript-eslint/no-unsafe-return
+   105:70   error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+   112:87   error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+   152:9    error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+   201:27   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   225:29   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   226:29   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   244:97   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   286:144  error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   293:29   error  This assertion is unnecessary since it does not change the type of the expression                                                                                   @typescript-eslint/no-unnecessary-type-assertion
+   298:142  error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   307:29   error  This assertion is unnecessary since it does not change the type of the expression                                                                                   @typescript-eslint/no-unnecessary-type-assertion
+   312:82   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   371:131  error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   395:66   error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+   395:71   error  Unsafe member access .role on an `any` value                                                                                                                        @typescript-eslint/no-unsafe-member-access
+   453:86   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   475:29   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   477:42   error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+   479:32   error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+   480:46   error  Unsafe member access .filters on an `any` value                                                                                                                     @typescript-eslint/no-unsafe-member-access
+   481:48   error  Unsafe member access .filters on an `any` value                                                                                                                     @typescript-eslint/no-unsafe-member-access
+   483:25   error  Unsafe member access .columns on an `any` value                                                                                                                     @typescript-eslint/no-unsafe-member-access
+   485:36   error  Unsafe argument of type `any` assigned to a parameter of type `SetStateAction<string | null>`                                                                       @typescript-eslint/no-unsafe-argument
+   485:47   error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+   485:53   error  Unsafe member access .id on an `any` value                                                                                                                          @typescript-eslint/no-unsafe-member-access
+   488:23   error  Unsafe assignment of an `any` value                                                                                                                                 @typescript-eslint/no-unsafe-assignment
+   488:34   error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+   489:23   error  Unsafe assignment of an `any` value                                                                                                                                 @typescript-eslint/no-unsafe-assignment
+   489:35   error  Unsafe member access .message on an `any` value                                                                                                                     @typescript-eslint/no-unsafe-member-access
+   490:39   error  Unsafe assignment of an `any` value                                                                                                                                 @typescript-eslint/no-unsafe-assignment
+   530:99   error  Unsafe member access .id on an `any` value                                                                                                                          @typescript-eslint/no-unsafe-member-access
+   530:157  error  Unsafe member access .status on an `any` value                                                                                                                      @typescript-eslint/no-unsafe-member-access
+   531:76   error  Unsafe member access .progress on an `any` value                                                                                                                    @typescript-eslint/no-unsafe-member-access
+   531:108  error  Unsafe member access .count on an `any` value                                                                                                                       @typescript-eslint/no-unsafe-member-access
+   531:145  error  Unsafe member access .progress on an `any` value                                                                                                                    @typescript-eslint/no-unsafe-member-access
+   531:178  error  Unsafe member access .size on an `any` value                                                                                                                        @typescript-eslint/no-unsafe-member-access
+   551:63   error  Unsafe member access .seconds on an `any` value                                                                                                                     @typescript-eslint/no-unsafe-member-access
+   551:94   error  Unsafe member access .seconds on an `any` value                                                                                                                     @typescript-eslint/no-unsafe-member-access
+   559:81   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   566:81   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   567:154  error  Unsafe argument of type `any` assigned to a parameter of type `string | number | boolean`                                                                           @typescript-eslint/no-unsafe-argument
+   567:229  error  Unsafe argument of type `any` assigned to a parameter of type `string | number | boolean`                                                                           @typescript-eslint/no-unsafe-argument
+   602:19   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   706:91   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   708:91   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   742:105  error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+   742:111  error  Unsafe member access .role on an `any` value                                                                                                                        @typescript-eslint/no-unsafe-member-access
+   809:69   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   839:114  error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   901:21   error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+   917:125  error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+   960:21   error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+   977:125  error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+  1017:5    error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+  1024:17   error  This assertion is unnecessary since it does not change the type of the expression                                                                                   @typescript-eslint/no-unnecessary-type-assertion
+  1092:20   error  This assertion is unnecessary since it does not change the type of the expression                                                                                   @typescript-eslint/no-unnecessary-type-assertion
+  1114:116  error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+  1142:5    error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+  1146:22   error  Unsafe argument of type `any` assigned to a parameter of type `SetStateAction<string>`                                                                              @typescript-eslint/no-unsafe-argument
+  1146:33   error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+  1146:39   error  Unsafe member access .activeKid on an `any` value                                                                                                                   @typescript-eslint/no-unsafe-member-access
+  1147:29   error  Unexpected any. Specify a different type                                                                                                                            @typescript-eslint/no-explicit-any
+  1147:35   error  Unsafe member access .kids on an `any` value                                                                                                                        @typescript-eslint/no-unsafe-member-access
+  1148:16   error  'e' is defined but never used                                                                                                                                       @typescript-eslint/no-unused-vars
+  1161:68   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+  1177:27   error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/AgentTools.tsx
+  100:77  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/Billing.tsx
+   34:9   error  Unsafe assignment of an `any` value                                                @typescript-eslint/no-unsafe-assignment
+   41:39  error  Unsafe argument of type `any` assigned to a parameter of type `string`             @typescript-eslint/no-unsafe-argument
+   57:7   error  Unexpected `await` of a non-Promise (non-"Thenable") value                         @typescript-eslint/await-thenable
+  105:76  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  121:27  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  124:43  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/MemberPortal.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/MemberPortal.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/MemberPortal.tsx
+  54:28  error  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  54:34  error  Unsafe member access .role on an `any` value                                       @typescript-eslint/no-unsafe-member-access
+  78:73  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/Profile.tsx
+   96:26  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+  140:47  error  Promise-returning function provided to attribute where a void return was expected  @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/SignIn.tsx
+  24:7   error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+  42:24  error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/SignUp.tsx
+  44:7   error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+  62:24  error  Promise-returning function provided to attribute where a void return was expected                                                                                   @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/Verify.tsx
+   4:35  error  Unexpected any. Specify a different type                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  10:11  error  Unsafe assignment of an `any` value                                                                                                                                                                                                       @typescript-eslint/no-unsafe-assignment
+  10:37  error  Unexpected any. Specify a different type                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  10:43  error  Unsafe member access .env on an `any` value                                                                                                                                                                                               @typescript-eslint/no-unsafe-member-access
+  10:91  error  Unexpected any. Specify a different type                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  10:97  error  Unsafe member access .env on an `any` value                                                                                                                                                                                               @typescript-eslint/no-unsafe-member-access
+  16:86  error  Unsafe argument of type `any` assigned to a parameter of type `string | number | boolean`                                                                                                                                                 @typescript-eslint/no-unsafe-argument
+  23:29  error  Unsafe member access .execute on an `any` value                                                                                                                                                                                           @typescript-eslint/no-unsafe-member-access
+  24:5   error  Unsafe return of a value of type `any`                                                                                                                                                                                                    @typescript-eslint/no-unsafe-return
+  24:18  error  Unsafe call of a(n) `any` typed value                                                                                                                                                                                                     @typescript-eslint/no-unsafe-call
+  24:36  error  Unsafe member access .execute on an `any` value                                                                                                                                                                                           @typescript-eslint/no-unsafe-member-access
+  49:13  error  Unsafe assignment of an `any` value                                                                                                                                                                                                       @typescript-eslint/no-unsafe-assignment
+  50:17  error  Unsafe argument of type `any` assigned to a parameter of type `SetStateAction<{ ok?: boolean | undefined; valid?: boolean | undefined; name?: string | undefined; memberNo?: string | undefined; region?: string | undefined; } | null>`  @typescript-eslint/no-unsafe-argument
+  71:9   error  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator                                                                        @typescript-eslint/no-floating-promises
+  81:22  error  Promise-returning function provided to attribute where a void return was expected                                                                                                                                                         @typescript-eslint/no-misused-promises
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/Admin.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/Admin.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/AdminCardKeys.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/AdminCardKeys.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/AdminCoupons.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/AdminCoupons.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/AdminExports.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/AdminExports.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/AdminOrgs.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/AdminOrgs.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/AdminReports.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/AdminReports.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/Billing.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/Billing.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/Profile.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/Profile.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/SignIn.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/SignIn.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/Verify.test.tsx
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/pages/__tests__/Verify.test.tsx was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/types.ts
+   9:10  error  "member" is overridden by string in this union type   @typescript-eslint/no-redundant-type-constituents
+   9:21  error  "agent" is overridden by string in this union type    @typescript-eslint/no-redundant-type-constituents
+   9:31  error  "admin" is overridden by string in this union type    @typescript-eslint/no-redundant-type-constituents
+  21:11  error  "active" is overridden by string in this union type   @typescript-eslint/no-redundant-type-constituents
+  21:22  error  "expired" is overridden by string in this union type  @typescript-eslint/no-redundant-type-constituents
+  21:34  error  "pending" is overridden by string in this union type  @typescript-eslint/no-redundant-type-constituents
+  25:14  error  "EUR" is overridden by string in this union type      @typescript-eslint/no-redundant-type-constituents
+  26:19  error  "cash" is overridden by string in this union type     @typescript-eslint/no-redundant-type-constituents
+  26:28  error  "card" is overridden by string in this union type     @typescript-eslint/no-redundant-type-constituents
+  26:37  error  "bank" is overridden by string in this union type     @typescript-eslint/no-redundant-type-constituents
+  26:46  error  "other" is overridden by string in this union type    @typescript-eslint/no-redundant-type-constituents
+
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/validation/profile.test.ts
+  0:0  error  Parsing error: /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend/src/validation/profile.test.ts was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+✖ 238 problems (238 errors, 0 warnings)
+  12 errors and 0 warnings potentially fixable with the `--fix` option.
+

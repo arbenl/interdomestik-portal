@@ -1,20 +1,23 @@
+'use client';
+
 import { useState, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { auth, functions } from '../firebase';
+import { useAuth } from '@/context/auth';
+import { auth, functions } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
-import { useMemberProfile } from '../hooks/useMemberProfile';
-import DigitalMembershipCard from '../components/DigitalMembershipCard';
-import Button from '../components/ui/Button';
-import { useToast } from '../components/ui/useToast';
-import RegionSelect from '../components/RegionSelect';
-import { ProfileInput } from '../validation/profile';
+import { useMemberProfile } from '@/hooks/useMemberProfile';
+import DigitalMembershipCard from '@/components/DigitalMembershipCard';
+import { Button } from '@/components/ui';
+import { useToast } from '@/components/ui/useToast';
+import RegionSelect from '@/components/RegionSelect';
+import { ProfileInput } from '@/validation/profile';
+import type { Profile } from '@/types';
 
 const upsertProfile = httpsCallable(functions, 'upsertProfile');
 
 export default function Profile() {
   const { user } = useAuth();
-  const { profile, activeMembership, loading, error: profileError } = useMemberProfile(user?.uid);
+  const { data: profile, isLoading, error: profileError } = useMemberProfile(user?.uid);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -78,7 +81,7 @@ export default function Profile() {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
@@ -93,7 +96,7 @@ export default function Profile() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2">
           <h2 className="text-2xl font-bold mb-4">My Profile</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Email</label>
               <input
@@ -137,7 +140,7 @@ export default function Profile() {
             {success && <p className="text-sm text-green-600">{success}</p>}
             <div className="flex justify-between items-center">
               <Button type="submit">Update Profile</Button>
-              <Button variant="ghost" onClick={handleSignOut}>Sign Out</Button>
+              <Button variant="ghost" onClick={() => { void handleSignOut(); }}>Sign Out</Button>
             </div>
           </form>
         </div>
@@ -151,7 +154,7 @@ export default function Profile() {
             );
             type TS = { seconds?: number } | undefined;
             const profileExpires = (profile as unknown as { expiresAt?: TS })?.expiresAt?.seconds;
-            const expiresAtSec = activeMembership?.expiresAt?.seconds ?? profileExpires;
+            const expiresAtSec = profile?.expiresAt?.seconds ?? profileExpires;
             const hasActive = typeof expiresAtSec === 'number' && expiresAtSec * 1000 > Date.now();
             const validUntil = typeof expiresAtSec === 'number' ? new Date(expiresAtSec * 1000).toLocaleDateString() : '—';
             const status = hasActive ? 'active' : (typeof expiresAtSec === 'number' ? 'expired' : 'none');

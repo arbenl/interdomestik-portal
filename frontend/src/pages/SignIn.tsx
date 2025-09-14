@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
+import { Button } from '@/components/ui';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '../components/ui/useToast';
@@ -21,7 +21,7 @@ export default function SignIn() {
       setLoading(true);
       await signInWithEmailAndPassword(auth, email, password);
       push({ type: 'success', message: 'Signed in successfully' });
-      navigate('/profile');
+      void navigate('/profile');
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Sign in failed';
       setError(msg);
@@ -39,7 +39,7 @@ export default function SignIn() {
       </div>
       <div className="max-w-md w-full mx-auto md:ml-auto bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Sign In</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
           <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           {error && <p className="text-sm text-red-600">{error}</p>}

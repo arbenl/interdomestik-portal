@@ -1,19 +1,15 @@
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { renderWithProviders, screen } from '@/test-utils';
 import { ToastProvider } from '../../components/ui/Toast';
-import { describe, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import SignIn from '../SignIn';
 
 describe('SignIn page', () => {
   it('renders sign-in form', () => {
-    render(
-      <MemoryRouter>
-        <ToastProvider>
-          <SignIn />
-        </ToastProvider>
-      </MemoryRouter>
+    renderWithProviders(
+      <ToastProvider>
+        <SignIn />
+      </ToastProvider>,
     );
     expect(screen.getByRole('heading', { name: /Sign In/i })).toBeInTheDocument();
   });
 });
-import { describe, it, expect } from 'vitest';

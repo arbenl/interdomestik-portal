@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders, screen, fireEvent, waitFor } from '@/test-utils';
 import AgentRegistrationCard from './AgentRegistrationCard';
 
 vi.mock('firebase/functions', () => ({
@@ -12,8 +12,8 @@ describe('AgentRegistrationCard', () => {
   it('submits with valid data and calls onSuccess', async () => {
     const onSuccess = vi.fn();
     const onError = vi.fn();
-    render(
-      <AgentRegistrationCard allowedRegions={['PRISHTINA']} onSuccess={onSuccess} onError={onError} />
+    renderWithProviders(
+      <AgentRegistrationCard allowedRegions={['PRISHTINA']} onSuccess={onSuccess} onError={onError} />,
     );
     fireEvent.change(screen.getByPlaceholderText(/Email/i), { target: { value: 'new@example.com' } });
     fireEvent.change(screen.getByPlaceholderText(/Full name/i), { target: { value: 'New User' } });

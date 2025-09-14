@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders, screen, fireEvent, waitFor } from '@/test-utils';
 import ActivateMembershipModal from './ActivateMembershipModal';
 
 vi.mock('firebase/functions', () => ({
@@ -12,12 +12,12 @@ describe('ActivateMembershipModal', () => {
   it('submits and calls onSuccess', async () => {
     const onClose = vi.fn();
     const onSuccess = vi.fn();
-    render(
+    renderWithProviders(
       <ActivateMembershipModal
         user={{ id: 'u1', email: 'member@example.com' }}
         onClose={onClose}
         onSuccess={onSuccess}
-      />
+      />,
     );
     fireEvent.click(screen.getByRole('button', { name: /activate/i }));
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());

@@ -1,0 +1,18 @@
+
+> frontend@0.0.0 build /Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend
+> tsc -b && vite build
+
+src/features/admin/members/MembersList.tsx(3,29): error TS6198: All destructured elements are unused.
+src/features/admin/members/MembersPanel.tsx(55,25): error TS2322: Type 'Promise<InfiniteQueryObserverResult<InfiniteData<{ users: Profile[]; nextPage: any; }, unknown>, Error>>' is not assignable to type 'Promise<void>'.
+  Type 'InfiniteQueryObserverResult<InfiniteData<{ users: Profile[]; nextPage: any; }, unknown>, Error>' is not assignable to type 'void'.
+    Type 'InfiniteQueryObserverRefetchErrorResult<InfiniteData<{ users: Profile[]; nextPage: any; }, unknown>, Error>' is not assignable to type 'void'.
+src/features/portal/MembershipPanel.tsx(13,49): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/features/portal/PortalLayout.tsx(6,33): error TS2322: Type '"member"' is not assignable to type 'Role'.
+src/features/portal/profile/ProfilePanel.tsx(8,11): error TS2339: Property 'data' does not exist on type '{ profile: Profile | null | undefined; isLoading: boolean; error: Error | null; update: UseMutateFunction<void, Error, Partial<Profile>, unknown>; isUpdating: boolean; }'.
+src/features/portal/profile/ProfilePanel.tsx(8,37): error TS2339: Property 'mutate' does not exist on type '{ profile: Profile | null | undefined; isLoading: boolean; error: Error | null; update: UseMutateFunction<void, Error, Partial<Profile>, unknown>; isUpdating: boolean; }'.
+src/features/portal/profile/ProfilePanel.tsx(8,53): error TS2339: Property 'isPending' does not exist on type '{ profile: Profile | null | undefined; isLoading: boolean; error: Error | null; update: UseMutateFunction<void, Error, Partial<Profile>, unknown>; isUpdating: boolean; }'.
+src/pages/Admin.tsx(37,9): error TS6133: 'today' is declared but its value is never read.
+/Users/arbenlila/development/interdomestik/interdomestik-member-portal/frontend:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 build: `tsc -b && vite build`
+Exit status 2

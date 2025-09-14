@@ -1,13 +1,22 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act } from '@testing-library/react';
 import { useOfflineCard } from './useOfflineCard';
+import { renderHookWithProviders } from '@/test-utils';
+
+interface JwtPayload {
+  mno: string;
+  iat: number;
+  exp: number;
+  ver: number;
+  jti: string;
+}
 
 function makeToken(expSecondsFromNow: number): string {
-  const header = { alg: 'HS256', typ: 'JWT', kid: 'v1' };
+  const header = { alg: 'HS265', typ: 'JWT', kid: 'v1' };
   const now = Math.floor(Date.now()/1000);
-  const payload = { mno: 'INT-2025-000001', iat: now, exp: now + expSecondsFromNow, ver: 1, jti: 'abc123' } as any;
-  const enc = (obj: any) => Buffer.from(JSON.stringify(obj)).toString('base64url');
-  return `${enc(header)}.${enc(payload)}.sig`;
+  const payload: JwtPayload = { mno: 'INT-2025-000001', iat: now, exp: now + expSecondsFromNow, ver: 1, jti: 'abc123' };
+  const enc = (obj: Record<string, unknown>) => Buffer.from(JSON.stringify(obj)).toString('base64url');
+  return `${enc(header)}.${enc(payload as any)}.sig`;
 }
 
 describe('useOfflineCard', () => {
@@ -17,7 +26,9 @@ describe('useOfflineCard', () => {
 
   it('opts in and caches token without PII; near expiry triggers prompt', () => {
     const soonExpToken = makeToken(3 * 24 * 3600); // 3 days
-    const { result, rerender } = renderHook(({ live }: { live: string | null }) => useOfflineCard(live), { initialProps: { live: null } });
+    const { result, rerender } = renderHookWithProviders<ReturnType<typeof useOfflineCard>, { live: string | null }>((props) => useOfflineCard(props.live), {
+      initialProps: { live: null },
+    });
     // Initially disabled, no token
     expect(result.current.enabled).toBe(false);
     expect(result.current.token).toBe(null);
@@ -36,7 +47,9 @@ describe('useOfflineCard', () => {
 
   it('falls back to cached token when live is missing', () => {
     const validToken = makeToken(30 * 24 * 3600);
-    const { result, rerender } = renderHook(({ live }: { live: string | null }) => useOfflineCard(live), { initialProps: { live: null } });
+    const { result, rerender } = renderHookWithProviders<ReturnType<typeof useOfflineCard>, { live: string | null }>((props) => useOfflineCard(props.live), {
+      initialProps: { live: null },
+    });
     act(() => { result.current.setEnabled(true); });
     rerender({ live: validToken });
     // Now drop live token; cached should remain available
@@ -45,4 +58,3 @@ describe('useOfflineCard', () => {
     expect(result.current.nearExpiry).toBe(false);
   });
 });
-

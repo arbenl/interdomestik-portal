@@ -1,27 +1,23 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, type Mock } from 'vitest';
+import { renderWithProviders, screen, fireEvent, waitFor } from '@/test-utils';
 import Profile from '../Profile';
+import { useAuth } from '@/context/auth';
+import { useMemberProfile } from '@/hooks/useMemberProfile';
 
-vi.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { uid: 'u1', email: 'u1@example.com' } }) }));
-vi.mock('../../hooks/useMemberProfile', () => ({ useMemberProfile: () => ({ profile: { name: 'User One', region: 'PRISHTINA' }, activeMembership: null, loading: false, error: null }) }));
-vi.mock('../../components/ui/useToast', () => ({ useToast: () => ({ push: vi.fn() }) }));
-
-vi.mock('firebase/functions', () => {
-  return {
-    httpsCallable: () => vi.fn().mockResolvedValue({ data: { message: 'ok' } })
-  };
-});
-
-vi.mock('../../firebase', () => ({ auth: { currentUser: { reload: vi.fn().mockResolvedValue(undefined) } }, functions: {} }));
+vi.mock('@/context/auth');
+vi.mock('@/hooks/useMemberProfile');
 
 describe('Profile page', () => {
   it('updates profile successfully', async () => {
-    render(<Profile />);
-    expect(screen.getByText(/My Profile/i)).toBeInTheDocument();
-    const name = screen.getByLabelText(/Name/i) as HTMLInputElement;
-    fireEvent.change(name, { target: { value: 'User One Updated' } });
+    (useAuth as Mock).mockReturnValue({ user: { uid: 'test-uid' } });
+    const mutate = vi.fn();
+    (useMemberProfile as Mock).mockReturnValue({ data: { name: 'User One' }, isLoading: false, error: null, mutate });
+    renderWithProviders(<Profile />);
+    const nameInput = screen.getByLabelText(/Name/i);
+    fireEvent.change(nameInput, { target: { value: 'User One Updated' } });
     fireEvent.click(screen.getByRole('button', { name: /Update Profile/i }));
-    expect(await screen.findByText(/Profile updated successfully/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mutate).toHaveBeenCalledWith({ name: 'User One Updated' });
+    });
   });
 });
-

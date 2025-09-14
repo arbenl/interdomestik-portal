@@ -1,94 +1,101 @@
-import type { FirestoreDataConverter, QueryDocumentSnapshot } from 'firebase/firestore';
-import type { Profile, Membership, Invoice, EventItem, MonthlyReport, AuditLog, Organization, Coupon } from '../types';
+import type { FirestoreDataConverter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import type { Profile, Membership, Invoice, EventItem, MonthlyReport, AuditLog, Organization, Coupon } from '@/types';
 
 // Generic safe wrapper: only apply converter when the ref supports it (avoids breaking tests/mocks)
-export function maybeWithConverter<T>(ref: any, converter: FirestoreDataConverter<T>): any {
+type WithConv<T> = { withConverter?: (converter: FirestoreDataConverter<T>) => unknown };
+export function maybeWithConverter<T, R>(ref: R, converter: FirestoreDataConverter<T>): R {
   try {
-    if (ref && typeof ref.withConverter === 'function') {
-      return ref.withConverter(converter);
+    const r = ref as unknown as WithConv<T>;
+    if (r && typeof r.withConverter === 'function') {
+      return r.withConverter(converter) as R;
     }
-  } catch {}
+  } catch {
+    // ignore
+  }
   return ref;
+}
+
+function toFirestoreWithoutId<T extends { id?: unknown }>(modelObject: T): DocumentData {
+  const data: Record<string, unknown> = { ...modelObject };
+  // Avoid storing local id field on documents
+  delete (data as { id?: unknown }).id;
+  return data as DocumentData;
+}
+
+function addId<T extends { id?: string }>(snapshot: QueryDocumentSnapshot): T {
+  const data = snapshot.data() as unknown as Omit<T, 'id'>;
+  return { id: snapshot.id, ...(data as object) } as T;
 }
 
 // Pass-through converters for core types (no field transforms)
 export const profileConverter: FirestoreDataConverter<Profile> = {
   toFirestore(modelObject: Profile) {
-    const { id, ...rest } = modelObject;
-    return rest as any;
+    return toFirestoreWithoutId(modelObject);
   },
   fromFirestore(snapshot: QueryDocumentSnapshot) {
-    return snapshot.data() as any as Profile;
+    return addId<Profile>(snapshot);
   },
 };
 
 export const membershipConverter: FirestoreDataConverter<Membership> = {
   toFirestore(modelObject: Membership) {
-    const { id, ...rest } = modelObject;
-    return rest as any;
+    return toFirestoreWithoutId(modelObject);
   },
   fromFirestore(snapshot: QueryDocumentSnapshot) {
-    return snapshot.data() as any as Membership;
+    return addId<Membership>(snapshot);
   },
 };
 
 export const invoiceConverter: FirestoreDataConverter<Invoice> = {
   toFirestore(modelObject: Invoice) {
-    const { id, ...rest } = modelObject;
-    return rest as any;
+    return toFirestoreWithoutId(modelObject);
   },
   fromFirestore(snapshot: QueryDocumentSnapshot) {
-    return snapshot.data() as any as Invoice;
+    return addId<Invoice>(snapshot);
   },
 };
 
 export const eventConverter: FirestoreDataConverter<EventItem> = {
   toFirestore(modelObject: EventItem) {
-    const { id, ...rest } = modelObject;
-    return rest as any;
+    return toFirestoreWithoutId(modelObject);
   },
   fromFirestore(snapshot: QueryDocumentSnapshot) {
-    return snapshot.data() as any as EventItem;
+    return addId<EventItem>(snapshot);
   },
 };
 
 export const reportConverter: FirestoreDataConverter<MonthlyReport> = {
   toFirestore(modelObject: MonthlyReport) {
-    const { id, ...rest } = modelObject;
-    return rest as any;
+    return toFirestoreWithoutId(modelObject);
   },
   fromFirestore(snapshot: QueryDocumentSnapshot) {
-    return snapshot.data() as any as MonthlyReport;
+    return addId<MonthlyReport>(snapshot);
   },
 };
 
 export const auditLogConverter: FirestoreDataConverter<AuditLog> = {
   toFirestore(modelObject: AuditLog) {
-    const { id, ...rest } = modelObject;
-    return rest as any;
+    return toFirestoreWithoutId(modelObject);
   },
   fromFirestore(snapshot: QueryDocumentSnapshot) {
-    return snapshot.data() as any as AuditLog;
+    return addId<AuditLog>(snapshot);
   },
 };
 
 export const orgConverter: FirestoreDataConverter<Organization> = {
   toFirestore(modelObject: Organization) {
-    const { id, ...rest } = modelObject;
-    return rest as any;
+    return toFirestoreWithoutId(modelObject);
   },
   fromFirestore(snapshot: QueryDocumentSnapshot) {
-    return snapshot.data() as any as Organization;
+    return addId<Organization>(snapshot);
   },
 };
 
 export const couponConverter: FirestoreDataConverter<Coupon> = {
   toFirestore(modelObject: Coupon) {
-    const { id, ...rest } = modelObject;
-    return rest as any;
+    return toFirestoreWithoutId(modelObject);
   },
   fromFirestore(snapshot: QueryDocumentSnapshot) {
-    return snapshot.data() as any as Coupon;
+    return addId<Coupon>(snapshot);
   },
 };
-

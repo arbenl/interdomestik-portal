@@ -1,10 +1,10 @@
-import Button from '../ui/Button';
+import { Button } from '@/components/ui';
 import SimpleQr from '../SimpleQr';
 import { useNavigate } from 'react-router-dom';
 
 type Props = {
   name: string;
-  status: 'active' | 'expired' | 'none' | string;
+  status: 'active' | 'expired' | 'none';
   memberNo?: string;
   expiresOn?: string;
   verifyUrl?: string;
@@ -53,9 +53,9 @@ export default function PortalHero({ name, status, memberNo, expiresOn, verifyUr
       </div>
 
       <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Button className="w-full" onClick={() => navigate('/profile')}>Update profile</Button>
-        <Button variant="ghost" className="w-full" onClick={() => navigate('/membership')}>View history</Button>
-        <Button variant="ghost" className="w-full" onClick={() => navigate('/verify')}>Verify membership</Button>
+        <Button className="w-full" onClick={() => { void navigate('/profile'); }}>Update profile</Button>
+        <Button variant="ghost" className="w-full" onClick={() => { void navigate('/membership'); }}>View history</Button>
+        <Button variant="ghost" className="w-full" onClick={() => { void navigate('/verify'); }}>Verify membership</Button>
       </div>
     </section>
   );

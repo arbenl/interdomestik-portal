@@ -14,6 +14,10 @@ describe('exportsV2 helpers', () => {
     await db.collection('members').doc('m1').set({ memberNo: 'INT-2025-000010', name: 'A', email: 'a@ex.com', region: 'PRISHTINA', status: 'active', expiresAt: soon, createdAt: now });
     await db.collection('members').doc('m2').set({ memberNo: 'INT-2025-000011', name: 'B', email: 'b@ex.com', region: 'PEJA', status: 'expired', expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now()-86400000)), createdAt: now });
     await db.collection('members').doc('m3').set({ memberNo: 'INT-2025-000012', name: 'C', email: 'c@ex.com', region: 'GJAKOVA', status: 'active', expiresAt: soon, createdAt: now });
+    // Set a root expiresAt mirror for UI filtering (as used by pipeline)
+    await db.collection('members').doc('m1').set({ expiresAt: soon }, { merge: true });
+    await db.collection('members').doc('m2').set({ expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now()-86400000)) }, { merge: true });
+    await db.collection('members').doc('m3').set({ expiresAt: soon }, { merge: true });
   });
 
   it('normalizeColumns respects presets and filters unknown columns', () => {

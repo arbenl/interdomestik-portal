@@ -4,8 +4,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function hasToken() { return signedIn() && request.auth.token != null; }
-    function isAdmin() { return hasToken() && request.auth.token.role == 'admin'; }
-    function isAgent() { return hasToken() && request.auth.token.role == 'agent'; }
+    function isAdmin() { return hasToken() && request.auth.token.get('role', '') == 'admin'; }
+    function isAgent() { return hasToken() && request.auth.token.get('role', '') == 'agent'; }
     function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
     // Safe helpers for region checks — never evaluate `in` on null
     function allowedRegionsList() {
@@ -43,6 +43,7 @@ service cloud.firestore {
     }
 
     match /members/{uid} {
+      allow list: if isAdmin();
       // Read self; admins (optionally region-limited); agents only their assigned members
       allow read: if isSelf(uid)
         || adminHasRegion(resource.data.region)

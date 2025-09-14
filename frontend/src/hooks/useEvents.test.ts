@@ -1,33 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
 import { useEvents } from './useEvents';
-import { onSnapshot } from 'firebase/firestore';
+import { renderHookWithProviders, waitFor } from '@/test-utils';
+import { setFirestoreSnapshotEmitter } from '@/tests/mocks/firestore.setup';
 
 describe('useEvents', () => {
-  beforeEach(() => vi.clearAllMocks());
+  const eventsKey = 'q:events';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('returns events list', async () => {
-    const docs = [
+    const mockEvents = [
       { id: 'e1', data: () => ({ title: 'Welcome', startAt: { seconds: 1 }, location: 'PRISHTINA' }) },
-    ];
-    (onSnapshot as unknown as vi.Mock).mockImplementation((_q, next) => { next({ docs }); return () => {}; });
-    const { result } = renderHook(() => useEvents(5));
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.events).toHaveLength(1);
+    ] as any;
+    setFirestoreSnapshotEmitter(eventsKey, (next) => {
+      next({ docs: mockEvents, size: mockEvents.length, empty: false });
+    });
+    const { result } = renderHookWithProviders(() => useEvents(5));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.data).toHaveLength(1);
   });
 
   it('handles empty list', async () => {
-    (onSnapshot as unknown as vi.Mock).mockImplementation((_q, next) => { next({ docs: [] }); return () => {}; });
-    const { result } = renderHook(() => useEvents(5));
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.events).toEqual([]);
+    setFirestoreSnapshotEmitter(eventsKey, (next) => {
+      next({ docs: [], size: 0, empty: true });
+    });
+    const { result } = renderHookWithProviders(() => useEvents(5));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.data).toEqual([]);
   });
 
   it('handles errors', async () => {
     const err = new Error('boom');
-    (onSnapshot as unknown as vi.Mock).mockImplementation((_q, _next, error) => { error(err); return () => {}; });
-    const { result } = renderHook(() => useEvents(5));
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    setFirestoreSnapshotEmitter(eventsKey, (_next, error) => {
+      error(err);
+    });
+    const { result } = renderHookWithProviders(() => useEvents(5));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.error).toBe(err);
   });
 });

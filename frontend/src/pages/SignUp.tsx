@@ -4,7 +4,7 @@ import { auth, functions } from '../firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import RegionSelect from '../components/RegionSelect';
-import Button from '../components/ui/Button';
+import { Button } from '@/components/ui';
 import Input from '../components/ui/Input';
 import { useToast } from '../components/ui/useToast';
 import { ProfileInput } from '../validation/profile';
@@ -41,7 +41,7 @@ export default function SignUp() {
       const upsertProfile = httpsCallable(functions, 'upsertProfile');
       await upsertProfile({ name, phone, region });
       push({ type: 'success', message: 'Account created' });
-      navigate('/profile');
+      void navigate('/profile');
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Sign up failed';
       setError(msg);
@@ -59,7 +59,7 @@ export default function SignUp() {
       </div>
       <div className="max-w-md w-full mx-auto md:ml-auto p-6 bg-white rounded-lg shadow">
         <h2 className="text-2xl font-bold mb-4">Create an account</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
           <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           <Input label="Full name" type="text" value={name} onChange={(e) => setName(e.target.value)} required />

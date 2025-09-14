@@ -1,0 +1,71 @@
+
+> frontend@0.0.0 build
+> tsc -b && vite build
+
+src/hooks/useAuth.test.tsx(1,32): error TS6133: 'vi' is declared but its value is never read.
+src/hooks/useAuth.test.tsx(7,19): error TS2503: Cannot find namespace 'JSX'.
+src/hooks/useAuth.test.tsx(15,39): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useAuth.test.tsx(15,68): error TS7006: Parameter '_auth' implicitly has an 'any' type.
+src/hooks/useAuth.test.tsx(15,75): error TS7006: Parameter 'cb' implicitly has an 'any' type.
+src/hooks/useDirectory.test.ts(14,17): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useDirectory.test.ts(21,17): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useDirectory.test.ts(29,17): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useEvents.test.ts(13,31): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useEvents.test.ts(13,60): error TS7006: Parameter '_q' implicitly has an 'any' type.
+src/hooks/useEvents.test.ts(13,64): error TS7006: Parameter 'next' implicitly has an 'any' type.
+src/hooks/useEvents.test.ts(20,31): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useEvents.test.ts(20,60): error TS7006: Parameter '_q' implicitly has an 'any' type.
+src/hooks/useEvents.test.ts(20,64): error TS7006: Parameter 'next' implicitly has an 'any' type.
+src/hooks/useEvents.test.ts(28,31): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useEvents.test.ts(28,60): error TS7006: Parameter '_q' implicitly has an 'any' type.
+src/hooks/useEvents.test.ts(28,64): error TS7006: Parameter '_next' implicitly has an 'any' type.
+src/hooks/useEvents.test.ts(28,71): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/hooks/useInvoices.test.ts(20,32): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useInvoices.test.ts(20,61): error TS7006: Parameter '_q' implicitly has an 'any' type.
+src/hooks/useInvoices.test.ts(20,65): error TS7006: Parameter 'next' implicitly has an 'any' type.
+src/hooks/useInvoices.test.ts(31,32): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useInvoices.test.ts(31,61): error TS7006: Parameter '_q' implicitly has an 'any' type.
+src/hooks/useInvoices.test.ts(31,65): error TS7006: Parameter '_next' implicitly has an 'any' type.
+src/hooks/useInvoices.test.ts(31,72): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/hooks/useMemberProfile.test.ts(21,32): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useMemberProfile.test.ts(21,61): error TS7006: Parameter '_ref' implicitly has an 'any' type.
+src/hooks/useMemberProfile.test.ts(21,67): error TS7006: Parameter 'next' implicitly has an 'any' type.
+src/hooks/useMemberProfile.test.ts(44,32): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useMemberProfile.test.ts(44,61): error TS7006: Parameter '_ref' implicitly has an 'any' type.
+src/hooks/useMemberProfile.test.ts(44,67): error TS7006: Parameter '_next' implicitly has an 'any' type.
+src/hooks/useMemberProfile.test.ts(44,74): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/hooks/useMemberProfile.test.ts(59,32): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useMemberProfile.test.ts(59,61): error TS7006: Parameter '_ref' implicitly has an 'any' type.
+src/hooks/useMemberProfile.test.ts(59,67): error TS7006: Parameter 'next' implicitly has an 'any' type.
+src/hooks/useMemberProfile.test.ts(81,32): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useMemberProfile.test.ts(81,61): error TS7006: Parameter '_ref' implicitly has an 'any' type.
+src/hooks/useMemberProfile.test.ts(81,67): error TS7006: Parameter 'next' implicitly has an 'any' type.
+src/hooks/useMembershipHistory.test.ts(22,32): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useMembershipHistory.test.ts(22,61): error TS7006: Parameter '_q' implicitly has an 'any' type.
+src/hooks/useMembershipHistory.test.ts(22,65): error TS7006: Parameter 'next' implicitly has an 'any' type.
+src/hooks/useMembershipHistory.test.ts(38,32): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useMembershipHistory.test.ts(38,61): error TS7006: Parameter '_q' implicitly has an 'any' type.
+src/hooks/useMembershipHistory.test.ts(38,65): error TS7006: Parameter '_next' implicitly has an 'any' type.
+src/hooks/useMembershipHistory.test.ts(38,72): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/hooks/useMembershipHistory.test.ts(52,32): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useMembershipHistory.test.ts(52,61): error TS7006: Parameter '_q' implicitly has an 'any' type.
+src/hooks/useMembershipHistory.test.ts(52,65): error TS7006: Parameter 'next' implicitly has an 'any' type.
+src/hooks/useOfflineCard.test.ts(27,16): error TS2322: Type 'string' is not assignable to type 'null'.
+src/hooks/useOfflineCard.test.ts(41,16): error TS2322: Type 'string' is not assignable to type 'null'.
+src/hooks/useUsers.test.ts(22,17): error TS2503: Cannot find namespace 'vi'.
+src/hooks/useUsers.test.ts(35,17): error TS2503: Cannot find namespace 'vi'.
+src/pages/__tests__/Admin.test.tsx(20,38): error TS6133: 'importOriginal' is declared but its value is never read.
+src/pages/__tests__/AdminExports.test.tsx(28,86): error TS2503: Cannot find namespace 'vi'.
+src/pages/__tests__/AdminExports.test.tsx(51,86): error TS2503: Cannot find namespace 'vi'.
+src/pages/__tests__/AdminExports.test.tsx(73,86): error TS2503: Cannot find namespace 'vi'.
+src/pages/__tests__/SignIn.test.tsx(4,10): error TS2300: Duplicate identifier 'describe'.
+src/pages/__tests__/SignIn.test.tsx(4,20): error TS2300: Duplicate identifier 'it'.
+src/pages/__tests__/SignIn.test.tsx(19,10): error TS2300: Duplicate identifier 'describe'.
+src/pages/__tests__/SignIn.test.tsx(19,20): error TS2300: Duplicate identifier 'it'.
+src/pages/Admin.tsx(304,17): error TS2578: Unused '@ts-expect-error' directive.
+src/pages/Admin.tsx(319,17): error TS2578: Unused '@ts-expect-error' directive.
+src/pages/Admin.tsx(493,38): error TS18048: 'payload.filters' is possibly 'undefined'.
+src/pages/Admin.tsx(494,40): error TS18048: 'payload.filters' is possibly 'undefined'.
+src/pages/MemberPortal.test.tsx(35,33): error TS2741: Property 'status' is missing in type '{ id: string; year: number; }' but required in type 'Membership'.
+src/pages/MemberPortal.tsx(70,31): error TS2322: Type 'string' is not assignable to type '"none" | "active" | "expired"'.
+src/pages/MemberPortal.tsx(99,104): error TS2322: Type 'string' is not assignable to type '"none" | "active" | "expired" | undefined'.
