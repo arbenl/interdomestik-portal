@@ -1,6 +1,6 @@
 import { doc, getDoc, getDocs, collection } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { firestore, functions } from '../firebase';
+import { firestore, functions } from '@/lib/firebase';
 import type { Profile, Membership, Invoice } from '@/types';
 
 export const getMemberProfile = async (uid: string): Promise<Profile | null> => {

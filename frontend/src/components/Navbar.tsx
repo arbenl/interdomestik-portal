@@ -1,8 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/auth';
+import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useRef, useState } from 'react';
 import { signOut as fbSignOut } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth } from '@/lib/firebase';
 import { queryClient } from '../queryClient';
 import { getMemberProfile, getMembershipHistory, getInvoices } from '../services/member';
 import { getUsers } from '../services/admin';

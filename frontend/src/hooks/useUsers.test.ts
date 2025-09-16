@@ -2,10 +2,10 @@ import { renderHookWithProviders, waitFor } from '@/test-utils';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { useUsers } from './useUsers';
 import { getDocs } from 'firebase/firestore';
-import { useAuth } from '../context/auth';
+import { useAuth } from '@/hooks/useAuth';
 
 vi.mock('firebase/firestore');
-vi.mock('../context/auth');
+vi.mock('../context/AuthProvider');
 
 describe('useUsers', () => {
   beforeEach(() => {

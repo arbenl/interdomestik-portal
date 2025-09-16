@@ -1,14 +1,19 @@
-/// <reference types="vitest/globals" />
-
 import '@testing-library/jest-dom';
-import 'whatwg-fetch';
-import { afterEach, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { vi } from 'vitest';
 
-// import global mocks below so they're hoisted for all tests
-import '@/tests/mocks/hooks'; // central hook mocks
+vi.mock('@/services/functionsClient');
 
-afterEach(() => {
-  cleanup();
-  vi.clearAllMocks();
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+
+    onchange: null,
+    addListener: () => {}, removeListener: () => {},
+    addEventListener: () => {}, removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }),
 });
+
+export { __setCallable } from '@/services/__mocks__/functionsClient';

@@ -1,6 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/auth';
+import { useAuth } from '@/hooks/useAuth';
 import PanelBoundary from '../components/ui/PanelBoundary';
 
 const ProfilePanel = lazy(() => import('../features/portal/ProfilePanel').then(m => ({ default: m.ProfilePanel })));

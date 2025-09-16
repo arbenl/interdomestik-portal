@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { collection, getDocs, limit, orderBy, query, startAt, endAt, where } from 'firebase/firestore';
-import { firestore } from '@/firebase';
+import { firestore } from '@/lib/firebase';
 import type { Profile } from '@/types';
 
 function isMemberNo(s: string) {

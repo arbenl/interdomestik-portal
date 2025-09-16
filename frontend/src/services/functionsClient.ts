@@ -1,6 +1,8 @@
 import { httpsCallable } from 'firebase/functions';
-import type { Functions } from 'firebase/functions';
-import { functions } from '../firebase';
+import { functions } from '@/lib/firebase';
 
-export const callFn = <I, O>(name: string, fns: Functions = functions) =>
-  httpsCallable<I, O>(fns, name);
+export async function callFn<TInput = unknown, TOutput = unknown>(name: string, data?: TInput): Promise<TOutput> {
+  const callable = httpsCallable<TInput, TOutput>(functions, name);
+  const res = await callable(data as TInput);
+  return res.data as TOutput;
+}

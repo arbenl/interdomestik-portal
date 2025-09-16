@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, limit, query, orderBy } from 'firebase/firestore';
-import { firestore } from '@/firebase';
+import { firestore } from '@/lib/firebase';
 import type { Profile } from '@/types';
 
 export type DirectoryItem = Pick<Profile, 'name' | 'region'> & { id: string };

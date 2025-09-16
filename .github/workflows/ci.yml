@@ -1,107 +1,61 @@
-name: CI
+name: ci
 
 on:
-  push:
-    branches: [ main, master ]
   pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
-
-env:
-  # Toggle to skip heavy jobs while billing is limited. Set repo/org variable CI_LIGHT=false to re-enable.
-  CI_LIGHT: ${{ vars.CI_LIGHT || 'true' }}
+  push:
+    branches: [main]
 
 jobs:
-  lint:
+  build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-      - run: npm ci
-      - run: npm --prefix frontend ci
-      - run: npm --prefix functions ci
-      - run: npm run lint
+          cache: 'pnpm'
 
-  frontend-unit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm --prefix frontend ci
-      - run: npm --prefix frontend run build
-      - run: npm --prefix frontend run test:coverage -- --run
-      - name: Upload frontend coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-coverage
-          path: frontend/coverage
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
 
-  functions-unit:
-    if: env.CI_LIGHT != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm --prefix functions ci
-      - run: npm --prefix functions run build
-      - name: Install Firebase CLI
-        run: npm i -g firebase-tools
-      - name: Run functions tests with coverage (emulators)
-        env:
-          FIRESTORE_EMULATOR_HOST: localhost:8085
-          FIREBASE_AUTH_EMULATOR_HOST: localhost:9099
-        run: |
-          npm --prefix functions run test:coverage
-      - name: Upload functions coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: functions-coverage
-          path: functions/coverage
+      - name: Typecheck
+        run: pnpm typecheck
 
-  rules:
-    if: env.CI_LIGHT != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm ci
-      - name: Install Firebase CLI
-        run: npm i -g firebase-tools
-      - name: Run rules tests
-        env:
-          FIRESTORE_EMULATOR_HOST: localhost:8085
-        run: npm test
+      - name: Lint
+        run: pnpm lint
 
+      - name: Unit tests (Vitest)
+        run: pnpm test:ci
   e2e:
-    if: env.CI_LIGHT != 'true'
     runs-on: ubuntu-latest
+    needs: build-test
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
       - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm ci
-      - run: npm --prefix frontend ci
-      - run: npm --prefix functions ci
-      - run: npm --prefix frontend run build
-      - name: Install Firebase CLI
-        run: npm i -g firebase-tools
-      - name: Run E2E with emulators + hosting
-        env:
-          FIRESTORE_EMULATOR_HOST: localhost:8085
-          FB_PROJECT_ID: demo-interdomestik
-        run: |
-          firebase emulators:exec --only functions,firestore,auth,hosting "npm run cypress:run"
+        with: { node-version: 20, cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter frontend exec npx playwright install --with-deps
+      - run: pnpm --filter frontend e2e
+  hygiene:
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - name: Dependency Check
+        run: pnpm --filter frontend depcheck
+      - name: Knip
+        run: pnpm --filter frontend knip

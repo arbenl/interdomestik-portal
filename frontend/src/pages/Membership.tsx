@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../context/auth';
+import { useAuth } from '@/hooks/useAuth';
 import { useMembershipHistory } from '../hooks/useMembershipHistory';
 import type { Membership } from '@/types';
 

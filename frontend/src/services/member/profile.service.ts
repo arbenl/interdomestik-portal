@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { firestore } from '../../firebase';
+import { firestore } from '@/lib/firebase';
 import type { Profile } from '@/types';
 
 export async function getProfile(uid: string): Promise<Profile | null> {

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Organization } from '@/types';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/firebase';
+import { functions } from '@/lib/firebase';
 
 const listOrganizations = httpsCallable<void, { items: Organization[] }>(functions, 'listOrganizations');
 const createOrganization = httpsCallable<{ name: string; billingEmail?: string; seats?: number }, { ok: boolean; id: string }>(functions, 'createOrganization');

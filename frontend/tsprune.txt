@@ -1,0 +1,44 @@
+vite.config.ts:7 - default
+vitest.config.ts:5 - default
+src/test-utils.ts:4 - createTestQueryClient
+src/test-utils.ts:8 - userEvent
+src/components/DiagCss.tsx:3 - default
+src/components/icons.tsx:1 - IconCard
+src/components/icons.tsx:10 - IconSparkles
+src/components/icons.tsx:19 - IconUsers
+src/components/icons.tsx:30 - IconCalendar
+src/components/icons.tsx:39 - IconCreditCard
+src/config/env.ts:30 - config (used in module)
+src/constants/regions.ts:11 - Region
+src/context/AuthProvider.tsx:35 - AuthProvider (used in module)
+src/context/AuthProvider.tsx:90 - default
+src/hooks/useAuditLogs.ts:6 - useAuditLogs
+src/hooks/useDirectory.ts:6 - DirectoryItem
+src/hooks/useMemberSearch.ts:10 - useMemberSearch
+src/lib/converters.ts:6 - maybeWithConverter
+src/lib/converters.ts:31 - profileConverter
+src/lib/converters.ts:40 - membershipConverter
+src/lib/converters.ts:49 - invoiceConverter
+src/lib/converters.ts:85 - orgConverter
+src/lib/converters.ts:94 - couponConverter
+src/services/functionsClient.ts:5 - callFn
+src/utils/download.ts:1 - downloadBlob (used in module)
+src/utils/download.ts:12 - downloadCSV
+src/validation/profile.ts:4 - regionEnum (used in module)
+src/validation/profile.ts:13 - ProfileInputType
+src/components/boundaries/PanelBoundary.tsx:3 - PanelBoundary
+src/components/dev/TailwindProbe.tsx:6 - default
+src/components/dev/TailwindVerifier.tsx:5 - TailwindVerifier
+src/components/portal/ActivityFeed.tsx:3 - default
+src/components/portal/BentoGrid.tsx:3 - BentoGrid
+src/components/portal/BentoGrid.tsx:11 - BentoCard
+src/components/ui/index.ts:1 - Button
+src/components/ui/index.ts:2 - ButtonProps
+src/components/ui/use-toast.ts:3 - useToast
+src/features/admin/CouponPanel.tsx:6 - CouponPanel
+src/features/admin/EmulatorPanel.tsx:4 - EmulatorPanel
+src/features/admin/MetricsPanel.tsx:27 - MetricsPanel
+src/features/admin/OrgPanel.tsx:6 - OrgPanel
+src/features/admin/RoleManagerPanel.tsx:6 - RoleManagerPanel
+src/features/portal/PortalLayout.tsx:4 - PortalLayout
+src/features/portal/profile/ProfilePanel.tsx:7 - ProfilePanel

@@ -1,9 +1,11 @@
+
+
 import { describe, it, expect, vi, type Mock } from 'vitest';
 import { renderWithProviders, screen, waitFor } from '@/test-utils';
 import MemberPortal from './MemberPortal';
-import { useAuth } from '@/context/auth';
+import { useAuth } from '@/hooks/useAuth';
 
-vi.mock('@/context/auth');
+vi.mock('@/context/AuthProvider');
 
 describe('MemberPortal', () => {
   it('asks unauthenticated users to sign in', () => {

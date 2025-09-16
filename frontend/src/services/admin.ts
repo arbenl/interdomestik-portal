@@ -1,5 +1,5 @@
 import { collection, getDocs, query, where, limit, orderBy, startAfter } from 'firebase/firestore';
-import { firestore } from '../firebase';
+import { firestore } from '@/lib/firebase';
 import type { Profile } from '@/types';
 
 export const getUsers = async ({ allowedRegions, region, status, expiringDays, pageParam, limitNum = 25 }: { allowedRegions: string[], region: string, status: string, expiringDays: number | null, pageParam: unknown, limitNum: number }): Promise<{ users: Profile[], nextPage: unknown }> => {

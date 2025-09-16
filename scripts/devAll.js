@@ -5,6 +5,10 @@
   stopping one stops the other.
 */
 const { spawn } = require('child_process');
+const dotenv = require('dotenv');
+const path = require('path');
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 function run(cmd, args, opts = {}) {
   const p = spawn(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32', ...opts });
@@ -38,4 +42,3 @@ function shutdown() {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 process.on('exit', shutdown);
-

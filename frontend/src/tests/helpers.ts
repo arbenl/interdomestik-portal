@@ -1,8 +1,11 @@
-import { QueryClient, type QueryClientConfig } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 
-export function createTestQueryClient(cfg?: QueryClientConfig) {
+export function createTestQueryClient() {
   return new QueryClient({
-    defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
-    ...cfg,
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
   });
 }

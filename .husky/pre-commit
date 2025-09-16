@@ -3,3 +3,4 @@
 # Husky v10: no sourcing of _/husky.sh
 # Limit lint-staged config lookup to root package.json to avoid node_modules
 npx lint-staged --config package.json
+pnpm -F frontend typecheck

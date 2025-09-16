@@ -26,7 +26,7 @@ describe('useOfflineCard', () => {
 
   it('opts in and caches token without PII; near expiry triggers prompt', () => {
     const soonExpToken = makeToken(3 * 24 * 3600); // 3 days
-    const { result, rerender } = renderHookWithProviders<ReturnType<typeof useOfflineCard>, { live: string | null }>((props) => useOfflineCard(props.live), {
+    const { result, rerender } = renderHookWithProviders<ReturnType<typeof useOfflineCard>, { live: string | null }>((props: { live: string | null }) => useOfflineCard(props.live), {
       initialProps: { live: null },
     });
     // Initially disabled, no token
@@ -47,7 +47,7 @@ describe('useOfflineCard', () => {
 
   it('falls back to cached token when live is missing', () => {
     const validToken = makeToken(30 * 24 * 3600);
-    const { result, rerender } = renderHookWithProviders<ReturnType<typeof useOfflineCard>, { live: string | null }>((props) => useOfflineCard(props.live), {
+    const { result, rerender } = renderHookWithProviders<ReturnType<typeof useOfflineCard>, { live: string | null }>((props: { live: string | null }) => useOfflineCard(props.live), {
       initialProps: { live: null },
     });
     act(() => { result.current.setEnabled(true); });

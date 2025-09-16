@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import Layout from '@/components/Layout';
 import RoleProtectedRoute from '@/components/RoleProtectedRoute';
+import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
 const Home = lazy(() => import('@/pages/Home'));
 const MemberPortal = lazy(() => import('@/pages/MemberPortal'));
@@ -13,6 +14,7 @@ const Admin = lazy(() => import('@/pages/Admin'));
 const Billing = lazy(() => import('@/pages/Billing'));
 const Membership = lazy(() => import('@/pages/Membership'));
 const Verify = lazy(() => import('@/pages/Verify'));
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
 
 export default function App() {
   return (
@@ -23,6 +25,14 @@ export default function App() {
           <Route path="signin" element={<SignIn />} />
           <Route path="signup" element={<SignUp />} />
           <Route path="verify" element={<Verify />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="portal"
             element={

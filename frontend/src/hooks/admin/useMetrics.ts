@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { doc, getDoc } from 'firebase/firestore';
-import { firestore } from '@/firebase';
+import { firestore } from '@/lib/firebase';
 
 export function useMetrics(dateKey: string) {
   return useQuery({

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, limit, query, orderBy, where } from 'firebase/firestore';
-import { firestore } from '@/firebase';
+import { firestore } from '@/lib/firebase';
 import { reportConverter } from '@/lib/converters';
 
 export function useReports(count: number = 6) {

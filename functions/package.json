@@ -4,14 +4,17 @@
   "engines": {
     "node": "20"
   },
+  "type": "module",
   "scripts": {
     "build": "tsc -p .",
-    "serve": "npm --prefix ../frontend run build && npm run build && firebase emulators:start --only functions,firestore,hosting,auth --project demo-interdomestik",
+    "serve": "firebase emulators:start --only functions,firestore,hosting,auth --project demo-interdomestik --import=./seeds",
+    "seed": "ts-node ../scripts/seeds/emulatorSeed.ts",
     "deploy": "npm run build && firebase deploy --only functions",
     "test": "firebase emulators:exec --only firestore,auth \"mocha --timeout 10000 --require ts-node/register test/**/*.test.ts\"",
     "test:coverage": "firebase emulators:exec --only firestore,auth \"c8 --check-coverage --branches=75 --functions=75 --lines=75 --statements=75 -r text -r lcov mocha --timeout 10000 --require ts-node/register test/**/*.test.ts\"",
     "lint": "eslint src --ext .ts",
-    "typecheck": "tsc -p . --noEmit"
+    "typecheck": "tsc -p . --noEmit",
+    "clean": "kill-port 9099 8080 5001 5000 4400 4500 && rm -f firebase-debug.log"
   },
   "dependencies": {
     "date-fns": "^3.6.0",

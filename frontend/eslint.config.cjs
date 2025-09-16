@@ -8,6 +8,9 @@ module.exports = [
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    ignores: ["dist/**", "eslint.config.cjs", "scripts/**"],
+  },
+  {
     languageOptions: {
       globals: {
         ...globals.browser,

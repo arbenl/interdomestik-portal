@@ -1,11 +1,11 @@
 import { renderWithProviders, screen, waitFor } from '@/test-utils';
-import { vi, type Mock } from 'vitest';
+import { vi, type Mock, describe, it, expect } from 'vitest';
 import Billing from '../Billing';
-import { useAuth } from '@/context/auth';
+import { useAuth } from '@/hooks/useAuth';
 import { useMemberProfile } from '@/hooks/useMemberProfile';
 import { useInvoices } from '@/hooks/useInvoices';
 
-vi.mock('@/context/auth');
+vi.mock('@/context/AuthProvider');
 vi.mock('@/hooks/useMemberProfile');
 vi.mock('@/hooks/useInvoices');
 

@@ -1,10 +1,12 @@
+
+
 import { describe, it, expect, vi } from 'vitest';
 import { renderWithProviders, screen, fireEvent } from '@/test-utils';
 import Navbar from './Navbar';
-import { useAuth } from '../context/auth';
+import { useAuth } from '@/hooks/useAuth';
 import type { User } from 'firebase/auth';
 
-vi.mock('../context/auth');
+vi.mock('../context/AuthProvider');
 
 describe('Navbar', () => {
   it('renders links and toggles user menu', () => {
@@ -14,6 +16,9 @@ describe('Navbar', () => {
       isAgent: false,
       allowedRegions: [],
       loading: false,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
     });
 
     renderWithProviders(<Navbar />);

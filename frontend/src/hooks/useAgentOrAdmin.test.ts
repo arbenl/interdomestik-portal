@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, type Mock } from 'vitest';
 import { renderHookWithProviders, waitFor } from '@/test-utils';
 import useAgentOrAdmin from './useAgentOrAdmin';
-import { useAuth } from '../context/auth';
+import { useAuth } from '@/hooks/useAuth';
 
-vi.mock('../context/auth');
+vi.mock('../context/AuthProvider');
 
 describe('useAgentOrAdmin', () => {
   it('maps claims to flags and regions', async () => {

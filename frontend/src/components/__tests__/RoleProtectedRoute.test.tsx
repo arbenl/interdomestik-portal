@@ -1,43 +1,50 @@
+
 import { describe, it, expect, vi } from 'vitest';
 import { renderWithProviders, screen } from '@/test-utils';
-import RoleProtectedRoute from '@/components/RoleProtectedRoute';
-import { useAuth } from '@/context/auth';
-import { type User } from 'firebase/auth';
+import { useAuth } from '@/hooks/useAuth';
+import RoleProtectedRoute from '../RoleProtectedRoute';
+import { makeUser } from '@/tests/factories/user';
 
-vi.mock('@/context/auth');
+vi.mock('@/context/AuthProvider');
 
 describe('RoleProtectedRoute', () => {
-  it('renders children when user has the required role', () => {
+  it('renders children when user has an allowed role', () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { uid: 'admin-uid' } as User,
+      user: makeUser(),
       isAdmin: true,
       isAgent: false,
       allowedRegions: [],
       loading: false,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
     });
 
     renderWithProviders(
       <RoleProtectedRoute roles={['admin']}>
         <div>Protected Content</div>
-      </RoleProtectedRoute>,
+      </RoleProtectedRoute>
     );
 
     expect(screen.getByText('Protected Content')).toBeInTheDocument();
   });
 
-  it('redirects when user does not have the required role', () => {
+  it('redirects to /signin when user is not authenticated', () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { uid: 'member-uid' } as User,
+      user: null,
       isAdmin: false,
       isAgent: false,
       allowedRegions: [],
       loading: false,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
     });
 
     renderWithProviders(
       <RoleProtectedRoute roles={['admin']}>
         <div>Protected Content</div>
-      </RoleProtectedRoute>,
+      </RoleProtectedRoute>
     );
 
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();

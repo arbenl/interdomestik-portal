@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, type Mock } from 'vitest';
+import { describe, it, expect, vi, type Mock, beforeEach } from 'vitest';
 import { renderWithProviders, screen, within, fireEvent } from '@/test-utils';
 import Admin from '../Admin';
-import { useAuth } from '@/context/auth';
+import { useAuth } from '@/hooks/useAuth';
 
-vi.mock('@/context/auth');
+vi.mock('@/context/AuthProvider');
 
 describe('Admin Card Keys panel', () => {
   beforeEach(() => {

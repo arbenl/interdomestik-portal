@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useAuth } from '@/context/auth';
+import { useAuth } from '@/hooks/useAuth';
 import { useMemberProfile } from '@/hooks/useMemberProfile';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useToast } from '@/components/ui/useToast';
 import { Button } from '@/components/ui';
 import PaymentElementBox from '@/components/payments/PaymentElementBox';
-import { functions } from '@/firebase';
+import { functions } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import type { Invoice } from '@/types';
 
@@ -101,20 +101,6 @@ export default function Billing() {
             <div className="text-sm text-gray-500">Renewal date</div>
             <div className="font-medium">{expiry}</div>
           </div>
-        </div>
-        <div className="mt-3 flex items-center gap-3">
-          <label className="inline-flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={!!profile?.autoRenew} onChange={(e)=>{ void (async ()=>{
-              try {
-                const fn = httpsCallable<{ autoRenew: boolean }, { ok: boolean }>(functions, 'setAutoRenew');
-                await fn({ autoRenew: e.target.checked });
-                push({ type: 'success', message: e.target.checked ? 'Auto-renew enabled' : 'Auto-renew disabled' });
-              } catch {
-                push({ type: 'error', message: 'Failed to update auto-renew' });
-              }
-            })(); }} />
-            Enable auto-renew (beta)
-          </label>
         </div>
         <div className="mt-3 text-sm text-gray-500">For local testing, use the button below to simulate a paid invoice via the emulator-friendly webhook.</div>
         <div className="mt-3 flex items-center gap-2">

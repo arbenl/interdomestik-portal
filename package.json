@@ -5,19 +5,20 @@
   "main": "index.js",
   "scripts": {
     "dev": "pnpm --filter frontend dev",
-    "dev:all": "firebase emulators:start --import=./firebase-export --export-on-exit",
     "dev:emu": "firebase emulators:start --project demo-interdomestik",
     "seed:raw": "tsx --tsconfig scripts/tsconfig.scripts.json scripts/emulator/seed.ts",
     "dev:seed": "tsx --tsconfig scripts/tsconfig.scripts.json scripts/emulator/run-seed.ts",
     "emu:seed": "firebase emulators:exec --project demo-interdomestik \"pnpm seed:raw\"",
     "dev:emu:seed": "concurrently \"pnpm dev:emu\" \"pnpm dev:seed\"",
     "dev:stop": "kill-port 9099 8080 5001 5000 4400 4500",
-    "dev:up": "firebase emulators:start --import=.firebase-data",
     "build": "pnpm --filter frontend build",
     "lint": "pnpm --filter frontend lint && pnpm --filter functions lint",
     "test": "pnpm --filter frontend test && pnpm --filter functions test",
-    "test:rules": "vitest run --config ./vite.config.ts",
-    "ci:light": "pnpm lint && pnpm test:rules"
+    "typecheck": "pnpm --filter frontend typecheck && pnpm --filter functions typecheck",
+    "test:ci": "pnpm --filter frontend test:run && pnpm --filter functions test",
+    "test:rules": "vitest -c vitest.config.rules.ts",
+    "ci:light": "pnpm lint && pnpm test:rules",
+    "check": "node scripts/check-errors.js"
   },
   "keywords": [
     "member-portal",
@@ -37,7 +38,7 @@
     "@types/node": "^24.3.3",
     "chai": "^6.0.1",
     "concurrently": "^9.2.1",
-    "cypress": "^15.2.0",
+    "dotenv": "^17.2.2",
     "firebase-tools": "^14.16.0",
     "husky": "^9.1.7",
     "kill-port": "^2.0.1",
@@ -46,6 +47,7 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
+    "vitest": "^1.6.0",
     "zod": "^4.1.8"
   },
   "lint-staged": {

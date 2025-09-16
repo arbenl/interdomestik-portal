@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { httpsCallable } from 'firebase/functions';
-import { functions, auth } from '@/firebase';
+import { functions, auth } from '@/lib/firebase';
 
 type Role = 'member' | 'agent' | 'admin';
 

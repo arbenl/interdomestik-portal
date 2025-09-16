@@ -1,4 +1,4 @@
-import { useAuth } from '@/context/auth';
+import { useAuth } from '@/hooks/useAuth';
 import { useMembershipHistory } from '@/hooks/useMembershipHistory';
 import DigitalMembershipCard from '@/components/DigitalMembershipCard';
 import { useCardToken } from '@/hooks/useCardToken';

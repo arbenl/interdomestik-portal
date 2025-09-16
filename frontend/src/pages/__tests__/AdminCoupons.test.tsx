@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, type Mock } from 'vitest';
 import { renderWithProviders, screen, fireEvent, within } from '@/test-utils';
 import Admin from '../Admin';
-import { useAuth } from '@/context/auth';
+import { useAuth } from '@/hooks/useAuth';
 
-vi.mock('@/context/auth');
+vi.mock('@/context/AuthProvider');
 
 describe('Admin Coupons panel', () => {
   it('renders and saves coupon', async () => {

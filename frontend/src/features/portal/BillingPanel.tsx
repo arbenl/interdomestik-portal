@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useInvoices } from '@/hooks/useInvoices';
-import { useAuth } from '@/context/auth';
+import { useAuth } from '@/hooks/useAuth';
 import type { Invoice } from '@/types';
 
 export function BillingPanel() {

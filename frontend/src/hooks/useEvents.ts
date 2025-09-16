@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, limit, query, orderBy } from 'firebase/firestore';
-import { firestore } from '@/firebase';
+import { firestore } from '@/lib/firebase';
 import { eventConverter } from '@/lib/converters';
 
 export function useEvents(max = 5) {

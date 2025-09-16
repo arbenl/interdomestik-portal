@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../firebase';
-
-const startMembership = httpsCallable(functions, 'startMembership');
+import { callFn } from '../services/functionsClient';
 
 interface ActivateMembershipModalProps {
   user: { id: string; email?: string };
@@ -24,7 +21,7 @@ const ActivateMembershipModal: React.FC<ActivateMembershipModalProps> = ({ user,
     setError(null);
     setIsSubmitting(true);
     try {
-      await startMembership({ uid: user.id, year, price, currency, paymentMethod, externalRef: externalRef || null });
+      await callFn('startMembership', { uid: user.id, year, price, currency, paymentMethod, externalRef: externalRef || null });
       onSuccess(`Membership activated for ${user.email || user.id}`);
       onClose();
     } catch (err) {

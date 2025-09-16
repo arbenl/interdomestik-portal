@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Coupon } from '@/types';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/firebase';
+import { functions } from '@/lib/firebase';
 
 const listCoupons = httpsCallable<void, { items: Coupon[] }>(functions, 'listCoupons');
 const createCoupon = httpsCallable<{ code: string; percentOff?: number; amountOff?: number; active?: boolean }, { ok: boolean }>(functions, 'createCoupon');

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useAuth } from '@/context/auth';
+import { useAuth } from '@/hooks/useAuth';
 import { useUsers } from '@/hooks/useUsers';
 import { doc, updateDoc } from 'firebase/firestore';
-import { firestore } from '@/firebase';
+import { firestore } from '@/lib/firebase';
 import AgentRegistrationCard from '@/components/AgentRegistrationCard';
 import type { Profile } from '@/types';
 

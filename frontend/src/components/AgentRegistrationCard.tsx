@@ -1,9 +1,6 @@
 import { useState } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../firebase';
+import { callFn } from '../services/functionsClient';
 import RegionSelect from './RegionSelect';
-
-const agentCreateMember = httpsCallable(functions, 'agentCreateMember');
 
 type AgentRegistrationProps = {
   allowedRegions: string[];
@@ -26,7 +23,7 @@ export default function AgentRegistrationCard({ allowedRegions, onSuccess, onErr
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await agentCreateMember({ email, name, region, phone, orgId });
+      await callFn('agentCreateMember', { email, name, region, phone, orgId });
       onSuccess('Member registered successfully');
       setEmail(''); setName(''); setRegion(''); setPhone(''); setOrgId('');
     } catch (err) {

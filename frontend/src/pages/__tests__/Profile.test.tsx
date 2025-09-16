@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, type Mock } from 'vitest';
 import { renderWithProviders, screen, fireEvent, waitFor } from '@/test-utils';
 import Profile from '../Profile';
-import { useAuth } from '@/context/auth';
+import { useAuth } from '@/hooks/useAuth';
 import { useMemberProfile } from '@/hooks/useMemberProfile';
 
-vi.mock('@/context/auth');
+vi.mock('@/context/AuthProvider');
 vi.mock('@/hooks/useMemberProfile');
 
 describe('Profile page', () => {
