@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderWithProviders, screen } from '@/test-utils';
-import { Button } from './button';
+import { Button } from './Button';
 
 describe('Button', () => {
   it('renders primary variant by default', () => {
@@ -13,4 +13,3 @@ describe('Button', () => {
     expect(screen.getByRole('button')).toHaveClass('bg-transparent');
   });
 });
-

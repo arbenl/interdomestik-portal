@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMemberSearch } from '@/hooks/useMemberSearch';
 import Input from '@/components/ui/Input';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 
 export function MemberSearchPanel() {
   const [searchTerm, setSearchTerm] = useState('');
