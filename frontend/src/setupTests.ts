@@ -5,6 +5,7 @@ type User = { uid: string; email: string | null } | null;
 
 declare global {
   var __authEmit: (u: User) => void;
+  var __authReset: () => void;
   var __fsSeed: (path: string, rows: any[]) => void;
   var __fsSeedDefault: (rows: any[]) => void;
   var __fsThrow: (path: string, err: Error) => void;
@@ -23,10 +24,10 @@ const add = (cb: (u: User) => void) => {
     if (i >= 0) listeners.splice(i, 1);
   };
 };
-global.__authEmit = (u: User) => {
+globalThis.__authEmit = (u: User) => {
   for (const cb of [...listeners]) cb(u);
 };
-global.__authReset = () => {
+globalThis.__authReset = () => {
   listeners.splice(0, listeners.length);
 };
 
