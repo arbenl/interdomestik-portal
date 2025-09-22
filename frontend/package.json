@@ -15,7 +15,7 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.13",
     "autoprefixer": "^10.4.21",
-    "firebase": "^12.2.1",
+    "firebase": "^12.3.0",
     "postcss": "^8.5.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
