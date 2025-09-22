@@ -41,11 +41,20 @@ This is a PNPM monorepo with two primary packages:
 -   `frontend/`: The Vite + React + TypeScript single-page application. This is the main user-facing portal.
 -   `functions/`: Firebase Cloud Functions that provide the backend logic.
 
+## Branches & Cleanup Workflow
+
+- Stable baseline lives on `main` with green CI.
+- New development and repository cleanup start from `next`.
+  - Create once: `git checkout -b next && git push -u origin next`
+  - Work in small PRs targeting `next`; keep CI green.
+  - See cleanup plan: `docs/cleanup/ROADMAP.md`.
+  - When ready, open a PR merging `next` back into `main`.
+
 ## Documentation
 
 For detailed information on architecture, coding standards, and more, please refer to the `/docs` directory.
 
--   [Architecture Overview](./docs/architecture.md)
--   [Authentication & Roles](./docs/auth-and-roles.md)
--   [Emulator Workflow & Seeding](./docs/emulators-and-seeding.md)
--   [Coding Standards](./docs/coding-standards.md)
+-   [Architecture & Decisions](./docs/adr.md)
+-   [Authentication & Roles](./docs/AUTH.md)
+-   [Project Guide (Emulators & Seeding)](./docs/PROJECT_GUIDE.md)
+-   [Coding Standards](./docs/STYLEGUIDE.md)
