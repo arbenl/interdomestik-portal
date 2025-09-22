@@ -7,9 +7,9 @@ This document outlines the testing strategy for the frontend application.
 -   **Unit & Integration Tests**: [Vitest](https://vitest.dev/) is used as the test runner, assertion library, and mocking framework.
 -   **Component Tests**: [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) is used for rendering components and interacting with them in a user-centric way.
 
-## Smoke Tests
+## E2E Smoke Tests
 
-A basic smoke test suite (`cypress/e2e/smoke.cy.ts`) exists to verify critical user flows:
+End-to-end smoke tests (Playwright) live under `frontend/e2e` and verify critical user flows:
 -   Signing in as an admin and a member.
 -   Navigating to the `/portal` and `/admin` pages.
 -   Asserting that basic content renders without redirect loops.

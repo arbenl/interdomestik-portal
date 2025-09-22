@@ -1,40 +1,61 @@
-// rules_version = '2';
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
     function signedIn() { return request.auth != null; }
-    function userRole() {
-      return signedIn()
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
-        : null;
-    }
-    function isAdmin() { return userRole() == 'admin'; }
-    function isAgent() { return userRole() == 'agent'; }
-    function isOwner(ownerUid) { return signedIn() && ownerUid == request.auth.uid; }
+    function isAdmin() { return signedIn() && request.auth.token.role == 'admin'; }
+    function isAgent() { return signedIn() && request.auth.token.role == 'agent'; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
 
-    match /users/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isAdmin();
-      allow update: if isAdmin()
-        || (request.auth.uid == uid && request.resource.data.role == resource.data.role);
-      allow delete: if isAdmin();
-    }
+    // Members collection: member profiles
+    match /members/{uid} {
+      // Read: owner, admin, agent
+      allow read: if isOwner(uid) || isAdmin() || isAgent();
+      // Writes via backend only (callables/Admin SDK). Disallow client writes by default.
+      allow create, update, delete: if false;
 
-    match /memberships/{docId} {
-      allow create: if signedIn();
-      allow read:   if signedIn() && (isOwner(resource.data.ownerUid) || isAdmin() || isAgent());
-      allow update: if signedIn() && (
-          (isOwner(resource.data.ownerUid) && request.resource.data.ownerUid == resource.data.ownerUid)
-          || isAdmin() || isAgent()
-        );
-      allow delete: if isAdmin();
+      // Nested memberships per year
+      match /memberships/{year} {
+        // Read: owner, admin, agent
+        allow read: if isOwner(uid) || isAdmin() || isAgent();
+        // Client writes not allowed; performed by backend
+        allow create, update, delete: if false;
+      }
     }
 
-    match /claims/{docId} {
-      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow read:   if signedIn() && (isOwner(resource.data.ownerUid) || isAdmin() || isAgent());
-      allow update: if signedIn() && (isOwner(resource.data.ownerUid) || isAdmin() || isAgent());
-      allow delete: if isAdmin();
+    // Billing: invoices per user
+    match /billing/{uid}/invoices/{invoiceId} {
+      // Owner and admins can read billing documents
+      allow read: if isOwner(uid) || isAdmin();
+      // Writes performed by backend only (webhooks/Admin SDK)
+      allow create, update, delete: if false;
+    }
+
+    // Events visible to authenticated users; admin manages
+    match /events/{eventId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Metrics and reports: admin-only reads
+    match /metrics/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /reports/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Internal/administrative collections: deny client access
+    match /coupons/{id} { allow read, write: if false; }
+    match /orgs/{id} { allow read, write: if false; }
+    match /registry/{kind}/{key} { allow read, write: if false; }
+    match /audit_logs/{id} { allow read, write: if false; }
+    match /exports/{id} { allow read, write: if false; }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

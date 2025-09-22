@@ -7,6 +7,6 @@ export const ProtectedRoute: React.FC<React.PropsWithChildren> = ({ children }) 
   const location = useLocation();
 
   if (loading) return <div>Loading…</div>;
-  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (!user) return <Navigate to="/signin" replace state={{ from: location }} />;
   return <>{children}</>;
 };

@@ -11,11 +11,14 @@ The project employs a two-pronged CSP strategy:
 
 ### Production CSP Directives
 
-The production CSP is configured in `firebase.json` and includes:
--   `default-src 'self'`: Restricts all content to the same origin.
--   `style-src 'self' https://fonts.googleapis.com`: Allows stylesheets from the origin and Google Fonts.
--   `font-src 'self' https://fonts.gstatic.com`: Allows fonts from the origin and Google Fonts.
--   `connect-src 'self' https://firestore.googleapis.com wss://firestore.googleapis.com https://www.googleapis.com https://securetoken.googleapis.com`: Allows connections to the application's origin and necessary Google Cloud services for Firebase Auth and Firestore.
+The production CSP is configured in `firebase.json` and includes (summary):
+- `default-src 'self'`
+- `style-src-elem 'self' https://fonts.googleapis.com` and `style-src-attr 'unsafe-inline'`
+- `font-src 'self' https://fonts.gstatic.com`
+- `script-src 'self' https://js.stripe.com` (Stripe Payment Element)
+- `frame-src https://js.stripe.com https://hooks.stripe.com` (Stripe iframes)
+- `img-src 'self' data: blob: https://q.stripe.com` (Stripe beacon)
+- `connect-src 'self' https://firestore.googleapis.com wss://firestore.googleapis.com https://www.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebasestorage.googleapis.com https://*.cloudfunctions.net` (Firebase Auth/Firestore/Functions/Storage)
 
 ## Secrets Management
 

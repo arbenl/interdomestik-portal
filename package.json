@@ -17,7 +17,7 @@
     "typecheck": "pnpm --filter frontend typecheck && pnpm --filter functions typecheck",
     "test:ci": "pnpm --filter frontend test:run && pnpm --filter functions test",
     "test:rules": "vitest -c vitest.config.rules.ts",
-    "ci:light": "pnpm lint && pnpm test:rules",
+    
     "check": "node scripts/check-errors.js",
     "verify:frontend": "pnpm --filter frontend typecheck && pnpm --filter frontend lint --no-fix && pnpm --filter frontend build && pnpm --filter frontend test:ci",
     "specify": "uvx --from git+https://github.com/github/spec-kit.git specify"

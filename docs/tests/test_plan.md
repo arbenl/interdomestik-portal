@@ -134,9 +134,9 @@ Expand the existing security rules tests to cover every collection and operation
     -   Test that an admin can read any user's invoices.
     -   Test that no one can write to the invoices collection from the client-side.
 
-## 5. End-to-End (E2E) Tests (`cypress/e2e/`)
+## 5. End-to-End (E2E) Tests (`frontend/e2e`)
 
-Expand the Cypress tests to cover complete user journeys.
+Use Playwright tests to cover complete user journeys.
 
 -   **Admin Journey**:
     1.  Sign in as an admin.

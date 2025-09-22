@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/useToast';
 import { Button } from '@/components/ui';
-import { callFn } from '@/services/functionsClient';
+import callFn from '@/services/functionsClient';
 
 type StripeElements = { create: (type: 'payment') => { mount: (el: HTMLElement) => void } };
 type StripeJS = {
@@ -52,7 +52,7 @@ export default function PaymentElementBox({ amountCents, currency }: Props) {
     if (clientSecret) return clientSecret;
     setLoading(true); setError(null);
     try {
-      const res = await callFn<{ amount: number; currency: string; description: string; donateCents: number; couponCode?: string }, { clientSecret: string }>('createPaymentIntent', { amount: amountCents, currency, description: 'Membership renewal', donateCents: donation, couponCode: coupon || undefined });
+      const res = await callFn<{ clientSecret: string }, { amount: number; currency: string; description: string; donateCents: number; couponCode?: string }>('createPaymentIntent', { amount: amountCents, currency, description: 'Membership renewal', donateCents: donation, couponCode: coupon || undefined });
       const cs = res.clientSecret;
       if (!cs) throw new Error('No client secret returned');
       setClientSecret(cs);

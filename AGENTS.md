@@ -3,35 +3,34 @@
 See also: `docs/PROJECT_GUIDE.md` for detailed architecture and end-to-end context.
 
 ## Repository Map
-- `frontend/`: React + TypeScript (Vite, Tailwind). Source in `frontend/src`, tests in `frontend/src/**/*.test.ts*`, assets in `frontend/public`.
+- `frontend/`: React + TypeScript (Vite, Tailwind). Source in `frontend/src`, tests in `frontend/src/**/*.test.ts*`, assets in `frontend/public`. E2E in `frontend/e2e`, config at `frontend/playwright.config.ts`.
 - `functions/`: Firebase Cloud Functions (TypeScript). Source in `functions/src`, compiled to `functions/lib`, tests under `functions/test`.
-- `cypress/`: E2E specs and support; `cypress.config.ts` at root.
-- `test/`: Firestore security rules tests (Mocha).
+- `rules/`: Firestore security rules tests (Vitest).
 - Root config: `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `tsconfig.json`, `docs/`.
 - CI: GitHub Actions workflows are included (`ci.yml`, `ci-light.yml`, `firebase.yml`).
 
 ## Tooling & Versions
-- Package manager: `npm`
+- Package manager: `pnpm`
 - Node: Functions target Node 20 (use an LTS locally)
-- Firebase emulators (defaults): Hosting 5000, Functions 5001, Firestore 8085, Auth 9099
+- Firebase emulators (defaults): Hosting 5000, Functions 5001, Firestore 8080, Auth 9099
 
 ## Local Development
-- Start emulators: `cd functions && npm run serve`
-- Start frontend (Vite): `cd frontend && npm run dev`
-- Build frontend: `cd frontend && npm run build`
+- Start emulators: `pnpm dev:emu` (root)
+- Start frontend (Vite): `pnpm --filter frontend dev`
+- Build frontend: `pnpm --filter frontend build`
 - Seed demo data (emulator only):
   - `curl -X POST http://localhost:5001/demo-interdomestik/europe-west1/seedDatabase`
 
 Test accounts after seeding: `member1@example.com`, `member2@example.com`, `admin@example.com`, `agent1@example.com`, `agent2@example.com`, `agent3@example.com` (password for all: `password123`).
 
 ## Build, Test, Deploy
-- Frontend unit tests: `cd frontend && npm test`
-- Lint: `cd frontend && npm run lint`
-- Functions build: `cd functions && npm run build`
-- Functions tests (emulators): `cd functions && npm test`
-- Rules tests: `npm test` (root)
-- Cypress E2E: `npm run cypress:open` or `npm run cypress:run`
-- Deploy all: `npm run deploy` (root) — or per target via Firebase CLI
+- Frontend unit tests: `pnpm --filter frontend test`
+- Lint: `pnpm --filter frontend lint`
+- Functions build: `pnpm --filter functions build`
+- Functions tests (emulators): `pnpm --filter functions test`
+- Rules tests: `pnpm test:rules`
+- E2E (Playwright): `pnpm --filter frontend e2e`
+- Deploy all: `pnpm dlx firebase-tools deploy` — or per target via Firebase CLI
 
 ## Coding Standards
 - TypeScript strict mode across packages
@@ -67,16 +66,21 @@ Test accounts after seeding: `member1@example.com`, `member2@example.com`, `admi
 ## Testing Strategy
 - Unit (Vitest): hooks (`useMemberProfile`, `useMembershipHistory`, etc.) and pure components
 - Integration (Mocha): Cloud Functions against emulators (`stripeWebhook`, `verifyMembership`, core callables)
-- Rules (Mocha): reads/writes for `members`, `memberships`, `events`, `billing`
-- E2E (Cypress): sign in seeded user → portal cards render → billing adds a paid invoice via webhook
+- Rules (Vitest): reads/writes for `members`, `memberships`, `events`, `billing`
+- E2E (Playwright): sign in seeded user → portal cards render → billing adds a paid invoice via webhook
 
 ## PR & Commit Guidelines
 - Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, etc. (present tense)
 - PRs: describe changes, link issues, add screenshots for UI, and include emulator/testing steps
 - Required checks: frontend tests, functions tests, rules tests, and E2E for affected areas
 
+### Spec Kit CI
+- Feature branches should follow `NNN-short-name` and include a spec at `specs/NNN-short-name/spec.md`.
+- CI enforces that the spec file exists and contains no `[NEEDS CLARIFICATION]` markers.
+- Add the spec path to the PR body to help reviewers.
+
 ## Quick Reference
-- Project id (emulators): `demo-interdomestik` (override in Cypress with `FB_PROJECT_ID`)
+- Project id (emulators): `demo-interdomestik`
 - Webhook (emulator): `http://localhost:5001/demo-interdomestik/europe-west1/stripeWebhook` (or `/stripeWebhook` via Hosting emulator)
 
 ## Docs Conventions

@@ -4,12 +4,11 @@
   "engines": {
     "node": "20"
   },
-  "type": "module",
   "scripts": {
     "build": "tsc -p .",
-    "serve": "firebase emulators:start --only functions,firestore,hosting,auth --project demo-interdomestik --import=./seeds",
+    "serve": "firebase emulators:start --only functions,firestore,hosting,auth --project demo-interdomestik",
     "seed": "ts-node ../scripts/seeds/emulatorSeed.ts",
-    "deploy": "npm run build && firebase deploy --only functions",
+    "deploy": "pnpm run build && pnpm dlx firebase-tools deploy --only functions",
     "test": "firebase emulators:exec --only firestore,auth \"mocha --timeout 10000 --require ts-node/register test/**/*.test.ts\"",
     "test:coverage": "firebase emulators:exec --only firestore,auth \"c8 --check-coverage --branches=75 --functions=75 --lines=75 --statements=75 -r text -r lcov mocha --timeout 10000 --require ts-node/register test/**/*.test.ts\"",
     "lint": "eslint src --ext .ts",

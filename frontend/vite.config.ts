@@ -16,7 +16,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     visualizer({
-      open: true,
+      open: process.env.ANALYZE === 'true',
       gzipSize: true,
       brotliSize: true,
     }),

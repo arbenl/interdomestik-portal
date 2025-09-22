@@ -1,44 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useEvents } from './useEvents';
 import { renderHookWithProviders, waitFor } from '@/test-utils';
-import { setFirestoreSnapshotEmitter } from '@/tests/mocks/firestore.setup';
-import { QueryDocumentSnapshot } from 'firebase/firestore';
+
 
 describe('useEvents', () => {
-  const eventsKey = 'q:events';
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('returns events list', async () => {
     const mockEvents = [
-      { id: 'e1', data: () => ({ title: 'Welcome', startAt: { seconds: 1 }, location: 'PRISHTINA' }) },
-    ] as unknown as QueryDocumentSnapshot[];
-    setFirestoreSnapshotEmitter(eventsKey, (next) => {
-      next({ docs: mockEvents, size: mockEvents.length, empty: false });
-    });
+      { id: 'evt1', title: 'Spring Fair', startsAt: 1700000000000 },
+    ];
+    __setFunctionsResponse((_name: string, _payload: any) => mockEvents);
     const { result } = renderHookWithProviders(() => useEvents(5));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data).toEqual(mockEvents);
   });
 
   it('handles empty list', async () => {
-    setFirestoreSnapshotEmitter(eventsKey, (next) => {
-      next({ docs: [], size: 0, empty: true });
-    });
+    __setFunctionsResponse(() => []);
     const { result } = renderHookWithProviders(() => useEvents(5));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toEqual([]);
   });
 
   it('handles errors', async () => {
-    const err = new Error('boom');
-    setFirestoreSnapshotEmitter(eventsKey, (_next, error) => {
-      error(err);
-    });
+    __setFunctionsResponse(() => { throw new Error('boom'); });
     const { result } = renderHookWithProviders(() => useEvents(5));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.error).toBe(err);
+    expect(result.current.error).toBeTruthy();
   });
 });

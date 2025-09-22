@@ -1,8 +1,12 @@
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 
-export async function callFn<TInput = unknown, TOutput = unknown>(name: string, data?: TInput): Promise<TOutput> {
-  const callable = httpsCallable<TInput, TOutput>(functions, name);
-  const res = await callable(data as TInput);
-  return res.data as TOutput;
+export type FunctionsClient = (name: string, payload?: unknown) => Promise<unknown>;
+
+async function callFn<TRes, TReq>(name: string, payload: TReq): Promise<TRes> {
+  const callable = httpsCallable(functions, name);
+  const result = await callable(payload);
+  return result.data as TRes;
 }
+
+export default callFn;

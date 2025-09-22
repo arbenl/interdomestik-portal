@@ -32,7 +32,7 @@ Primary personas: Members, Agents, and Admins. Core capabilities include profile
   - Source: `functions/src`
   - Build: `functions/lib`
   - Tests: `functions/test`
-- `cypress/`: E2E tests and support; config in `cypress.config.ts`
+- E2E: Playwright tests live under `frontend/e2e`; config in `frontend/playwright.config.ts`
 - `test/`: Firestore security rules tests
 - Root configs: `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `tsconfig.json`, `docs/`
 
@@ -62,9 +62,13 @@ pnpm install
 ```
 2) Start emulators (Functions, Firestore, Hosting, Auth)
 ```
-pnpm run dev:all
+pnpm dev:emu
 ```
-3) (Optional) Seed demo data (emulators only)
+3) Start frontend (Vite)
+```
+pnpm --filter frontend dev
+```
+4) (Optional) Seed demo data (emulators only)
 ```
 curl -X POST http://localhost:5001/demo-interdomestik/europe-west1/seedDatabase
 ```
@@ -98,9 +102,9 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
 ## Testing
 - Unit (frontend): Vitest + jsdom — colocate as `*.test.ts(x)` near code.
 - Integration (functions): Mocha + Chai using emulators.
-- Rules: `@firebase/rules-unit-testing` under `test/`.
-- E2E: Cypress; baseUrl `http://localhost:5000` (Hosting emulator).
-- **New:** When testing components that use TanStack Query, wrap them in a `QueryClientProvider`.
+- Rules: Vitest + `@firebase/rules-unit-testing` in `rules/__tests__`.
+- E2E: Playwright (`pnpm --filter frontend e2e`); Playwright spawns the Vite dev server.
+- When testing components that use TanStack Query, wrap in `QueryClientProvider`.
 
 ## Functions Reference
 - `verifyMembership` (HTTPS): GET with `memberNo` → `{ valid, name, region }`

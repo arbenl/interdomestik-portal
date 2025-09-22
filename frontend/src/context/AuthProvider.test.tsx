@@ -1,25 +1,41 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
 import { AuthProvider } from './AuthProvider';
 import { useAuth } from '@/hooks/useAuth';
-import { Auth, User } from 'firebase/auth';
+import { makeUser } from '@/tests/factories/user';
 
-vi.mock('@/lib/firebase', () => ({ auth: {} })); // we don't hit real Firebase in unit tests
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: (_auth: Auth, cb: (user: User | null) => void) => { cb(null); return () => {}; },
-  signInWithEmailAndPassword: vi.fn().mockResolvedValue({}),
-  createUserWithEmailAndPassword: vi.fn().mockResolvedValue({}),
-  signOut: vi.fn().mockResolvedValue({})
-}));
+vi.mock('@/lib/firebase', () => ({ auth: {} }));
 
 const Probe = () => {
   const { user, loading } = useAuth();
-  return <div>{loading ? 'loading' : user ? 'user' : 'anon'}</div>;
+  if (loading) return <div>loading</div>;
+  if (!user) return <div>logged out</div>;
+  return <div>logged in as {user.email}</div>;
 };
 
 describe('AuthProvider', () => {
-  it('renders anon when no user', () => {
+  afterEach(() => {
+    global.__authReset();
+  });
+
+  it('shows logged out state', () => {
     render(<AuthProvider><Probe /></AuthProvider>);
-    expect(screen.getByText(/anon/i)).toBeInTheDocument();
+    expect(screen.getByText(/logged out/i)).toBeInTheDocument();
+  });
+
+  it('reacts to id token changes', async () => {
+    render(<AuthProvider><Probe /></AuthProvider>);
+    expect(screen.getByText(/logged out/i)).toBeInTheDocument();
+
+    await act(async () => {
+      global.__authEmit(makeUser({ email: 'test@example.com' }));
+    });
+
+    expect(screen.getByText(/logged in as test@example.com/i)).toBeInTheDocument();
+
+    await act(async () => {
+      global.__authEmit(null);
+    });
+    expect(screen.getByText(/logged out/i)).toBeInTheDocument();
   });
 });

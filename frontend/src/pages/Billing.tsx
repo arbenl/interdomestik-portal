@@ -33,7 +33,7 @@ export default function Billing() {
   const { data: invoices, isLoading, error, refetch } = useInvoices(user?.uid);
   const { push } = useToast();
   const [busy, setBusy] = useState(false);
-  const projectId = 'demo-interdomestik';
+  const projectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) || 'demo-interdomestik';
   const ENABLE_PAYMENTS_UI = String(import.meta.env.VITE_ENABLE_PAYMENTS_UI ?? 'true') === 'true';
 
   async function simulatePayment() {

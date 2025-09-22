@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { renderWithProviders, screen, within } from '@/test-utils';
+import { renderWithProviders, screen, within, fireEvent } from '@/test-utils';
 import Admin from '../Admin';
 import { useAuth } from '@/hooks/useAuth';
 
-vi.mock('@/context/AuthProvider');
+const seededExports = [
+  { id: 'exp1', type: 'members', status: 'running', startedAt: 1700000000000 },
+];
+
+__fsSeed('exports', seededExports);
+
+vi.mock('@/hooks/useAuth');
 
 describe('Admin Exports panel', () => {
   beforeEach(() => {
@@ -19,24 +25,25 @@ describe('Admin Exports panel', () => {
 
   it('renders exports list with actions and disables start when running', async () => {
     renderWithProviders(<Admin />);
-    const headers = await screen.findAllByText(/Exports/i);
-    expect(headers.length).toBeGreaterThan(0);
+    const panel = await screen.findByTestId('exports-panel');
+    expect(within(panel).getByText('exp1')).toBeInTheDocument();
+    expect(within(panel).getByRole('button', { name: /Start Members CSV Export/i })).toBeDisabled();
   });
 
   it('toggles Show more/Show less and resubscribes', async () => {
     renderWithProviders(<Admin />);
-    const headers = await screen.findAllByText(/Exports/i);
-    expect(headers.length).toBeGreaterThan(0);
-    const panel = headers[0].closest('div') as HTMLElement;
+    const panel = await screen.findByTestId('exports-panel');
     const toggleBtn = within(panel).getByRole('button', { name: /Show more/i });
-    expect(toggleBtn).toBeInTheDocument();
+    fireEvent.click(toggleBtn);
+    expect(within(panel).getByRole('button', { name: /Show less/i })).toBeInTheDocument();
   });
 
   it('starts export and shows success toast', async () => {
+    __fsSeed('exports', [{ id: 'exp1', type: 'members', status: 'done' }]);
     renderWithProviders(<Admin />);
-    const headers = await screen.findAllByText(/Exports/i);
-    const panel = headers[0].closest('div') as HTMLElement;
+    const panel = await screen.findByTestId('exports-panel');
     const startBtn = within(panel).getByRole('button', { name: /Start Members CSV Export/i });
-    expect(startBtn).toBeInTheDocument();
+    fireEvent.click(startBtn);
+    // You would also test for the toast message here if it were implemented
   });
 });

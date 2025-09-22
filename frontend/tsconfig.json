@@ -14,7 +14,8 @@
       "vite/client",
       "vitest/globals",
       "@testing-library/jest-dom"
-    ]
+    ],
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["src", "vite-env.d.ts"],
   "exclude": ["dist", "coverage", "_attic", "src/**/__legacy_tests__/**"]

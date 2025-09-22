@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
+import { useAuth } from '@/hooks/useAuth';
 
 export function useMetrics(dateKey: string) {
+  const { isAdmin } = useAuth();
   return useQuery({
     queryKey: ['metrics', dateKey],
     queryFn: async () => {
@@ -23,5 +25,6 @@ export function useMetrics(dateKey: string) {
         return { activations_total: 0, activations_by_region: {} };
       }
     },
+    enabled: isAdmin && !!dateKey,
   });
 }

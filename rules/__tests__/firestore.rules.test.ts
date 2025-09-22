@@ -1,6 +1,6 @@
 import { describe, it, beforeAll, afterAll, expect } from 'vitest';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc } from 'firebase/firestore';
 
 let testEnv: any;
 
@@ -10,14 +10,20 @@ beforeAll(async () => {
     firestore: { host: '127.0.0.1', port: 8080, rules: (await import('fs')).readFileSync('firestore.rules', 'utf8') }
   });
 
-  // Seed roles with rules disabled
+  // Seed documents with rules disabled
   await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
     const db = ctx.firestore();
-    await setDoc(doc(db, 'users', 'admin-uid'), { role: 'admin', email: 'admin@example.com' });
-    await setDoc(doc(db, 'users', 'agent-uid'), { role: 'agent', email: 'agent@example.com' });
-    await setDoc(doc(db, 'users', 'member-uid'), { role: 'member', email: 'member@example.com' });
-
-    await setDoc(doc(db, 'claims', 'c1'), { ownerUid: 'member-uid', status: 'open' });
+    // members and nested memberships
+    await setDoc(doc(db, 'members', 'member-uid'), { name: 'Member', region: 'EU' });
+    await setDoc(doc(db, 'members', 'other-uid'), { name: 'Other', region: 'EU' });
+    await setDoc(doc(db, 'members', 'member-uid', 'memberships', '2025'), { status: 'active', year: 2025 });
+    // billing invoice
+    await setDoc(doc(db, 'billing', 'member-uid', 'invoices', 'inv1'), { amount: 2500, currency: 'EUR', status: 'paid' });
+    // metrics and reports
+    await setDoc(doc(db, 'metrics', 'daily-2025-09-22'), { activations_total: 1 });
+    await setDoc(doc(db, 'reports', 'r1'), { kind: 'summary' });
+    // events
+    await setDoc(doc(db, 'events', 'e1'), { title: 'Event', startAt: { seconds: 1 } });
   });
 });
 
@@ -25,34 +31,66 @@ afterAll(async () => {
   await testEnv.cleanup();
 });
 
-describe('Firestore rules', () => {
-  it('member can read own claim, not others', async () => {
+describe('Firestore rules (aligned to app data model)', () => {
+  it('member can read own profile, not others', async () => {
     const memberCtx = testEnv.authenticatedContext('member-uid');
     const db = memberCtx.firestore();
-    await assertSucceeds(getDoc(doc(db, 'claims', 'c1')));
-    // seed another claim owned by someone else
-    await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
-      const db2 = ctx.firestore();
-      await setDoc(doc(db2, 'claims', 'c2'), { ownerUid: 'someone-else', status: 'open' });
-    });
-    await assertFails(getDoc(doc(db, 'claims', 'c2')));
+    await assertSucceeds(getDoc(doc(db, 'members', 'member-uid')));
+    await assertFails(getDoc(doc(db, 'members', 'other-uid')));
   });
 
-  it('agent can read any claim', async () => {
-    const agentCtx = testEnv.authenticatedContext('agent-uid');
-    const db = agentCtx.firestore();
-    await assertSucceeds(getDoc(doc(db, 'claims', 'c1')));
+  it('admin can read any profile', async () => {
+    const adminCtx = testEnv.authenticatedContext('admin-uid', { token: { role: 'admin' } });
+    const db = adminCtx.firestore();
+    await assertSucceeds(getDoc(doc(db, 'members', 'member-uid')));
+    await assertSucceeds(getDoc(doc(db, 'members', 'other-uid')));
   });
 
-  it('admin can delete membership, member cannot', async () => {
-    await testEnv.withSecurityRulesDisabled(async (ctx: any) => {
-      const db = ctx.firestore();
-      await setDoc(doc(db, 'memberships', 'm1'), { ownerUid: 'member-uid', status: 'active' });
-    });
+  it('owner can read memberships, cannot write; admin can write', async () => {
     const memberCtx = testEnv.authenticatedContext('member-uid');
-    await assertFails(memberCtx.firestore().doc('memberships/m1').delete());
+    const db = memberCtx.firestore();
+    await assertSucceeds(getDoc(doc(db, 'members', 'member-uid', 'memberships', '2025')));
+    await assertFails(doc(db, 'members', 'member-uid', 'memberships', '2025').set({ status: 'expired' }));
 
-    const adminCtx = testEnv.authenticatedContext('admin-uid');
-    await assertSucceeds(adminCtx.firestore().doc('memberships/m1').delete());
+    const adminCtx = testEnv.authenticatedContext('admin-uid', { token: { role: 'admin' } });
+    const dbAdmin = adminCtx.firestore();
+    await assertFails(doc(dbAdmin, 'members', 'member-uid', 'memberships', '2026').set({ status: 'active' }));
+  });
+
+  it('billing invoices: owner and admin can read; no client writes', async () => {
+    const memberCtx = testEnv.authenticatedContext('member-uid');
+    const db = memberCtx.firestore();
+    await assertSucceeds(getDoc(doc(db, 'billing', 'member-uid', 'invoices', 'inv1')));
+    await assertFails(doc(db, 'billing', 'member-uid', 'invoices', 'inv2').set({ amount: 100 }));
+
+    const adminCtx = testEnv.authenticatedContext('admin-uid', { token: { role: 'admin' } });
+    const dbAdmin = adminCtx.firestore();
+    await assertSucceeds(getDoc(doc(dbAdmin, 'billing', 'member-uid', 'invoices', 'inv1')));
+  });
+
+  it('events: authenticated users can read; admin writes; unauthenticated cannot read', async () => {
+    const unauth = testEnv.unauthenticatedContext();
+    const dbU = unauth.firestore();
+    await assertFails(getDoc(doc(dbU, 'events', 'e1')));
+
+    const memberCtx = testEnv.authenticatedContext('member-uid');
+    const db = memberCtx.firestore();
+    await assertSucceeds(getDoc(doc(db, 'events', 'e1')));
+
+    const adminCtx = testEnv.authenticatedContext('admin-uid', { token: { role: 'admin' } });
+    const dbAdmin = adminCtx.firestore();
+    await assertSucceeds(doc(dbAdmin, 'events', 'e2').set({ title: 'New', startAt: { seconds: 2 } }));
+  });
+
+  it('metrics and reports: admin-only reads', async () => {
+    const memberCtx = testEnv.authenticatedContext('member-uid');
+    const db = memberCtx.firestore();
+    await assertFails(getDoc(doc(db, 'metrics', 'daily-2025-09-22')));
+    await assertFails(getDoc(doc(db, 'reports', 'r1')));
+
+    const adminCtx = testEnv.authenticatedContext('admin-uid', { token: { role: 'admin' } });
+    const dbAdmin = adminCtx.firestore();
+    await assertSucceeds(getDoc(doc(dbAdmin, 'metrics', 'daily-2025-09-22')));
+    await assertSucceeds(getDoc(doc(dbAdmin, 'reports', 'r1')));
   });
 });

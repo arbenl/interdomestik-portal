@@ -5,7 +5,7 @@ import { getDocs } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 
 vi.mock('firebase/firestore');
-vi.mock('../context/AuthProvider');
+vi.mock('@/hooks/useAuth');
 
 describe('useUsers', () => {
   beforeEach(() => {

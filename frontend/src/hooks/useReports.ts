@@ -2,8 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, limit, query, orderBy, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { reportConverter } from '@/lib/converters';
+import { useAuth } from '@/hooks/useAuth';
 
 export function useReports(count: number = 6) {
+  const { isAdmin } = useAuth();
   return useQuery({
     queryKey: ['reports', count],
     queryFn: async () => {
@@ -12,5 +14,6 @@ export function useReports(count: number = 6) {
       const snap = await getDocs(q);
       return snap.docs.map((d) => d.data());
     },
+    enabled: isAdmin,
   });
 }

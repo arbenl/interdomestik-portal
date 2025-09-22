@@ -16,28 +16,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies (functions)
-        run: npm ci
-        working-directory: functions
-
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.16.1
+      - name: Install workspace dependencies
+        run: pnpm install
       - name: Build functions
-        run: npm run build
-        working-directory: functions
-
-      - name: Install dependencies (frontend)
-        run: npm ci
-        working-directory: frontend
-
+        run: pnpm --filter functions build
       - name: Build frontend
-        run: npm run build
-        working-directory: frontend
+        run: pnpm --filter frontend build
 
   deploy_staging:
     name: Deploy to Staging
@@ -46,31 +38,22 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies (functions)
-        run: npm ci
-        working-directory: functions
-
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.16.1
+      - name: Install workspace dependencies
+        run: pnpm install
       - name: Build functions
-        run: npm run build
-        working-directory: functions
-
-      - name: Install dependencies (frontend)
-        run: npm ci
-        working-directory: frontend
-
+        run: pnpm --filter functions build
       - name: Build frontend
-        run: npm run build
-        working-directory: frontend
-
+        run: pnpm --filter frontend build
       - name: Deploy to Firebase Staging
-        run: npx firebase deploy --project ${{ env.PROJECT_ID }} --only hosting,functions,firestore:rules --token ${{ env.FIREBASE_TOKEN }}
+        run: pnpm dlx firebase-tools deploy --project ${{ env.PROJECT_ID }} --only hosting,functions,firestore:rules --token ${{ env.FIREBASE_TOKEN }}
 
   deploy_production:
     name: Deploy to Production
@@ -79,30 +62,21 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies (functions)
-        run: npm ci
-        working-directory: functions
-
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.16.1
+      - name: Install workspace dependencies
+        run: pnpm install
       - name: Build functions
-        run: npm run build
-        working-directory: functions
-
-      - name: Install dependencies (frontend)
-        run: npm ci
-        working-directory: frontend
-
+        run: pnpm --filter functions build
       - name: Build frontend
-        run: npm run build
-        working-directory: frontend
-
+        run: pnpm --filter frontend build
       - name: Deploy to Firebase Production
-        run: npx firebase deploy --project ${{ env.PROJECT_ID }} --only hosting,functions,firestore:rules --token ${{ env.FIREBASE_TOKEN }}
+        run: pnpm dlx firebase-tools deploy --project ${{ env.PROJECT_ID }} --only hosting,functions,firestore:rules --token ${{ env.FIREBASE_TOKEN }}
 
   # Optional: add a manual rollback workflow separately if needed

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import Layout from '@/components/Layout';
 import RoleProtectedRoute from '@/components/RoleProtectedRoute';
+import AdminRoute from '@/routes/AdminRoute';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
 const Home = lazy(() => import('@/pages/Home'));
@@ -65,14 +66,7 @@ export default function App() {
               </RoleProtectedRoute>
             }
           />
-          <Route
-            path="admin"
-            element={
-              <RoleProtectedRoute roles={['admin']}>
-                <Admin />
-              </RoleProtectedRoute>
-            }
-          />
+          <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route
             path="agent"
             element={

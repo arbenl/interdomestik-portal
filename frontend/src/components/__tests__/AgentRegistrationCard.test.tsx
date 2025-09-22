@@ -2,14 +2,15 @@ import { screen, waitFor } from '@testing-library/react';
 import { renderWithProviders, userEvent } from '@/test-utils';
 import AgentRegistrationCard from '../AgentRegistrationCard';
 import { describe, it, expect, vi } from 'vitest';
-import { __setCallable } from '@/setupTests';
 
 describe('AgentRegistrationCard', () => {
   it('submits with valid data and calls onSuccess', async () => {
     const onSuccess = vi.fn();
     const onError = vi.fn();
     const agentCreateMemberMock = vi.fn().mockResolvedValue({ ok: true });
-    __setCallable('agentCreateMember', agentCreateMemberMock);
+    __setFunctionsResponse(async (name: string) => {
+      if (name === 'agentCreateMember') return agentCreateMemberMock();
+    });
 
     renderWithProviders(
       <AgentRegistrationCard allowedRegions={['PRISHTINA']} onSuccess={onSuccess} onError={onError} />,

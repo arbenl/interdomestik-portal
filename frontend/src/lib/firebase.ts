@@ -14,11 +14,19 @@ const firebaseConfig = {
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const firestore = getFirestore(app);
-export const functions = getFunctions(app);
+// All Cloud Functions are deployed to europe-west1
+export const functions = getFunctions(app, 'europe-west1');
 
 if (import.meta.env.VITE_USE_EMULATORS === 'true') {
   console.log('Connecting to Firebase emulators...');
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(firestore, '127.0.0.1', 8080);
   connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+}
+
+if (!firebaseConfig.projectId || !firebaseConfig.apiKey) {
+  // Helpful hint in dev environments if env vars are missing
+  // Avoid throwing to keep tests/environments flexible
+  // eslint-disable-next-line no-console
+  console.warn('[firebase] Missing VITE_FIREBASE_* env vars. Check frontend/.env.example');
 }

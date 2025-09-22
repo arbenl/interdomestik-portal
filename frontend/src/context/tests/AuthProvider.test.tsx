@@ -1,83 +1,54 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
 import { AuthProvider } from '../AuthProvider';
 import { useAuth } from '@/hooks/useAuth';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { makeUser } from '../../tests/factories/user';
-import type { User } from 'firebase/auth';
 
-// --- Mock Firebase Auth ---
-const mockOnAuthStateChangedCallbacks: ((user: User | null) => void)[] = [];
-const mockAuth = {
-  currentUser: null as User | null,
-};
-
-vi.mock('firebase/auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('firebase/auth')>();
-  return {
-    ...actual,
-    getAuth: vi.fn(() => mockAuth),
-    onAuthStateChanged: vi.fn((authInstance, callback) => {
-      mockOnAuthStateChangedCallbacks.push(callback as (user: User | null) => void);
-      // Immediately invoke the callback with the current user state
-      (callback as (user: User | null) => void)(mockAuth.currentUser);
-      return vi.fn(); // Return an unsubscribe function
-    }),
-  };
-});
-
-// Helper to trigger auth state changes in tests
-const triggerAuthStateChanged = (user: User | null) => {
-  mockAuth.currentUser = user;
-  mockOnAuthStateChangedCallbacks.forEach((cb) => cb(user));
-};
-
+// IMPORTANT: ensure the real hook is used for this suite
+vi.doUnmock('@/hooks/useAuth');
 
 const Probe = () => {
   const { user, loading } = useAuth();
   if (loading) return <div>Loading...</div>;
-  if (user) return <div>logged in</div>;
+  if (user) return <div>logged in as {user.email}</div>;
   return <div>logged out</div>;
 };
 
 describe('AuthProvider', () => {
-  beforeEach(() => {
-    // Reset auth state before each test
-    mockAuth.currentUser = null;
-    mockOnAuthStateChangedCallbacks.length = 0;
-  });
-
   afterEach(() => {
-    vi.clearAllMocks();
+    global.__authReset();
   });
 
-  it('should show loading indicator', () => {
+  it('shows logged out state', async () => {
     render(
       <AuthProvider>
         <Probe />
       </AuthProvider>
     );
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    await act(async () => {
+      global.__authEmit(null);
+    });
+    expect(screen.getByText('logged out')).toBeInTheDocument();
   });
 
-  it('should show logged out', async () => {
+  it('reacts to id token changes', async () => {
     render(
       <AuthProvider>
         <Probe />
       </AuthProvider>
     );
-    triggerAuthStateChanged(null);
-    expect(await screen.findByText('logged out')).toBeInTheDocument();
-  });
 
-  it('should show logged in', async () => {
-    const user = makeUser();
-    render(
-      <AuthProvider>
-        <Probe />
-      </AuthProvider>
-    );
-    triggerAuthStateChanged(user);
-    expect(await screen.findByText('logged in')).toBeInTheDocument();
+    await act(async () => {
+      global.__authEmit(makeUser({ email: 'test@example.com' }));
+    });
+
+    expect(screen.getByText(/logged in as test@example.com/i)).toBeInTheDocument();
+
+    await act(async () => {
+      global.__authEmit(null);
+    });
+
+    expect(screen.queryByText(/test@example.com/i)).not.toBeInTheDocument();
+    expect(screen.getByText('logged out')).toBeInTheDocument();
   });
 });

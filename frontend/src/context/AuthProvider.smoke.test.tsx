@@ -1,10 +1,11 @@
-
-import { render, screen } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 import { AuthProvider } from './AuthProvider';
 import { useAuth } from '@/hooks/useAuth';
-import { describe, it, expect } from 'vitest';
-import { mockAuth } from '@/tests/mocks/firebaseApp';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { makeUser } from '@/tests/factories/user';
+
+// IMPORTANT: ensure the real hook is used for this suite
+vi.doUnmock('@/hooks/useAuth');
 
 function TestComponent() {
   const { user, loading } = useAuth();
@@ -13,6 +14,10 @@ function TestComponent() {
 }
 
 describe('AuthProvider', () => {
+  afterEach(() => {
+    global.__authReset();
+  });
+
   it('provides user context to children after loading', async () => {
     render(
       <AuthProvider>
@@ -21,8 +26,12 @@ describe('AuthProvider', () => {
     );
 
     // Simulate user signing in
-    mockAuth.__emit(makeUser({ displayName: 'Test User' }));
+    await act(async () => {
+      global.__authEmit(makeUser({ displayName: 'Test User' }));
+    });
 
-    expect(await screen.findByText(/Welcome, Test User/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Welcome, Test User/i)).toBeInTheDocument();
+    });
   });
 });

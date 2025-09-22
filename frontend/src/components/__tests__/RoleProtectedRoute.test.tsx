@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import RoleProtectedRoute from '../RoleProtectedRoute';
 import { makeUser } from '@/tests/factories/user';
 
-vi.mock('@/context/AuthProvider');
+vi.mock('@/hooks/useAuth');
 
 describe('RoleProtectedRoute', () => {
   it('renders children when user has an allowed role', () => {
