@@ -14,6 +14,32 @@ functions/.runtimeconfig.json
 # Firebase & emulators
 .firebase/
 firebase-debug.log
+firestore-debug.log
+**/firebase-debug.log
+**/firestore-debug.log
+
+# Build caches and TS artifacts
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Generated reports and debug outputs
+*.errors
+**/*.errors
+stats.html
+**/stats.html
+depcheck.json
+tsprune.txt
+build_errors.txt
+
+# Archives and dumps
+*.zip
+*.tgz
+
+# Lockfiles (pnpm only)
+package-lock.json
+**/package-lock.json
+yarn.lock
+**/yarn.lock
 
 # Cypress artifacts
 cypress/screenshots/
