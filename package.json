@@ -19,7 +19,7 @@
     "test:rules": "vitest -c vitest.config.rules.ts",
     "ci:light": "pnpm lint && pnpm test:rules",
     "check": "node scripts/check-errors.js",
-    "verify:frontend": "pnpm --filter frontend typecheck && pnpm --filter frontend lint --no-fix && pnpm --filter frontend build && pnpm --filter frontend test:ci && pnpm why vite",
+    "verify:frontend": "pnpm --filter frontend typecheck && pnpm --filter frontend lint --no-fix && pnpm --filter frontend build && pnpm --filter frontend test:ci",
     "specify": "uvx --from git+https://github.com/github/spec-kit.git specify"
   },
   "keywords": [
@@ -38,6 +38,7 @@
     "@types/chai": "^5.2.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.3.3",
+    "@vitest/coverage-v8": "^1.6.1",
     "chai": "^6.0.1",
     "concurrently": "^9.2.1",
     "dotenv": "^17.2.2",
@@ -49,7 +50,7 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
-    "vitest": "^1.6.0",
+    "vitest": "^3.2.4",
     "zod": "^4.1.8"
   },
   "engines": {
@@ -66,5 +67,10 @@
       "sh -c 'npm --prefix functions run typecheck'"
     ]
   },
-  "packageManager": "pnpm@10.16.1+sha512.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706"
+  "packageManager": "pnpm@10.16.1+sha512.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706",
+  "pnpm": {
+    "overrides": {
+      "vite": "^7.1.7"
+    }
+  }
 }
