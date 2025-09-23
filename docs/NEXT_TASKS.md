@@ -61,6 +61,14 @@ Notes:
 - [ ] (P2) Advanced filters: region, status (done), expiring windows (30d filter added); (P3) full‑text via search service if needed
 - [x] (P2) Members index cleanup: remove collectionGroup index for root `members`; keep `memberships` collectionGroup index
 
+### Upcoming (Feature 101) — Members CSV Export: UI polish + async status
+- [ ] (P1) Frontend: Admin Exports panel — show recent jobs with status (pending/running/success/error), rows/bytes, and download link; poll every 3–5s while active
+- [ ] (P1) Frontend: `useExportJobs` hook with TanStack Query (list + status polling)
+- [ ] (P1) Functions: add `getExportStatus` callable (admin-only) to fetch `{ status, progress, url, error }` by id; optional `getMyExports({limit})`
+- [ ] (P1) Rules tests: admin-only read access to `exports/{id}`; non-admin denied
+- [ ] (P1) E2E: admin starts export → sees progress → downloads CSV link (emulator)
+
+
 ## Phase 4 — Storage & Attachments (Optional)
 - [ ] (P2) Storage rules for attachments (owner/admin/agent by region); deny public
 - [ ] (P2) Malware scan on upload; quarantine + logs
