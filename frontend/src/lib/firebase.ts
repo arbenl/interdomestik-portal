@@ -27,6 +27,5 @@ if (import.meta.env.VITE_USE_EMULATORS === 'true') {
 if (!firebaseConfig.projectId || !firebaseConfig.apiKey) {
   // Helpful hint in dev environments if env vars are missing
   // Avoid throwing to keep tests/environments flexible
-  // eslint-disable-next-line no-console
   console.warn('[firebase] Missing VITE_FIREBASE_* env vars. Check frontend/.env.example');
 }
