@@ -18,24 +18,39 @@ describe('AuthProvider', () => {
     global.__authReset();
   });
 
-  it('shows logged out state', () => {
+  it('shows logged out state', async () => {
     render(<AuthProvider><Probe /></AuthProvider>);
-    expect(screen.getByText(/logged out/i)).toBeInTheDocument();
+
+    await act(async () => {
+      global.__authEmit(null);
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText(/logged out/i)).toBeInTheDocument();
   });
 
   it('reacts to id token changes', async () => {
     render(<AuthProvider><Probe /></AuthProvider>);
-    expect(screen.getByText(/logged out/i)).toBeInTheDocument();
-
-    await act(async () => {
-      global.__authEmit(makeUser({ email: 'test@example.com' }));
-    });
-
-    expect(screen.getByText(/logged in as test@example.com/i)).toBeInTheDocument();
 
     await act(async () => {
       global.__authEmit(null);
+      await Promise.resolve();
     });
-    expect(screen.getByText(/logged out/i)).toBeInTheDocument();
+
+    expect(await screen.findByText(/logged out/i)).toBeInTheDocument();
+
+    await act(async () => {
+      global.__authEmit(makeUser({ email: 'test@example.com' }));
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText(/logged in as test@example.com/i)).toBeInTheDocument();
+
+    await act(async () => {
+      global.__authEmit(null);
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText(/logged out/i)).toBeInTheDocument();
   });
 });

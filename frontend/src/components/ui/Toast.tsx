@@ -1,17 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ToastContext, type Toast } from './toastContext';
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<Toast[]>([]);
-  const push = (t: Omit<Toast, 'id'>) => setItems((prev) => [...prev, { ...t, id: Date.now() + Math.random() }]);
+  const push = useCallback((t: Omit<Toast, 'id'>) => {
+    setItems((prev) => [...prev, { ...t, id: Date.now() + Math.random() }]);
+  }, []);
   useEffect(() => {
     const i = setInterval(() => {
       setItems((prev) => prev.slice(1));
     }, 3500);
     return () => clearInterval(i);
   }, []);
+  const contextValue = useMemo(() => ({ push }), [push]);
   return (
-    <ToastContext.Provider value={{ push }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <div className="fixed right-4 top-4 z-50 flex flex-col gap-2">
         {items.map((t) => (

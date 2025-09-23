@@ -1,6 +1,9 @@
 import { useState } from 'react';
 
-const EMU_BASE = 'http://127.0.0.1:5001/demo-interdomestik/europe-west1';
+const PROJECT_ID = import.meta.env.VITE_FIREBASE_EMULATOR_PROJECT_ID
+  || import.meta.env.VITE_FIREBASE_PROJECT_ID
+  || 'demo-interdomestik';
+const EMU_BASE = `http://127.0.0.1:5001/${PROJECT_ID}/europe-west1`;
 
 export function useEmulator() {
   const [loading, setLoading] = useState(false);

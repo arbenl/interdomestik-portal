@@ -8,8 +8,9 @@ describe('AgentRegistrationCard', () => {
     const onSuccess = vi.fn();
     const onError = vi.fn();
     const agentCreateMemberMock = vi.fn().mockResolvedValue({ ok: true });
-    __setFunctionsResponse(async (name: string) => {
-      if (name === 'agentCreateMember') return agentCreateMemberMock();
+    __setFunctionsResponse(async (name: string, payload: unknown) => {
+      if (name === 'agentCreateMember') return agentCreateMemberMock(payload);
+      return {};
     });
 
     renderWithProviders(

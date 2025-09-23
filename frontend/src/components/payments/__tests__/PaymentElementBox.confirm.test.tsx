@@ -6,6 +6,13 @@ import PaymentElementBox from '../PaymentElementBox';
 describe('PaymentElementBox confirm flow', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_STRIPE_PUBLISHABLE_KEY', 'pk_test_123');
+    // Minimal Stripe stub so the component believes Stripe.js loaded
+    (window as any).Stripe = vi.fn(() => ({
+      elements: () => ({
+        create: () => ({ mount: vi.fn() }),
+      }),
+      confirmPayment: vi.fn().mockResolvedValue({ paymentIntent: { status: 'succeeded' } }),
+    }));
     __setFunctionsResponse(async (name: string, _payload: any) => {
       if (name === 'createPaymentIntent') return { clientSecret: 'cs_test_123' };
       return {};
@@ -14,6 +21,7 @@ describe('PaymentElementBox confirm flow', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    delete (window as any).Stripe;
   });
 
   it('confirms payment and shows success', async () => {

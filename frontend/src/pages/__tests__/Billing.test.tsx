@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMemberProfile } from '@/hooks/useMemberProfile';
 import { useInvoices } from '@/hooks/useInvoices';
 
-vi.mock('@/context/AuthProvider');
+vi.mock('@/hooks/useAuth');
 vi.mock('@/hooks/useMemberProfile');
 vi.mock('@/hooks/useInvoices');
 

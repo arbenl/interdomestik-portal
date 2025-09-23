@@ -8,7 +8,7 @@ module.exports = [
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ['dist/**', 'eslint.config.cjs', 'scripts/**']
+    ignores: ['dist/**', 'coverage/**', 'eslint.config.cjs', 'scripts/**']
   },
   {
     languageOptions: {

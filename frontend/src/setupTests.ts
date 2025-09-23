@@ -1,167 +1,292 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import type { ReactNode } from 'react';
+import { afterEach, vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
 
-/** ---- auth listener bus we can drive from tests ---- */
-type User = { uid: string; email?: string } | null;
-const listeners: Array<(u: User) => void> = [];
-const add = (cb: (u: User) => void) => {
-  listeners.push(cb);
-  return () => {
-    const i = listeners.indexOf(cb);
-    if (i >= 0) listeners.splice(i, 1);
-  };
-};
+type User = { uid: string; email?: string; displayName?: string } | null;
 
 type TestGlobal = typeof globalThis & {
   __authEmit?: (u: User) => void;
   __authReset?: () => void;
-  __setFunctionsResponse?: (impl: (name: string, payload: any) => any | Promise<any>) => void;
   __fsSeed?: (path: string, rows: any[]) => void;
   __fsSeedDefault?: (rows: any[]) => void;
-  __fsClear?: () => void;
+  __fsThrow?: (error?: unknown) => void;
+  __fsReset?: () => void;
+  __setFunctionsResponse?: (impl: (name: string, payload: any) => any | Promise<any>) => void;
+  __resetFunctions?: () => void;
+  __stripeReset?: () => void;
 };
+
+declare global {
+  var __authEmit: (_user: User) => void;
+  var __authReset: () => void;
+  var __fsSeed: (_path: string, _rows: any[]) => void;
+  var __fsSeedDefault: (_rows: any[]) => void;
+  var __fsThrow: (_error?: unknown) => void;
+  var __fsReset: () => void;
+  var __setFunctionsResponse: (_impl: (name: string, payload: any) => any | Promise<any>) => void;
+  var __resetFunctions: () => void;
+  var __stripeReset: () => void;
+}
 
 const testGlobal = globalThis as TestGlobal;
 
-declare global {
-  var __authEmit: (u: User) => void;
-  var __authReset: () => void;
-  var __setFunctionsResponse: (impl: (name: string, payload: any) => any | Promise<any>) => void;
-  var __fsSeed: (path: string, rows: any[]) => void;
-  var __fsSeedDefault: (rows: any[]) => void;
-  var __fsClear: () => void;
-}
+/** ------------------------------------------------------------------------
+ * firebase/auth — maintain a single auth instance across renders.
+ * ------------------------------------------------------------------------ */
+vi.mock('firebase/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('firebase/auth')>();
 
-testGlobal.__authEmit = (u: User) => { for (const cb of [...listeners]) cb(u); };
-testGlobal.__authReset = () => { listeners.splice(0, listeners.length); };
-
-/** ---- mock modular firebase/auth ---- */
-const normalize = (x: unknown) => {
-  if (typeof x === 'function') return x as (u: User) => void;
-  if (x && typeof (x as any).next === 'function') return (x as any).next as (u: User) => void;
-  throw new Error('Auth observer mock requires callback/observer');
-};
-vi.mock('firebase/auth', async () => {
-  const actual = await vi.importActual<any>('firebase/auth');
-  const onIdTokenChanged = (_a: any, cbOrObs: any) => add(normalize(cbOrObs));
-  const onAuthStateChanged = onIdTokenChanged;
-  const authStub = {
+  const AUTH_SINGLETON: { app: { options: { projectId: string } }; currentUser: User } = {
     app: { options: { projectId: 'demo-interdomestik' } },
-    currentUser: null,
-    onAuthStateChanged,
+    currentUser: null as User,
   };
-  return { ...actual, getAuth: () => authStub, onIdTokenChanged, onAuthStateChanged };
-});
 
-/** ---- mock useAuth: default + named are the SAME vi.fn ---- */
-vi.mock('@/hooks/useAuth', () => {
-  const fn = vi.fn(() => ({ user: null, role: 'guest' as const, signIn: vi.fn(), signOut: vi.fn() }));
-  const __setUseAuth = (v: any) => (fn as any).mockReturnValue(v);
-  return { default: fn, useAuth: fn, __setUseAuth };
-});
+  let currentUser: User = null;
+  const listeners = new Set<(u: User) => void>();
 
-/** ---- mock functions client: support ALL import shapes ---- */
-const __callFn = vi.fn(async () => ({} as any));
-export const __setFunctionsResponse = (
-  impl: (name: string, payload: any) => any | Promise<any>
-) => {
-  __callFn.mockImplementation(impl as any);
-};
-// expose setter so tests can configure the mock without imports
-testGlobal.__setFunctionsResponse = __setFunctionsResponse;
-vi.mock('@/services/functionsClient', () => {
-  const functionsClient = { call: __callFn };
+  const normalize = (callbackOrObserver: unknown): ((u: User) => void) => {
+    if (typeof callbackOrObserver === 'function') {
+      return callbackOrObserver as (u: User) => void;
+    }
+    const maybeObserver = callbackOrObserver as { next?: (u: User) => void } | undefined;
+    if (maybeObserver?.next) return maybeObserver.next.bind(maybeObserver);
+    throw new Error('Auth observer mock requires a callback or observer with next()');
+  };
+
+  const subscribe = (_auth: unknown, callbackOrObserver: unknown) => {
+    const cb = normalize(callbackOrObserver);
+    // mimic async emission performed by Firebase SDK
+    const timer = setTimeout(() => cb(currentUser), 0);
+    listeners.add(cb);
+    return () => {
+      clearTimeout(timer);
+      listeners.delete(cb);
+    };
+  };
+
+  testGlobal.__authEmit = (user: User) => {
+    currentUser = user ?? null;
+    AUTH_SINGLETON.currentUser = currentUser;
+    for (const listener of [...listeners]) listener(currentUser);
+  };
+
+  testGlobal.__authReset = () => {
+    currentUser = null;
+    AUTH_SINGLETON.currentUser = null;
+    listeners.clear();
+  };
+
   return {
-    default: __callFn,  // import callFn from ...
-    callFn: __callFn,   // import { callFn } from ...
-    functionsClient,    // import { functionsClient } from ...
-    __setFunctionsResponse
+    ...actual,
+    getAuth: () => AUTH_SINGLETON,
+    onIdTokenChanged: subscribe,
+    onAuthStateChanged: subscribe,
   };
 });
 
-/** ---- optional Stripe facades for payments tests ---- */
-vi.mock('@stripe/react-stripe-js', () => ({
-  Elements: ({ children }: { children: React.ReactNode }) => children,
-  useStripe: () => ({ confirmPayment: vi.fn().mockResolvedValue({ paymentIntent: { status: 'succeeded' } }) }),
-  useElements: () => ({ getElement: vi.fn() }),
-})); // --- firestore mock: deterministic, seedable --- //
+testGlobal.__authEmit ??= () => {};
+testGlobal.__authReset ??= () => {};
+
+/** ------------------------------------------------------------------------
+ * firebase/firestore — in-memory store with per-test reset helpers.
+ * ------------------------------------------------------------------------ */
 
 type DocLike = { id: string; data: () => any };
 type SnapshotLike = { docs: DocLike[] };
 
-const __fsStore = new Map<string, any[]>();    // path -> array of plain objects
-let __fsDefault: any[] = [];                   // fallback when path not seeded
+const fsStore = new Map<string, any[]>();
+let defaultRows: any[] = [];
+let fsError: unknown = null;
 
-function toDocs(arr: any[]): DocLike[] {
-  return (arr || []).map((obj, i) => ({
-    id: obj?.id ?? String(i + 1),
-    data: () => obj,
-  }));
-}
+const toDocs = (rows: any[] = []): DocLike[] => rows.map((row, index) => ({
+  id: row?.id ?? String(index + 1),
+  data: () => row,
+}));
 
-function pathFromSegments(segs: any[]): string {
-  // segments can be strings or refs; stringify best-effort
-  return segs.flat().map((s) => (typeof s === 'string' ? s : (s?.__path ?? '') )).join('/');
-}
+const pathFromSegments = (segments: any[]): string => segments
+  .flat()
+  .map(segment => (typeof segment === 'string' ? segment : segment?.__path ?? ''))
+  .filter(Boolean)
+  .join('/');
 
-testGlobal.__fsSeed = (path: string, rows: any[]) => { __fsStore.set(path, rows); };
-testGlobal.__fsSeedDefault = (rows: any[]) => { __fsDefault = rows; };
-testGlobal.__fsClear = () => { __fsStore.clear(); __fsDefault = []; };
+const ensureNoFsError = () => {
+  if (fsError) throw fsError;
+};
 
+testGlobal.__fsSeed = (path: string, rows: any[]) => {
+  fsStore.set(path, rows);
+};
+
+testGlobal.__fsSeedDefault = (rows: any[]) => {
+  defaultRows = rows;
+};
+
+testGlobal.__fsThrow = (error?: unknown) => {
+  fsError = error ?? new Error('Firestore error');
+};
+
+testGlobal.__fsReset = () => {
+  fsStore.clear();
+  defaultRows = [];
+  fsError = null;
+};
 
 vi.mock('firebase/firestore', async (importOriginal) => {
-  const actual = await importOriginal<any>();
+  const actual = await importOriginal<typeof import('firebase/firestore')>();
 
   const getFirestore = vi.fn(() => ({ __kind: 'firestore' }));
   const collection = vi.fn((dbOrRef: any, ...segments: string[]) => ({ __path: pathFromSegments(segments) }));
   const doc = vi.fn((dbOrRef: any, ...segments: string[]) => ({ __path: pathFromSegments(segments) }));
-
-  // Query builders just carry-through the ref; we don’t emulate filters here.
   const query = vi.fn((ref: any) => ref);
-  const where = vi.fn((_f: string, _op: string, _v: any) => (x: any) => x);
-  const orderBy = vi.fn((_f: string, _dir?: 'asc' | 'desc') => (x: any) => x);
+  const where = vi.fn((_field: string, _op: string, _value: any) => (x: any) => x);
+  const orderBy = vi.fn((_field: string, _direction?: 'asc' | 'desc') => (x: any) => x);
   const limit = vi.fn((_n: number) => (x: any) => x);
 
   const getDocs = vi.fn(async (refOrQuery: any): Promise<SnapshotLike> => {
+    ensureNoFsError();
     const path = refOrQuery?.__path ?? '';
-    const rows = __fsStore.get(path) ?? __fsDefault;
+    const rows = fsStore.get(path) ?? defaultRows;
     return { docs: toDocs(rows) };
   });
 
   const getDoc = vi.fn(async (ref: any) => {
+    ensureNoFsError();
     const path = ref?.__path ?? '';
-    const rows = __fsStore.get(path) ?? __fsDefault;
-    const first = (rows && rows[0]) || undefined;
+    const rows = fsStore.get(path) ?? defaultRows;
+    const first = rows?.[0];
     return { exists: () => !!first, id: first?.id ?? '1', data: () => first };
   });
 
-  const onSnapshot = vi.fn((refOrQuery: any, cb: (snap: SnapshotLike) => void) => {
+  const onSnapshot = vi.fn((refOrQuery: any, cb: (snapshot: SnapshotLike) => void) => {
+    ensureNoFsError();
     const path = refOrQuery?.__path ?? '';
-    const rows = __fsStore.get(path) ?? __fsDefault;
+    const rows = fsStore.get(path) ?? defaultRows;
     cb({ docs: toDocs(rows) });
-    return () => { /* unsubscribe noop */ };
+    return () => {};
   });
 
-  // write ops: mutate store (good enough for tests that “start export”, etc.)
   const setDoc = vi.fn(async (ref: any, data: any) => {
+    ensureNoFsError();
     const path = ref?.__path ?? '';
-    const rows = __fsStore.get(path) ?? [];
+    const rows = fsStore.get(path) ?? [];
     const id = data?.id ?? String(rows.length + 1);
-    const next = rows.filter((r: any) => (r.id ?? '') !== id).concat([{ ...data, id }]);
-    __fsStore.set(path, next);
+    const next = rows.filter((row: any) => (row.id ?? '') !== id).concat([{ ...data, id }]);
+    fsStore.set(path, next);
   });
+
   const updateDoc = vi.fn(async (ref: any, data: any) => setDoc(ref, data));
   const addDoc = vi.fn(async (colRef: any, data: any) => setDoc({ __path: colRef?.__path ?? '' }, data));
 
   return {
-    ...actual, // keeps types/constants if something imports them
-    getFirestore, collection, doc, query, where, orderBy, limit,
-    getDocs, getDoc, onSnapshot, setDoc, updateDoc, addDoc,
+    ...actual,
+    getFirestore,
+    collection,
+    doc,
+    query,
+    where,
+    orderBy,
+    limit,
+    getDocs,
+    getDoc,
+    onSnapshot,
+    setDoc,
+    updateDoc,
+    addDoc,
   };
 });
 
+testGlobal.__fsSeed ??= () => {};
+testGlobal.__fsSeedDefault ??= () => {};
+testGlobal.__fsThrow ??= () => {};
+testGlobal.__fsReset ??= () => {};
+
+/** ------------------------------------------------------------------------
+ * Firebase Functions client — controllable default export & helpers.
+ * ------------------------------------------------------------------------ */
+const callFnMock = vi.fn<(name: string, payload: any) => Promise<any>>();
+
+const applyFunctionsImpl = (impl: (name: string, payload: any) => any | Promise<any>) => {
+  callFnMock.mockImplementation(async (name: string, payload: any) => impl(name, payload));
+};
+
+const resetFunctions = () => {
+  applyFunctionsImpl(async () => ({}));
+};
+
+resetFunctions();
+
+testGlobal.__setFunctionsResponse = (impl) => applyFunctionsImpl(impl);
+testGlobal.__resetFunctions = resetFunctions;
+
+vi.mock('@/services/functionsClient', () => {
+  const functionsClient = { call: callFnMock };
+  return {
+    __esModule: true,
+    default: callFnMock,
+    callFn: callFnMock,
+    functionsClient,
+  };
+});
+
+/** ------------------------------------------------------------------------
+ * Stripe mocks — keep confirmation stub predictable across tests.
+ * ------------------------------------------------------------------------ */
+const stripeConfirmPayment = vi.fn();
+const stripeElementsGetElement = vi.fn();
+
+const resetStripe = () => {
+  stripeConfirmPayment.mockReset();
+  stripeConfirmPayment.mockResolvedValue({ paymentIntent: { status: 'succeeded' } });
+  stripeElementsGetElement.mockReset();
+};
+
+resetStripe();
+
+testGlobal.__stripeReset = resetStripe;
+
+vi.mock('@stripe/react-stripe-js', () => ({
+  __esModule: true,
+  Elements: ({ children }: { children: ReactNode }) => children,
+  useStripe: () => ({ confirmPayment: stripeConfirmPayment }),
+  useElements: () => ({ getElement: stripeElementsGetElement }),
+}));
+
+/** ------------------------------------------------------------------------
+ * Firebase app module — avoid env lookups during tests.
+ * ------------------------------------------------------------------------ */
+vi.mock('@/lib/firebase', () => {
+  const auth = { app: { options: { projectId: 'demo-interdomestik' } }, currentUser: null };
+  const firestore = {};
+  const functions = {};
+  const noop = () => {};
+  return {
+    __esModule: true,
+    auth,
+    firestore,
+    functions,
+    getAuth: () => auth,
+    getFirestore: () => firestore,
+    getFunctions: () => functions,
+    connectAuthEmulator: noop,
+    connectFirestoreEmulator: noop,
+    connectFunctionsEmulator: noop,
+  };
+});
+
+/** ------------------------------------------------------------------------
+ * Global afterEach cleanup — reset mocks/state between tests.
+ * ------------------------------------------------------------------------ */
 afterEach(() => {
-  vi.clearAllMocks?.();
-  testGlobal.__fsClear?.();
   testGlobal.__authReset?.();
+  testGlobal.__fsReset?.();
+  testGlobal.__resetFunctions?.();
+  testGlobal.__stripeReset?.();
+
+  vi.clearAllMocks();
+  vi.resetAllMocks();
+  vi.resetModules();
+  vi.unstubAllEnvs?.();
+  vi.unstubAllGlobals?.();
+  cleanup();
 });

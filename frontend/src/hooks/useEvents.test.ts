@@ -10,23 +10,23 @@ describe('useEvents', () => {
 
   it('returns events list', async () => {
     const mockEvents = [
-      { id: 'evt1', title: 'Spring Fair', startsAt: 1700000000000 },
+      { id: 'evt1', title: 'Spring Fair', startAt: { seconds: 1_700_000_000 } },
     ];
-    __setFunctionsResponse((_name: string, _payload: any) => mockEvents);
+    __fsSeed('events', mockEvents);
     const { result } = renderHookWithProviders(() => useEvents(5));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toEqual(mockEvents);
   });
 
   it('handles empty list', async () => {
-    __setFunctionsResponse(() => []);
+    __fsSeed('events', []);
     const { result } = renderHookWithProviders(() => useEvents(5));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toEqual([]);
   });
 
   it('handles errors', async () => {
-    __setFunctionsResponse(() => { throw new Error('boom'); });
+    __fsThrow(new Error('boom'));
     const { result } = renderHookWithProviders(() => useEvents(5));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.error).toBeTruthy();

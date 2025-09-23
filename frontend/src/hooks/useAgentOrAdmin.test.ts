@@ -3,7 +3,7 @@ import { renderHookWithProviders, waitFor } from '@/test-utils';
 import useAgentOrAdmin from './useAgentOrAdmin';
 import { useAuth } from '@/hooks/useAuth';
 
-vi.mock('../context/AuthProvider');
+vi.mock('@/hooks/useAuth');
 
 describe('useAgentOrAdmin', () => {
   it('maps claims to flags and regions', async () => {

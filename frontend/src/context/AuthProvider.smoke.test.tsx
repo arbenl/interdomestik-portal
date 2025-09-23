@@ -1,14 +1,12 @@
 import { render, screen, act, waitFor } from '@testing-library/react';
+import { useContext } from 'react';
 import { AuthProvider } from './AuthProvider';
-import { useAuth } from '@/hooks/useAuth';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { AuthContext } from './AuthContext';
+import { describe, it, expect, afterEach } from 'vitest';
 import { makeUser } from '@/tests/factories/user';
 
-// IMPORTANT: ensure the real hook is used for this suite
-vi.doUnmock('@/hooks/useAuth');
-
 function TestComponent() {
-  const { user, loading } = useAuth();
+  const { user, loading } = useContext(AuthContext);
   if (loading) return <div>Loading...</div>;
   return <div>Welcome, {user?.displayName}</div>;
 }

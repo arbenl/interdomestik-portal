@@ -12,3 +12,10 @@ Frontend is always green with pnpm.
 - pnpm --filter frontend test:ci
 - `pnpm why vite` shows a single major version
 
+## Verification Log
+
+- 2025-02-14: `pnpm --filter frontend typecheck`
+- 2025-02-14: `pnpm --filter frontend lint --no-fix`
+- 2025-02-14: `pnpm --filter frontend build`
+- 2025-02-14: `pnpm --filter frontend test:ci`
+- 2025-02-14: `pnpm why vite`

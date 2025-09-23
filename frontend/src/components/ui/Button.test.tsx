@@ -5,11 +5,11 @@ import { Button } from './Button';
 describe('Button', () => {
   it('renders primary variant by default', () => {
     renderWithProviders(<Button>Click me</Button>);
-    expect(screen.getByRole('button')).toHaveClass('bg-indigo-600');
+    expect(screen.getByRole('button', { name: 'Click me' })).toHaveClass('bg-indigo-600');
   });
 
   it('renders ghost variant', () => {
     renderWithProviders(<Button variant="ghost">Click me</Button>);
-    expect(screen.getByRole('button')).toHaveClass('bg-transparent');
+    expect(screen.getByRole('button', { name: 'Click me' })).toHaveClass('bg-transparent');
   });
 });

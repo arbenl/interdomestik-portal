@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import type { User } from 'firebase/auth';
 
 vi.mock('../context/AuthProvider');
+vi.mock('@/hooks/useAuth');
 
 describe('Navbar', () => {
   it('renders links and toggles user menu', () => {
@@ -24,7 +25,7 @@ describe('Navbar', () => {
     renderWithProviders(<Navbar />);
 
     // Open menu
-    const avatarBtn = screen.getByRole('button');
+    const avatarBtn = screen.getByRole('button', { name: /Hi, Test User/i });
     fireEvent.click(avatarBtn);
     expect(screen.getByText('History')).toBeInTheDocument();
   });

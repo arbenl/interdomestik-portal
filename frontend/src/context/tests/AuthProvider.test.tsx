@@ -6,7 +6,7 @@ import { makeUser } from '../../tests/factories/user';
 import { describe, it, expect, afterEach } from 'vitest';
 
 declare global {
-  var __authEmit: (user: ReturnType<typeof makeUser> | null) => void;
+  var __authEmit: (_user: ReturnType<typeof makeUser> | null) => void;
   var __authReset: () => void;
 }
 

@@ -17,12 +17,12 @@ function formatMoney(amount: number, currency: string) {
   }
 }
 
-function getStripeWebhookUrl(projectId: string) {
+function getStripeWebhookUrl(projectId: string, emulatorProjectId: string) {
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   // If served via Hosting emulator (port 5000), the rewrite works at /stripeWebhook
   if (isLocal && location.port === '5000') return `${location.origin}/stripeWebhook`;
   // Otherwise, call Functions emulator directly
-  if (isLocal) return `http://localhost:5001/${projectId}/europe-west1/stripeWebhook`;
+  if (isLocal) return `http://localhost:5001/${emulatorProjectId}/europe-west1/stripeWebhook`;
   // In production, Hosting rewrite handles /stripeWebhook
   return '/stripeWebhook';
 }
@@ -33,14 +33,15 @@ export default function Billing() {
   const { data: invoices, isLoading, error, refetch } = useInvoices(user?.uid);
   const { push } = useToast();
   const [busy, setBusy] = useState(false);
-  const projectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) || 'demo-interdomestik';
+  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'demo-interdomestik';
+  const emulatorProjectId = import.meta.env.VITE_FIREBASE_EMULATOR_PROJECT_ID || projectId;
   const ENABLE_PAYMENTS_UI = String(import.meta.env.VITE_ENABLE_PAYMENTS_UI ?? 'true') === 'true';
 
   async function simulatePayment() {
     if (!user) return;
     setBusy(true);
     try {
-      const url = getStripeWebhookUrl(projectId);
+      const url = getStripeWebhookUrl(projectId, emulatorProjectId);
       const body = {
         uid: user.uid,
         invoiceId: `inv_${Date.now()}`,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { renderWithProviders, fireEvent, waitFor, within } from '@/test-utils';
+import { renderWithProviders, fireEvent, waitFor, screen } from '@/test-utils';
 import Profile from '../Profile';
 import { useAuth } from '@/hooks/useAuth';
 import { useMemberProfile } from '@/hooks/useMemberProfile';
@@ -26,11 +26,10 @@ describe('Profile page', () => {
     vi.mocked(useMemberProfile).mockReturnValue({ data: { name: 'User One', region: 'PRISHTINA', phone: '' }, isLoading: false, error: null, refetch } as any);
     const callFunction = vi.fn().mockResolvedValue(undefined);
     vi.mocked(useHttpsCallable).mockReturnValue({ data: null, loading: false, error: null, callFunction, reset: vi.fn() } as any);
-    const { container } = renderWithProviders(<Profile />);
-    const scope = within(container);
-    const nameInput = scope.getByLabelText(/Name/i);
+    renderWithProviders(<Profile />);
+    const nameInput = screen.getByLabelText(/^Name$/i);
     fireEvent.change(nameInput, { target: { value: 'User One Updated' } });
-    fireEvent.click(scope.getByRole('button', { name: /Update Profile/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Update Profile/i }));
     await waitFor(() => {
       expect(callFunction).toHaveBeenCalledWith({ name: 'User One Updated', phone: '', region: 'PRISHTINA' });
     });

@@ -8,7 +8,7 @@ describe('useMembershipHistory', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    global.__fsClear();
+    global.__fsReset();
   });
 
   it('should return loading state initially', () => {
@@ -33,7 +33,7 @@ describe('useMembershipHistory', () => {
 
   it('should return an error if fetching fails', async () => {
     const mockError = new Error('Failed to fetch');
-    global.__fsThrowDefault(mockError);
+    global.__fsThrow(mockError);
 
     const { result } = renderHook(() => useMembershipHistory(uid), { wrapper: TestProviders });
     await waitFor(() => {

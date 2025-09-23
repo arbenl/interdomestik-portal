@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { auth } from '@/lib/firebase';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  getAuth,
   onIdTokenChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -15,9 +15,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAgent, setIsAgent] = useState(false);
   const [allowedRegions, setAllowedRegions] = useState<string[]>([]);
+  const authRef = useRef(getAuth());
 
   useEffect(() => {
-    const unsub = onIdTokenChanged(auth, async (user) => {
+    const unsub = onIdTokenChanged(authRef.current, async (user) => {
       if (user) {
         setUser(user);
         const tokenResult = await user.getIdTokenResult();
@@ -43,13 +44,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     isAgent,
     allowedRegions,
     async signIn(email, password) {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(authRef.current, email, password);
     },
     async signUp(email, password) {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(authRef.current, email, password);
     },
     async signOutUser() {
-      await signOut(auth);
+      await signOut(authRef.current);
     }
   }), [user, loading, isAdmin, isAgent, allowedRegions]);
 
