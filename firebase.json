@@ -1,9 +1,42 @@
 {
-  "functions": { "source": "functions" },
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
+  "emulators": {
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 9099
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8080
+    },
+    "functions": {
+      "host": "127.0.0.1",
+      "port": 5001
+    },
+    "hosting": {
+      "host": "127.0.0.1",
+      "port": 5000
+    },
+    "hub": {
+      "host": "127.0.0.1",
+      "port": 4400
+    },
+    "logging": {
+      "host": "127.0.0.1",
+      "port": 4500
+    }
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "*.log"
+      ]
+    }
+  ],
   "hosting": {
     "public": "frontend/dist",
     "ignore": [
@@ -11,84 +44,26 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "cleanUrls": true,
-    "headers": [
-      {
-        "source": "**/*.@(js|css|png|jpg|svg|webp)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=31536000, immutable"
-          }
-        ]
-      },
-      {
-        "source": "**/*.html",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-store"
-          }
-        ]
-      },
-      {
-        "source": "**",
-        "headers": [
-          {
-            "key": "X-Content-Type-Options",
-            "value": "nosniff"
-          },
-          {
-            "key": "X-Frame-Options",
-            "value": "SAMEORIGIN"
-          },
-          {
-            "key": "Strict-Transport-Security",
-            "value": "max-age=31536000; includeSubDomains"
-          },
-          {
-            "key": "Referrer-Policy",
-            "value": "strict-origin-when-cross-origin"
-          },
-          {
-            "key": "Permissions-Policy",
-            "value": "geolocation=(), microphone=(), camera=()"
-          },
-          {
-            "key": "Content-Security-Policy",
-            "value": "default-src 'self'; img-src 'self' data: https://www.gstatic.com https://chart.googleapis.com https://api.qrserver.com; style-src 'self' 'unsafe-inline' https://www.gstatic.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://cdn.tailwindcss.com https://js.stripe.com; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.googleapis.com https://api.stripe.com https://r.stripe.com http://localhost:9099 http://127.0.0.1:9099 http://localhost:8085 http://127.0.0.1:8085 http://localhost:5001 http://127.0.0.1:5001 ws://localhost:* ws://127.0.0.1:*; frame-src 'self' https://js.stripe.com;"
-          }
-        ]
-      }
-    ],
     "rewrites": [
-      {
-        "source": "/verifyMembership",
-        "function": { "functionId": "verifyMembership", "region": "europe-west1" }
-      },
-      {
-        "source": "/exportMonthlyReport",
-        "function": { "functionId": "exportMonthlyReport", "region": "europe-west1" }
-      },
       {
         "source": "/stripeWebhook",
         "function": { "functionId": "stripeWebhook", "region": "europe-west1" }
       },
       {
-        "source": "/exportMembersCsv",
-        "function": { "functionId": "exportMembersCsv", "region": "europe-west1" }
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css|html|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; base-uri 'self'; img-src 'self' data: blob: https://q.stripe.com; font-src 'self' https://fonts.gstatic.com; style-src-elem 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; script-src 'self' https://js.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; connect-src 'self' https://firestore.googleapis.com wss://firestore.googleapis.com https://www.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebasestorage.googleapis.com https://*.cloudfunctions.net;"
+          }
+        ]
+      }
     ]
-  },
-  "emulators": {
-    "ui": { "enabled": true, "port": 4000 },
-    "hosting": { "port": 5000 },
-    "firestore": { "port": 8085 },
-    "functions": { "port": 5001 },
-    "auth": { "port": 9099 }
   }
 }

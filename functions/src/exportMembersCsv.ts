@@ -1,6 +1,7 @@
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import { Timestamp } from 'firebase-admin/firestore';
+import { log } from './lib/logger';
 
 try {
   admin.app();
@@ -17,6 +18,7 @@ const db = admin.firestore();
  * - Join in memory; no N+1 reads
  */
 export const exportMembersCsv = functions
+  .runWith({ memory: '256MB', timeoutSeconds: 60 })
   .region("europe-west1")
   .https.onRequest(async (req: functions.https.Request, res: functions.Response): Promise<void> => {
     res.set("Access-Control-Allow-Origin", "*");
@@ -32,11 +34,13 @@ export const exportMembersCsv = functions
         .replace("Bearer ", "")
         .trim();
       if (!authHeader) {
+        log('export_csv_unauthorized', {});
         res.status(401).send("Missing Authorization");
         return;
       }
       const token = await admin.auth().verifyIdToken(authHeader);
       if ((token as any).role !== "admin") {
+        log('export_csv_forbidden', { uid: token.uid });
         res.status(403).send("Admins only");
         return;
       }
@@ -88,9 +92,11 @@ export const exportMembersCsv = functions
         "Content-Disposition",
         'attachment; filename="members.csv"'
       );
+      log('export_csv_success', { count: membersOrdered.length });
       res.status(200).send(csv);
       return;
     } catch (e) {
+      log('export_csv_error', { error: String(e) });
       res.status(500).send(String(e));
       return;
     }

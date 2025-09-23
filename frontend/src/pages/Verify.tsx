@@ -1,5 +1,34 @@
 import React, { useEffect, useState } from 'react';
 
+declare global {
+  interface Window {
+    grecaptcha?: { execute: (siteKey: string, opts: { action: string }) => Promise<string> };
+  }
+}
+
+async function maybeGetCaptchaToken(): Promise<string | undefined> {
+  try {
+    if (typeof window === 'undefined') return undefined;
+    const siteKey = (import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined) || (import.meta.env.VITE_APPCHECK_SITE_KEY as string | undefined);
+    if (!siteKey) return undefined;
+    // If grecaptcha not present, attempt to load script once
+    if (!window.grecaptcha) {
+      await new Promise<void>((resolve) => {
+        const s = document.createElement('script');
+        s.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(siteKey)}`;
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => resolve();
+        document.head.appendChild(s);
+      });
+    }
+    if (!window.grecaptcha?.execute) return undefined;
+    return await window.grecaptcha.execute(siteKey, { action: 'verify' });
+  } catch {
+    return undefined;
+  }
+}
+
 const Verify: React.FC = () => {
   const [memberNo, setMemberNo] = useState('');
   const [result, setResult] = useState<{ ok?: boolean; valid?: boolean; name?: string; memberNo?: string; region?: string } | null>(null);
@@ -14,9 +43,13 @@ const Verify: React.FC = () => {
       const qs = new URLSearchParams();
       if (params.token) qs.set('token', params.token);
       if (params.memberNo) qs.set('memberNo', params.memberNo);
-      const response = await fetch(`/verifyMembership?${qs.toString()}`);
+      const captcha = await maybeGetCaptchaToken();
+      const response = await fetch(`/verifyMembership?${qs.toString()}`, {
+        headers: captcha ? { 'x-recaptcha-token': captcha } : undefined,
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
+      const raw = (await response.json()) as unknown;
+      const data = raw as { ok?: boolean; valid?: boolean; name?: string; memberNo?: string; region?: string };
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -38,7 +71,7 @@ const Verify: React.FC = () => {
       const m = url.searchParams.get('memberNo') || undefined;
       if (t || m) {
         if (m) setMemberNo(m);
-        runVerify({ token: t, memberNo: m });
+        void runVerify({ token: t, memberNo: m });
       }
     } catch {
       // ignore malformed URLs in non-browser contexts
@@ -48,7 +81,7 @@ const Verify: React.FC = () => {
   return (
     <div className="max-w-md mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Verify Membership</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
         <input
           type="text"
           value={memberNo}

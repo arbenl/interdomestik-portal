@@ -1,11 +1,24 @@
-import { useContext } from 'react';
-import { ToastContext } from './toastContext';
+import { toast } from 'sonner';
+
+type ToastKind = 'success' | 'error' | 'info' | 'warning';
+type Payload = { type?: ToastKind; message: string };
 
 export function useToast() {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast must be used within ToastProvider');
-  return ctx;
+  return {
+    push: ({ type = 'info', message }: Payload) => {
+      switch (type) {
+        case 'success':
+          toast.success(message);
+          break;
+        case 'error':
+          toast.error(message);
+          break;
+        case 'warning':
+          toast.warning(message);
+          break;
+        default:
+          toast(message);
+      }
+    },
+  };
 }
-
-export default useToast;
-

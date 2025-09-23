@@ -1,9 +1,6 @@
 import { useState } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../firebase';
+import callFn from '../services/functionsClient';
 import RegionSelect from './RegionSelect';
-
-const agentCreateMember = httpsCallable(functions, 'agentCreateMember');
 
 type AgentRegistrationProps = {
   allowedRegions: string[];
@@ -26,7 +23,7 @@ export default function AgentRegistrationCard({ allowedRegions, onSuccess, onErr
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await agentCreateMember({ email, name, region, phone, orgId });
+      await callFn('agentCreateMember', { email, name, region, phone, orgId });
       onSuccess('Member registered successfully');
       setEmail(''); setName(''); setRegion(''); setPhone(''); setOrgId('');
     } catch (err) {
@@ -41,7 +38,7 @@ export default function AgentRegistrationCard({ allowedRegions, onSuccess, onErr
     <div className="bg-white shadow rounded-lg p-4 mb-6">
       <h3 className="text-lg font-semibold mb-2">Agent Registration</h3>
       <p className="text-sm text-gray-600 mb-4">Allowed regions: {allowedRegions.length ? allowedRegions.join(', ') : '—'}</p>
-      <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-3">
+      <form onSubmit={(e) => { void onSubmit(e); }} className="grid grid-cols-1 md:grid-cols-5 gap-3">
         <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} className="border rounded px-3 py-2" required />
         <input type="text" placeholder="Full name" value={name} onChange={e=>setName(e.target.value)} className="border rounded px-3 py-2" required />
         <RegionSelect value={region} onChange={setRegion} className="border rounded px-3 py-2" options={allowedRegions} />

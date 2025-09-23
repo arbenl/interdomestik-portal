@@ -1,5 +1,6 @@
 import { admin, db } from "../firebaseAdmin";
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { log } from './logger';
 
 const ORG_NAME = process.env.ORG_NAME || 'Interdomestik';
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@interdomestik.app';
@@ -47,7 +48,7 @@ export async function queueEmail(mail: MailOptions): Promise<{ id: string }> {
 
   if (isEmulator()) {
     // In emulator runs, no extension processes the document; log for visibility
-    console.log("[mail:queued]", ref.id, JSON.stringify(doc));
+    log('mail_queued', { id: ref.id, to: Array.isArray(doc.to) ? doc.to.join(',') : String(doc.to), subject: doc.message.subject });
   }
 
   return { id: ref.id };

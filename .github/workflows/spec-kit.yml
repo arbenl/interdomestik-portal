@@ -1,0 +1,36 @@
+name: Spec Kit
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  spec-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Spec presence and quality
+        env:
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
+          PR_BODY: ${{ github.event.pull_request.body || '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Branch: $HEAD_REF"
+          if [[ "$HEAD_REF" =~ ^[0-9]{3}-.+ ]]; then
+            SPEC_DIR="specs/${HEAD_REF}"
+            SPEC_FILE="${SPEC_DIR}/spec.md"
+            if [[ ! -f "$SPEC_FILE" ]]; then
+              echo "::error title=Spec missing::Expected spec file at $SPEC_FILE for feature branch $HEAD_REF" && exit 1
+            fi
+            echo "Found spec: $SPEC_FILE"
+            if grep -n "\[NEEDS CLARIFICATION:" "$SPEC_FILE" >/dev/null; then
+              echo "::error title=Spec has unresolved clarifications::Remove or resolve [NEEDS CLARIFICATION] markers in $SPEC_FILE" && exit 1
+            fi
+            # Require PR body to reference spec path for reviewer convenience
+            if ! grep -Fq "$SPEC_FILE" <<<"$PR_BODY"; then
+              echo "::warning title=Spec link missing in PR body::Consider adding a reference to $SPEC_FILE in the PR description"
+            fi
+          else
+            echo "Non-spec branch; skipping spec validation"
+          fi

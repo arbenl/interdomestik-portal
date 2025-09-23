@@ -11,20 +11,28 @@ Primary personas: Members, Agents, and Admins. Core capabilities include profile
 - Data: Firestore collections: `members/{uid}`, `members/{uid}/memberships`, `events`, `billing/{uid}/invoices`, and `registry/*`
 - Functions (region `europe-west1`):
   - HTTPS callables: `upsertProfile`, `startMembership`, `setUserRole`, `searchUserByEmail`, `agentCreateMember`
-  - HTTPS endpoints: `verifyMembership`, `exportMembersCsv`, `clearDatabase`, `stripeWebhook`
+  - HTTPS endpoints: `verifyMembership`, `clearDatabase`, `stripeWebhook`
+  - Exports (v2): callable `startMembersExport` + Firestore `onCreate` worker (`exportsWorkerOnCreate`)
   - Scheduled: `dailyRenewalReminders` (03:00 UTC)
   - Emulator‑only: `seedDatabase` to create demo users, memberships, and events
+- **New:** The frontend architecture has been refactored to be modular and performant.
+  - **Admin & Portal Pages:** The UI is split into feature-based panels (e.g., `OrganizationsPanel`, `ProfilePanel`).
+  - **Data Fetching:** TanStack Query is used for data fetching, caching, and server state management.
+  - **Code Splitting:** Feature panels are lazily loaded using `React.lazy` and `<Suspense>`.
 
 ## Repository Structure
 - `frontend/`: React app (Vite).
   - Source: `frontend/src`
+    - `features/`: Contains the modular features for the Admin and Portal pages.
+    - `services/`: Contains typed wrappers for Firebase services.
+    - `utils/`: Contains shared utility functions.
   - Tests: `frontend/src/**/*.test.ts*`
   - Assets: `frontend/public`
 - `functions/`: Cloud Functions (TypeScript).
   - Source: `functions/src`
   - Build: `functions/lib`
   - Tests: `functions/test`
-- `cypress/`: E2E tests and support; config in `cypress.config.ts`
+- E2E: Playwright tests live under `frontend/e2e`; config in `frontend/playwright.config.ts`
 - `test/`: Firestore security rules tests
 - Root configs: `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `tsconfig.json`, `docs/`
 
@@ -50,17 +58,15 @@ Primary personas: Members, Agents, and Admins. Core capabilities include profile
 ## Local Development
 1) Install dependencies
 ```
-npm install
-(cd functions && npm install)
-(cd frontend && npm install)
+pnpm install
 ```
 2) Start emulators (Functions, Firestore, Hosting, Auth)
 ```
-cd functions && npm run serve
+pnpm dev:emu
 ```
-3) Start frontend dev server (optional; Hosting emulator also serves built app)
+3) Start frontend (Vite)
 ```
-cd frontend && npm run dev
+pnpm --filter frontend dev
 ```
 4) (Optional) Seed demo data (emulators only)
 ```
@@ -70,33 +76,42 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
 
 ## Routing (SPA)
 - `/signin`, `/signup`
-- `/portal` (member dashboard with digital card, activity, events, billing link)
-- `/billing` (invoices & payments)
-- `/profile` (edit profile)
-- `/membership` (membership history)
-- `/admin` (admin tools), `/agent` (agent tools)
-- `/verify` (public membership check)
+- `/portal`: Member portal with a shared layout (`PortalLayout`).
+  - `/portal/profile`
+  - `/portal/membership`
+  - `/portal/claims`
+  - `/portal/payments`
+  - `/portal/documents`
+  - `/portal/support`
+- `/admin`: Admin tools, with lazily loaded feature panels.
+- `/agent`: Agent tools.
+- `/verify`: Public membership check.
 
 ## Commands
-- Frontend: `npm run dev` | `npm run build` | `npm test`
-- Functions: `npm run build` | `npm test` | `npm run serve` | `npm run deploy`
-- Root: `npm test` (rules), `npm run cypress:open` | `npm run cypress:run`, `npm run deploy`
+- `pnpm dev`: Starts the development server for the frontend.
+- `pnpm build`: Builds the frontend for production.
+- `pnpm test`: Runs all tests (frontend, functions, rules).
+- `pnpm lint`: Lints the frontend and functions code.
+- `pnpm dev:all`: Starts the Firebase emulators and the frontend development server.
 
 ## Quick Reference
 - Project id (emulators): `demo-interdomestik`
-- Emulator ports: Hosting 5000, Functions 5001, Firestore 8085, Auth 9099
+- Emulator ports: Hosting 5000, Functions 5001, Firestore 8080, Auth 9099
 - Webhook (emulator): `http://localhost:5001/demo-interdomestik/europe-west1/stripeWebhook` (also via Hosting rewrite at `/stripeWebhook`)
 
 ## Testing
-- Unit (frontend): Vitest + jsdom — colocate as `*.test.ts(x)` near code
-- Integration (functions): Mocha + Chai using emulators
-- Rules: `@firebase/rules-unit-testing` under `test/`
-- E2E: Cypress; baseUrl `http://localhost:5000` (Hosting emulator)
+- Unit (frontend): Vitest + jsdom — colocate as `*.test.ts(x)` near code.
+- Integration (functions): Mocha + Chai using emulators.
+- Rules: Vitest + `@firebase/rules-unit-testing` in `rules/__tests__`.
+- E2E: Playwright (`pnpm --filter frontend e2e`); Playwright spawns the Vite dev server.
+- When testing components that use TanStack Query, wrap in `QueryClientProvider`.
 
 ## Functions Reference
 - `verifyMembership` (HTTPS): GET with `memberNo` → `{ valid, name, region }`
 - `stripeWebhook` (HTTPS): emulator‑friendly placeholder; expects `{ uid, invoiceId?, amount, currency, created? }`; writes `billing/{uid}/invoices/{invoiceId}` with `status: 'paid'`. Hosting rewrite available at `/stripeWebhook`.
-- `exportMembersCsv` (HTTPS): CSV export of basic member info
+- Exports v2:
+  - `startMembersExport` (callable): enqueue an export job at `exports/{id}` with `filters`, `columns` (preset `BASIC|FULL`), and `createdBy`.
+  - `exportsWorkerOnCreate` (Firestore onCreate): streams filtered member rows to GCS as CSV, updates `progress.rows/bytes`, and attaches a 3‑day signed URL when available.
 - `clearDatabase` (HTTPS): development utility to purge Auth users and member docs
 - Callables: `upsertProfile`, `startMembership`, `setUserRole`, `searchUserByEmail`, `agentCreateMember`
 - `dailyRenewalReminders` (scheduled): sends reminder emails for 30/7/1‑day windows
@@ -111,9 +126,10 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
   - `billing/{uid}/invoices` readable by the owner and admins; writes by backend only
 
 ## Performance & Observability
+- **New:** The frontend is optimized for performance using code-splitting (`React.lazy` and `<Suspense>`) and a robust data fetching layer with TanStack Query.
+- **New:** A bundle analysis can be generated by running `pnpm run build`. The report is saved as `stats.html`.
 - Functions sized for pay‑per‑use; no minimum instances
 - Logging kept minimal; enable deeper tracing only when debugging
-- Avoid heavy listeners on the client; prefer paginated reads and ordered queries
 
 ## Deployment
 - All: `firebase deploy`
@@ -152,3 +168,11 @@ curl -X POST \
 - Finalize Firestore rules for `events` and `billing` per above expectations
 - Secrets hygiene: document rotation and signed‑webhook tests in staging
 - Expand test coverage and wire CI (see testing plan)
+
+## Operations
+
+- TTL & Cleanup: Use Firestore TTL for `audit_logs.ttlAt` and `metrics.ttlAt`. Scheduled `cleanupExpiredData` deletes expired docs daily at 03:15 UTC. In production, enable TTL in the console for those fields to enforce retention.
+
+- Idempotency: Membership activations (manual, admin, webhook) are idempotent using a `{uid, year, source}` key. Webhook events use a `webhooks_stripe/{event.id}` guard to ignore duplicates.
+
+- Exports (v2): Admins enqueue jobs via `startMembersExport`. A Firestore onCreate worker streams CSV to Cloud Storage, updates `progress`, and adds a 3‑day signed URL. Storage rules restrict `/exports/**` reads to admins; writes occur via Admin SDK only.

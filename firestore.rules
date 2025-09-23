@@ -1,115 +1,60 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function hasToken() { return signedIn() && request.auth.token != null; }
-    function isAdmin() { return hasToken() && request.auth.token.role == 'admin'; }
-    function isAgent() { return hasToken() && request.auth.token.role == 'agent'; }
-    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
-    // Safe helpers for region checks — never evaluate `in` on null
-    function allowedRegionsList() {
-      return (signedIn() && request.auth.token != null && (request.auth.token.allowedRegions is list))
-        ? request.auth.token.allowedRegions
-        : [];
-    }
-    function adminHasRegion(region) {
-      // Admins: full access if no regions are set; otherwise region must be included
-      let l = allowedRegionsList();
-      return isAdmin() && ( (l.size() == 0) || ( (region is string) && (region in l) ) );
-    }
-    function adminCanUpdateRegion(oldRegion, newRegion) {
-      // For updates, ensure both the current and new region (if provided) are within allowed set
-      let l = allowedRegionsList();
-      return isAdmin() && (
-        (l.size() == 0) || (
-          ((oldRegion is string) && (oldRegion in l)) &&
-          ( (newRegion is string) ? (newRegion in l) : true )
-        )
-      );
-    }
-    function agentHasRegion(region) {
-      // Agents must have a list and the region must be included
-      let l = allowedRegionsList();
-      return isAgent() && ( (region is string) && (l.size() > 0) && (region in l) );
-    }
-    function agentOwns(uid) {
-      return isAgent() && resource.data.agentId == request.auth.uid;
-    }
+    function isAdmin() { return signedIn() && request.auth.token.role == 'admin'; }
+    function isAgent() { return signedIn() && request.auth.token.role == 'agent'; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
 
-    match /users/{uid} {
-      allow read: if isSelf(uid) || isAdmin();
-      allow write: if isAdmin();
-    }
-
+    // Members collection: member profiles
     match /members/{uid} {
-      // Read self; admins (optionally region-limited); agents only their assigned members
-      allow read: if isSelf(uid)
-        || adminHasRegion(resource.data.region)
-        || agentOwns(uid);
-      // split create into separate rules to avoid evaluating agent clause for self-writes
-      allow create: if isSelf(uid);
-      // Agents cannot create member docs directly (must use backend callable)
-      // Admins can create only within allowedRegions (or full access if claim list is empty)
-      allow create: if adminHasRegion(request.resource.data.region);
-      // Admin updates: region-constrained, including when changing region
-      allow update: if adminCanUpdateRegion(resource.data.region, request.resource.data.region);
-      // Members can only edit a safe subset of fields
-      allow update: if isSelf(uid) &&
-        request.resource.data.diff(resource.data).changedKeys().hasOnly(["name","region","phone","orgId"]);
-      // Agents can edit a safe subset within their allowed regions;
-      // region changes must remain within allowed regions as well
-      allow update: if isAgent() &&
-        agentHasRegion(resource.data.region) &&
-        request.resource.data.diff(resource.data).changedKeys().hasOnly(["name","region","phone","orgId"]) &&
-        (
-          !request.resource.data.diff(resource.data).changedKeys().hasAny(["region"]) ||
-          (request.resource.data.region == resource.data.region) ||
-          agentHasRegion(request.resource.data.region)
-        );
-      allow delete: if isAdmin();
+      // Read: owner, admin, agent
+      allow read: if isOwner(uid) || isAdmin() || isAgent();
+      // Writes via backend only (callables/Admin SDK). Disallow client writes by default.
+      allow create, update, delete: if false;
+
+      // Nested memberships per year
+      match /memberships/{year} {
+        // Read: owner, admin, agent
+        allow read: if isOwner(uid) || isAdmin() || isAgent();
+        // Client writes not allowed; performed by backend
+        allow create, update, delete: if false;
+      }
     }
 
-    match /members/{uid}/memberships/{year} {
-      allow read: if isSelf(uid) || isAdmin();
-      allow write: if isAdmin();
+    // Billing: invoices per user
+    match /billing/{uid}/invoices/{invoiceId} {
+      // Owner and admins can read billing documents
+      allow read: if isOwner(uid) || isAdmin();
+      // Writes performed by backend only (webhooks/Admin SDK)
+      allow create, update, delete: if false;
     }
 
-    match /registry/{path=**} { allow read, write: if false; }
-
-    // Public events: readable by signed-in users; writable by admins only
+    // Events visible to authenticated users; admin manages
     match /events/{eventId} {
       allow read: if signedIn();
-      allow write: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
-    // Billing invoices: readable by owner and admins; client writes are disallowed
-    match /billing/{uid}/invoices/{invoiceId} {
-      allow read: if isSelf(uid) || isAdmin();
+    // Metrics and reports: admin-only reads
+    match /metrics/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /reports/{docId} {
+      allow read: if isAdmin();
       allow write: if false;
     }
 
-    // Metrics: allow admins to read/write root docs like metrics/daily-YYYY-MM-DD
-    match /metrics/{id} {
-      allow read, write: if isAdmin();
-    }
-    match /audit_logs/{id} {
-      allow read, write: if isAdmin();
-    }
-    match /reports/{id} {
-      allow read, write: if isAdmin();
-    }
-    match /orgs/{id} {
-      allow read, write: if isAdmin();
-    }
-    match /coupons/{id} {
-      allow read, write: if isAdmin();
-    }
-    match /api_keys/{id} {
-      allow read, write: if isAdmin();
-    }
+    // Internal/administrative collections: deny client access
+    match /coupons/{id} { allow read, write: if false; }
+    match /orgs/{id} { allow read, write: if false; }
+    match /registry/{kind}/{key} { allow read, write: if false; }
+    match /audit_logs/{id} { allow read, write: if false; }
+    match /exports/{id} { allow read, write: if false; }
 
-    match /mail/{id} {
+    // Default deny
+    match /{document=**} {
       allow read, write: if false;
     }
   }

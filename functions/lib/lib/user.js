@@ -40,6 +40,7 @@ const firebaseAdmin_1 = require("../firebaseAdmin");
 const firestore_1 = require("firebase-admin/firestore");
 const functions = __importStar(require("firebase-functions/v1"));
 const validators_1 = require("./validators");
+const logger_1 = require("./logger");
 const rbac_1 = require("./rbac");
 async function setUserRoleLogic(data, context) {
     (0, rbac_1.requireAdmin)(context);
@@ -59,7 +60,7 @@ async function setUserRoleLogic(data, context) {
         });
     }
     catch (e) {
-        console.warn('[audit] failed to write setUserRole audit', e);
+        (0, logger_1.log)('audit_write_failed', { action: 'setUserRole', uid, error: String(e) });
     }
     return { message: "User role updated successfully" };
 }

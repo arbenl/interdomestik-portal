@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../firebase';
-
-const startMembership = httpsCallable(functions, 'startMembership');
+import callFn from '../services/functionsClient';
 
 interface ActivateMembershipModalProps {
   user: { id: string; email?: string };
@@ -24,7 +21,7 @@ const ActivateMembershipModal: React.FC<ActivateMembershipModalProps> = ({ user,
     setError(null);
     setIsSubmitting(true);
     try {
-      await startMembership({ uid: user.id, year, price, currency, paymentMethod, externalRef: externalRef || null });
+      await callFn('startMembership', { uid: user.id, year, price, currency, paymentMethod, externalRef: externalRef || null });
       onSuccess(`Membership activated for ${user.email || user.id}`);
       onClose();
     } catch (err) {
@@ -39,7 +36,7 @@ const ActivateMembershipModal: React.FC<ActivateMembershipModalProps> = ({ user,
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
       <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
         <h2 className="text-xl font-bold mb-4">Activate Membership for {user.email}</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
           <div>
             <label className="block text-sm font-medium">Year</label>
             <input type="number" value={year} onChange={e => setYear(parseInt(e.target.value))} className="mt-1 block w-full p-2 border rounded" />

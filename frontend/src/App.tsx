@@ -1,26 +1,26 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Suspense, lazy } from "react";
-import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+import Layout from '@/components/Layout';
+import RoleProtectedRoute from '@/components/RoleProtectedRoute';
+import AdminRoute from '@/routes/AdminRoute';
+//
 
-// Route-level code splitting
-const Home = lazy(() => import("./pages/Home"));
-const SignIn = lazy(() => import("./pages/SignIn"));
-const SignUp = lazy(() => import("./pages/SignUp"));
-const Profile = lazy(() => import("./pages/Profile"));
-const Admin = lazy(() => import("./pages/Admin"));
-const AgentTools = lazy(() => import("./pages/AgentTools"));
-const Membership = lazy(() => import("./pages/Membership"));
-const Verify = lazy(() => import("./pages/Verify"));
-const MemberPortal = lazy(() => import("./pages/MemberPortal"));
-const Billing = lazy(() => import("./pages/Billing"));
+const Home = lazy(() => import('@/pages/Home'));
+const MemberPortal = lazy(() => import('@/pages/MemberPortal'));
+const SignIn = lazy(() => import('@/pages/SignIn'));
+const SignUp = lazy(() => import('@/pages/SignUp'));
+const Profile = lazy(() => import('@/pages/Profile'));
+const AgentTools = lazy(() => import('@/pages/AgentTools'));
+const Admin = lazy(() => import('@/pages/Admin'));
+const Billing = lazy(() => import('@/pages/Billing'));
+const Membership = lazy(() => import('@/pages/Membership'));
+const Verify = lazy(() => import('@/pages/Verify'));
 
-function App() {
+export default function App() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<div style={{padding:16}}>Loading…</div>}>
-      <Routes>
-        <Route path="/" element={<Layout />}>
+    <Layout>
+      <Suspense fallback={<div className='p-6 text-gray-600'>Loading…</div>}>
+        <Routes>
           <Route index element={<Home />} />
           <Route path="signin" element={<SignIn />} />
           <Route path="signup" element={<SignUp />} />
@@ -28,56 +28,47 @@ function App() {
           <Route
             path="portal"
             element={
-              <ProtectedRoute>
+              <RoleProtectedRoute roles={['member', 'agent', 'admin']}>
                 <MemberPortal />
-              </ProtectedRoute>
+              </RoleProtectedRoute>
             }
           />
           <Route
             path="billing"
             element={
-              <ProtectedRoute>
+              <RoleProtectedRoute roles={['member', 'agent', 'admin']}>
                 <Billing />
-              </ProtectedRoute>
+              </RoleProtectedRoute>
             }
           />
           <Route
             path="profile"
             element={
-              <ProtectedRoute>
+              <RoleProtectedRoute roles={['member', 'agent', 'admin']}>
                 <Profile />
-              </ProtectedRoute>
+              </RoleProtectedRoute>
             }
           />
           <Route
             path="membership"
             element={
-              <ProtectedRoute>
+              <RoleProtectedRoute roles={['member', 'agent', 'admin']}>
                 <Membership />
-              </ProtectedRoute>
+              </RoleProtectedRoute>
             }
           />
-          <Route
-            path="admin"
-            element={
-              <ProtectedRoute>
-                <Admin />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route
             path="agent"
             element={
-              <ProtectedRoute>
+              <RoleProtectedRoute roles={['agent', 'admin']}>
                 <AgentTools />
-              </ProtectedRoute>
+              </RoleProtectedRoute>
             }
           />
-        </Route>
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </Suspense>
-    </BrowserRouter>
+    </Layout>
   );
 }
-
-export default App;

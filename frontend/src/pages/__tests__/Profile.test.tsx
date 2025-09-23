@@ -1,27 +1,33 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { renderWithProviders, screen, fireEvent, waitFor } from '@/test-utils';
 import Profile from '../Profile';
+import { useAuth } from '@/hooks/useAuth';
+import { useMemberProfile } from '@/hooks/useMemberProfile';
+import { makeUser } from '@/tests/factories/user';
 
-vi.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { uid: 'u1', email: 'u1@example.com' } }) }));
-vi.mock('../../hooks/useMemberProfile', () => ({ useMemberProfile: () => ({ profile: { name: 'User One', region: 'PRISHTINA' }, activeMembership: null, loading: false, error: null }) }));
-vi.mock('../../components/ui/useToast', () => ({ useToast: () => ({ push: vi.fn() }) }));
-
-vi.mock('firebase/functions', () => {
-  return {
-    httpsCallable: () => vi.fn().mockResolvedValue({ data: { message: 'ok' } })
-  };
-});
-
-vi.mock('../../firebase', () => ({ auth: { currentUser: { reload: vi.fn().mockResolvedValue(undefined) } }, functions: {} }));
+vi.mock('@/hooks/useAuth');
+vi.mock('@/hooks/useMemberProfile');
 
 describe('Profile page', () => {
   it('updates profile successfully', async () => {
-    render(<Profile />);
-    expect(screen.getByText(/My Profile/i)).toBeInTheDocument();
-    const name = screen.getByLabelText(/Name/i) as HTMLInputElement;
-    fireEvent.change(name, { target: { value: 'User One Updated' } });
+    vi.mocked(useAuth).mockReturnValue({
+      user: makeUser(),
+      loading: false,
+      isAdmin: false,
+      isAgent: false,
+      allowedRegions: [],
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
+    });
+    const mutate = vi.fn();
+    vi.mocked(useMemberProfile).mockReturnValue({ data: { name: 'User One' }, isLoading: false, error: null, mutate } as any);
+    renderWithProviders(<Profile />);
+    const nameInput = screen.getByLabelText(/Name/i);
+    fireEvent.change(nameInput, { target: { value: 'User One Updated' } });
     fireEvent.click(screen.getByRole('button', { name: /Update Profile/i }));
-    expect(await screen.findByText(/Profile updated successfully/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mutate).toHaveBeenCalledWith({ name: 'User One Updated' });
+    });
   });
 });
-

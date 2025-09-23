@@ -8,13 +8,16 @@ import { backfillNameLowerLogic } from './lib/backfill';
 import { startMembershipLogic } from "./lib/startMembership";
 import { agentCreateMemberLogic } from "./lib/agent";
 import { sendRenewalReminder, membershipCardHtml, queueEmail, sendPaymentReceipt } from "./lib/membership";
-import { signCardToken } from './lib/tokens';
+import { signCardToken, getCardKeyStatus } from './lib/tokens';
 import { activateMembership } from './lib/startMembership';
 import { cleanupOldAuditLogs, cleanupOldMetrics } from './lib/cleanup';
 import { createPaymentIntentLogic } from './lib/payments';
 import { setAutoRenewLogic } from './lib/settings';
 export { exportMembersCsv } from './exportMembersCsv';
 import { monthlyReportCsv } from './lib/reports';
+import { generateMembersCsv, saveCsvToStorage } from './lib/exports';
+import { normalizeColumns, streamMembersCsv } from './lib/exportsV2';
+import { log } from './lib/logger';
 
 // Region constant for consistency
 const REGION = "europe-west1" as const;
@@ -188,6 +191,32 @@ export const resendMembershipCard = functions
     return { ok: true };
   });
 
+// Card token management (admin only)
+export const getCardKeyStatusCallable = functions
+  .region(REGION)
+  .https.onCall(async (_data, context) => {
+    if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
+      throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const s = getCardKeyStatus();
+    return s;
+  });
+
+export const revokeCardToken = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => {
+    if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
+      throw new functions.https.HttpsError('permission-denied', 'Admin only');
+    }
+    const jti = String(data?.jti || '').trim();
+    const reason = String(data?.reason || '').trim();
+    if (!/^[-_A-Za-z0-9]{6,}$/.test(jti)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid jti');
+    }
+    await db.collection('card_revocations').doc(jti).set({ reason: reason || 'manual', by: context.auth.uid, createdAt: FieldValue.serverTimestamp() }, { merge: true });
+    return { ok: true };
+  });
+
 // HTTP utilities -------------------------------------------------------------
 export const clearDatabase = functions
   .region(REGION)
@@ -196,8 +225,32 @@ export const clearDatabase = functions
       // CORS for local tools
       res.set("Access-Control-Allow-Origin", "*");
       res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-      res.set("Access-Control-Allow-Headers", "Content-Type");
+      res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
       if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+
+      // Guard: allow only on emulator and only for admin users
+      const isEmulator = !!process.env.FUNCTIONS_EMULATOR;
+      if (!isEmulator) {
+        res.status(403).json({ ok: false, error: 'forbidden' });
+        return;
+      }
+      const authHeader = (req.headers['authorization'] || req.headers['Authorization']) as string | undefined;
+      const emuBypass = String((req.headers['x-emulator-admin'] || req.headers['X-Emulator-Admin'] || '') as string).toLowerCase();
+      const emuBypassOk = emuBypass === 'true' || emuBypass === '1';
+      let isAdmin = false;
+      if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
+        const idToken = authHeader.slice(7);
+        try {
+          const decoded = await admin.auth().verifyIdToken(idToken, true);
+          isAdmin = (decoded as any)?.role === 'admin';
+        } catch {
+          isAdmin = false;
+        }
+      }
+      if (!(isAdmin || (isEmulator && emuBypassOk))) {
+        res.status(403).json({ ok: false, error: 'admin-required' });
+        return;
+      }
 
       const auth = admin.auth();
       const listUsersResult = await auth.listUsers();
@@ -208,13 +261,14 @@ export const clearDatabase = functions
 
       res.status(200).send('Database cleared successfully.');
     } catch (error: unknown) {
-      console.error('Error clearing database:', error);
+      log('clear_db_error', { error: String(error) });
       if (error instanceof Error) res.status(500).send(`Error clearing database: ${error.message}`);
       else res.status(500).send('An unknown error occurred during database clearing.');
     }
   });
 
 export const verifyMembership = functions
+  .runWith({ memory: '256MB', timeoutSeconds: 30 })
   .region(REGION)
   .https.onRequest(async (req: functions.https.Request, res: functions.Response): Promise<void> => {
     // Basic CORS for GET
@@ -246,8 +300,25 @@ export const verifyMembership = functions
         } catch {}
       }
 
-      // Simple IP-based rate limiting (skips emulator/tests or valid API key). Limits: 60/minute or 1000/day
+      // Optional captcha (prod only if configured)
       const isEmu = !!(process.env.FUNCTIONS_EMULATOR || process.env.FIREBASE_EMULATOR_HUB || process.env.FIRESTORE_EMULATOR_HOST || process.env.GCLOUD_PROJECT === 'demo-interdomestik');
+      const recaptchaSecret = process.env.RECAPTCHA_SECRET as string | undefined;
+      if (!isEmu && recaptchaSecret) {
+        const token = String((req.headers['x-recaptcha-token'] || '')).trim();
+        if (!token) { res.status(400).json({ ok: false, error: 'captcha-required' }); return; }
+        try {
+          const params = new URLSearchParams({ secret: recaptchaSecret, response: token });
+          const r = await fetch('https://www.google.com/recaptcha/api/siteverify', { method: 'POST', body: params as any });
+          const json: any = await r.json();
+          if (!json?.success) { res.status(400).json({ ok: false, error: 'captcha-invalid' }); return; }
+        } catch (e) {
+          log('verify_captcha_error', { error: String(e) });
+          res.status(400).json({ ok: false, error: 'captcha-error' });
+          return;
+        }
+      }
+
+      // Simple IP-based rate limiting (skips emulator/tests or valid API key). Limits: 60/minute or 1000/day
       if (!isEmu && !apiKeyValid) {
         const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
         const ip = fwd || (req as any).ip || (req.socket && (req.socket as any).remoteAddress) || 'unknown';
@@ -277,6 +348,7 @@ export const verifyMembership = functions
           }, { merge: true });
         });
         if (limited) {
+          log('verify_rate_limited', { ipHash: hash });
           res.status(429).json({ ok: false, error: 'Too many requests' });
           return;
         }
@@ -360,6 +432,7 @@ export const verifyMembership = functions
       }
       return;
     } catch (e) {
+      log('verify_error', { error: String(e) });
       res.status(500).json({ ok: false, error: String(e) });
       return;
     }
@@ -367,6 +440,7 @@ export const verifyMembership = functions
 
 // Stripe webhook (emulator-friendly placeholder). In production, add signature verification.
 export const stripeWebhook = functions
+  .runWith({ memory: '256MB', timeoutSeconds: 30 })
   .region(REGION)
   .https.onRequest(async (req, res): Promise<void> => {
     res.set('Access-Control-Allow-Origin', '*');
@@ -388,7 +462,7 @@ export const stripeWebhook = functions
         try {
           event = stripe.webhooks.constructEvent(req.rawBody, sig!, signingSecret!);
         } catch (err) {
-          console.error('[stripeWebhook] signature verification failed', err);
+          log('stripe_webhook_signature_failed', { error: String(err) });
           res.status(400).send(`Webhook Error: ${(err as Error).message}`);
           return;
         }
@@ -436,7 +510,7 @@ export const stripeWebhook = functions
                 await sendPaymentReceipt({ email, name, memberNo, amount: amount / 100, currency, method: 'card', reference: invoiceId });
               }
             } catch (e) {
-              console.warn('[stripeWebhook] email dispatch failed', e);
+              log('stripe_email_error', { error: String(e), uid });
             }
             // Minimal audit and metrics handled inside startMembership logic normally; here we emulate key parts
             await db.collection('audit_logs').add({
@@ -450,7 +524,7 @@ export const stripeWebhook = functions
               ts: FieldValue.serverTimestamp(),
             });
           } catch (e) {
-            console.warn('[stripeWebhook] activateMembership failed', e);
+            log('stripe_activate_error', { error: String(e), uid });
           }
           res.json({ ok: true });
           return;
@@ -496,14 +570,14 @@ export const stripeWebhook = functions
             await sendPaymentReceipt({ email, name, memberNo, amount: amount / 100, currency, method: 'card', reference: invoiceId });
           }
         } catch (e) {
-          console.warn('[stripeWebhook][emu] email dispatch failed', e);
+          log('stripe_emulator_email_error', { error: String(e), uid });
         }
       } catch (e) {
-        console.warn('[stripeWebhook][emu] activateMembership failed', e);
+        log('stripe_emulator_activate_error', { error: String(e), uid });
       }
       res.json({ ok: true, mode: 'emulator' });
     } catch (e) {
-      console.error('[stripeWebhook] error', e);
+      log('stripe_webhook_error', { error: String(e) });
       res.status(500).json({ ok: false, error: String(e) });
     }
   });
@@ -660,7 +734,7 @@ if (process.env.FUNCTIONS_EMULATOR) {
 
       res.status(200).json({ ok: true, seeded: ['member1@example.com', 'member2@example.com', 'admin@example.com'], agents: agents.map(a=>a.email), members: total });
     } catch (error: unknown) {
-      console.error('Error seeding database:', error);
+      log('seed_error', { error: String(error) });
       if (error instanceof Error) {
         res.status(500).send(`Error seeding database: ${error.message}`);
       } else {
@@ -714,7 +788,7 @@ export const cleanupExpiredData = functions
       cleanupOldAuditLogs(180, 2000),
       cleanupOldMetrics(400, 2000),
     ]);
-    console.log('[cleanup] audit_logs deleted:', aud.deleted, 'metrics deleted:', met.deleted);
+    log('cleanup_stats', { audit_deleted: aud.deleted, metrics_deleted: met.deleted });
   });
 
 // Monthly membership report aggregation for previous month
@@ -766,6 +840,7 @@ export const monthlyMembershipReport = functions
 
 // CSV export for monthly report (admin only)
 export const exportMonthlyReport = functions
+  .runWith({ memory: '256MB', timeoutSeconds: 60 })
   .region(REGION)
   .https.onRequest(async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
@@ -839,33 +914,132 @@ export const generateMonthlyReportNow = functions
     return { ok: true, month: target, total, revenue };
   });
 
-// Token helpers: admin utilities for revocation and status
-export const revokeCardToken = functions
-  .region(REGION)
-  .https.onCall(async (data, context) => {
-    if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
-      throw new functions.https.HttpsError('permission-denied', 'Admin only');
-    }
-    const jti = String(data?.jti || '').trim();
-    const reason = String(data?.reason || 'manual');
-    if (!jti) throw new functions.https.HttpsError('invalid-argument', 'jti required');
-    await db.collection('card_revocations').doc(jti).set({ reason, ts: FieldValue.serverTimestamp() }, { merge: true });
-    return { ok: true };
-  });
-
-export const getCardKeyStatus = functions
+// Async Members CSV export: writes to Storage, emails signed URL, and records status doc
+export const startMembersExportLegacy = functions
+  .runWith({ memory: '512MB', timeoutSeconds: 300 })
   .region(REGION)
   .https.onCall(async (_data, context) => {
     if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
       throw new functions.https.HttpsError('permission-denied', 'Admin only');
     }
-    const activeKid = process.env.CARD_JWT_ACTIVE_KID || 'v1';
-    const secretsRaw = process.env.CARD_JWT_SECRETS || '';
-    let kids: string[] = [];
-    try { const m = JSON.parse(secretsRaw || '{}'); kids = Object.keys(m || {}); } catch {}
-    if (kids.length === 0) kids = ['v1'];
-    return { activeKid, kids };
+    const actor = context.auth.uid;
+    const ts = new Date();
+    const dateKey = `${ts.getUTCFullYear()}-${String(ts.getUTCMonth() + 1).padStart(2, '0')}-${String(ts.getUTCDate()).padStart(2, '0')}_${String(ts.getUTCHours()).padStart(2, '0')}${String(ts.getUTCMinutes()).padStart(2, '0')}`;
+    const path = `exports/members/members_${dateKey}.csv`;
+    const exportRef = db.collection('exports').doc();
+    await exportRef.set({
+      type: 'members_csv',
+      status: 'running',
+      path,
+      createdAt: FieldValue.serverTimestamp(),
+      createdBy: actor,
+    }, { merge: true });
+    try {
+      const { csv, count } = await generateMembersCsv();
+      const { url, size } = await saveCsvToStorage(csv, path);
+      await exportRef.set({ status: 'done', count, size, url, finishedAt: FieldValue.serverTimestamp() }, { merge: true });
+      // Send email to actor if we can resolve an email address from profile
+      try {
+        const m = await db.collection('members').doc(actor).get();
+        const email = (m.get('email') as string | undefined);
+        if (email) {
+          const subj = `Members CSV export — ${dateKey}`;
+          const html = url
+            ? `<p>Your export is ready. <a href="${url}">Download CSV</a></p>`
+            : `<p>Your export is ready at: ${path} (no signed URL available)</p>`;
+          await queueEmail({ to: [email], subject: subj, html });
+        }
+      } catch {}
+      return { ok: true, id: exportRef.id, path, url, count };
+    } catch (e) {
+      await exportRef.set({ status: 'error', error: String(e), finishedAt: FieldValue.serverTimestamp() }, { merge: true });
+      throw new functions.https.HttpsError('internal', 'Export failed', String(e));
+    }
   });
+
+// New async export pipeline (Phase 3)
+export const startMembersExport = functions
+  .runWith({ memory: '256MB', timeoutSeconds: 60 })
+  .region(REGION)
+  .https.onCall(async (data, context) => {
+    try {
+      if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
+        throw new functions.https.HttpsError('permission-denied', 'Admin only');
+      }
+      const actor = context.auth.uid;
+      const running = await db.collection('exports').where('createdBy','==',actor).where('status','==','running').get();
+      if (running.size >= 2) throw new functions.https.HttpsError('resource-exhausted', 'Too many concurrent exports');
+
+      function tsSafe(input: any): admin.firestore.Timestamp | undefined {
+        if (!input) return undefined;
+        try {
+          const d = input instanceof Date ? input : new Date(String(input));
+          if (isNaN(d.getTime())) return undefined;
+          return admin.firestore.Timestamp.fromDate(d);
+        } catch { return undefined; }
+      }
+      const filters: any = {
+        regions: Array.isArray(data?.filters?.regions) ? data.filters.regions.map((x:any)=>String(x)).filter(Boolean) : undefined,
+        status: data?.filters?.status ? String(data.filters.status) : undefined,
+        orgId: data?.filters?.orgId ? String(data.filters.orgId) : undefined,
+        expiringAfter: tsSafe(data?.filters?.expiringAfter),
+        expiringBefore: tsSafe(data?.filters?.expiringBefore),
+      };
+      const presetRaw = String(data?.preset || 'BASIC').toUpperCase();
+      const preset = presetRaw === 'FULL' ? 'FULL' : 'BASIC';
+      const columns = normalizeColumns(Array.isArray(data?.columns) ? data.columns.map((c:any)=>String(c)) : undefined, preset as any);
+
+      const exportRef = db.collection('exports').doc();
+      await exportRef.set({
+        type: 'members_csv',
+        status: 'pending',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdBy: actor,
+        filters,
+        columns,
+        progress: { rows: 0, bytes: 0 },
+      }, { merge: true });
+      return { ok: true, id: exportRef.id };
+    } catch (e) {
+      // Map unknown errors to HttpsError with details for easier debugging in UI
+      const msg = e instanceof functions.https.HttpsError ? e.message : String(e);
+      if (e instanceof functions.https.HttpsError) throw e;
+      throw new functions.https.HttpsError('internal', `startMembersExport failed: ${msg}`);
+    }
+  });
+
+export const exportsWorkerOnCreate = functions
+  .runWith({ memory: '512MB', timeoutSeconds: 300 })
+  .region(REGION)
+  .firestore.document('exports/{exportId}')
+  .onCreate(async (snap, context) => {
+    const id = context.params.exportId as string;
+    const data = snap.data() as any;
+    if (!data || data.type !== 'members_csv' || data.status !== 'pending') return;
+    const actor = String(data.createdBy || '');
+    const ts = new Date();
+    const dateKey = `${ts.getUTCFullYear()}-${String(ts.getUTCMonth() + 1).padStart(2, '0')}-${String(ts.getUTCDate()).padStart(2, '0')}_${String(ts.getUTCHours()).padStart(2, '0')}${String(ts.getUTCMinutes()).padStart(2, '0')}`;
+    const path = data.path || `exports/members/members_${dateKey}_${id}.csv`;
+    const ref = db.collection('exports').doc(id);
+    await ref.set({ status: 'running', path, startedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    try {
+      const { rows, size, url } = await streamMembersCsv({ exportId: id, filters: data.filters || {}, columns: data.columns || [], actorUid: actor, path });
+      await ref.set({ status: 'success', count: rows, size, url, finishedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      try {
+        const m = await db.collection('members').doc(actor).get();
+        const email = (m.get('email') as string | undefined);
+        if (email) {
+          const subj = `Members CSV export — ${dateKey}`;
+          const html = url ? `<p>Your export is ready. <a href=\"${url}\">Download CSV</a></p>` : `<p>Your export is ready at: ${path} (no signed URL available)</p>`;
+          await queueEmail({ to: [email], subject: subj, html });
+        }
+      } catch {}
+    } catch (e) {
+      await ref.set({ status: 'error', error: String(e), finishedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    }
+  });
+
+// (removed duplicate token helper exports)
 
 //       if (q.empty) {
 //         res.json({ ok: true, valid: false, memberNo });

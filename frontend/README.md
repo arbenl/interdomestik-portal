@@ -1,69 +1,43 @@
-# React + TypeScript + Vite
+# Frontend Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This directory contains the Vite + React + TypeScript frontend for the Interdomestik Member Portal.
 
-Currently, two official plugins are available:
+## Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The recommended way to run this application is from the **root of the monorepo**. Please see the [root README.md](../README.md) for the full 3-step development workflow.
 
-## Expanding the ESLint configuration
+## Environment Variables
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+To run the application, you will need to create a `.env` file in the root of the monorepo and add the following environment variables:
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_APP_ID=...
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Available Scripts
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+From the **root** of the monorepo:
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+-   `pnpm -F frontend dev`: Starts the Vite development server.
+-   `pnpm -F frontend build`: Builds the application for production.
+-   `pnpm -F frontend preview`: Serves the production build locally for previewing.
+-   `pnpm -F frontend lint`: Runs ESLint to check for code quality issues.
+
+### Testing
+
+-   `pnpm -F frontend test`: Runs the unit and integration tests with Vitest in watch mode.
+-   `pnpm -F frontend test:ci`: Runs the unit and integration tests once with coverage.
+-   `pnpm -F frontend e2e`: Runs the end-to-end tests with Playwright.
+-   `pnpm -F frontend e2e:ui`: Runs the end-to-end tests with the Playwright UI.
+-   `pnpm -F frontend e2e:report`: Shows the Playwright test report.
+
+## Documentation
+
+For detailed information on architecture, coding standards, and more, please refer to the central `/docs` directory at the root of the repository.
+
+-   [Architecture Overview](../docs/architecture.md)
+-   [Authentication & Roles](../docs/auth-and-roles.md)
+-   [UI and Theming](../docs/ui-and-theming.md)

@@ -5,34 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite + React + TS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-gray-50 text-gray-900 antialiased" style="font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';">
-    <script>
-      (function () {
-        try {
-          var local = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-          if (!local) return;
-          var probe = document.createElement('div');
-          probe.className = 'flex';
-          probe.style.position = 'absolute';
-          probe.style.left = '-9999px';
-          probe.style.top = '-9999px';
-          document.documentElement.appendChild(probe);
-          var display = getComputedStyle(probe).display;
-          probe.remove();
-          if (display !== 'flex' || location.port === '5000') {
-            var s = document.createElement('script');
-            s.src = 'https://cdn.tailwindcss.com';
-            document.head.appendChild(s);
-            console.warn('[dev] Injected Tailwind CDN fallback');
-          }
-        } catch (e) { /* no-op */ }
-      })();
-    </script>
+  <body class="bg-gray-50 text-gray-900 antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

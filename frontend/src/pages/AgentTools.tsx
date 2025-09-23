@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import useAgentOrAdmin from '../hooks/useAgentOrAdmin';
-import { useAuth } from '../hooks/useAuth';
-import { useUsers } from '../hooks/useUsers';
+import { useAuth } from '@/hooks/useAuth';
+import { useUsers } from '@/hooks/useUsers';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-import AgentRegistrationCard from '../components/AgentRegistrationCard';
+import { firestore } from '@/lib/firebase';
+import AgentRegistrationCard from '@/components/AgentRegistrationCard';
+import type { Profile } from '@/types';
 
 export default function AgentTools() {
-  const { canRegister, isAgent, allowedRegions, loading } = useAgentOrAdmin();
-  const { user } = useAuth();
+  const { user, isAdmin, isAgent, allowedRegions, loading } = useAuth();
+  const canRegister = isAdmin || isAgent;
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { users, loading: usersLoading, refresh } = useUsers({ myOnlyUid: isAgent && user ? user.uid : null, limit: 20 });
+  const { data, isLoading, refetch } = useUsers({ allowedRegions: isAgent && user ? [user.uid] : [], limit: 20, region: 'ALL', status: 'ALL', expiringDays: null });
   const [editRow, setEditRow] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
@@ -20,6 +20,8 @@ export default function AgentTools() {
   if (loading) return <div className="flex justify-center items-center h-screen"><p>Loading...</p></div>;
 
   if (!canRegister) return <div className="text-center mt-10"><p>You are not authorized to view this page.</p></div>;
+
+  const users = data?.pages.flatMap(page => page.users) || [];
 
   return (
     <div className="max-w-4xl mx-auto p-4">
@@ -32,9 +34,9 @@ export default function AgentTools() {
         <div className="mt-8 border rounded bg-white">
           <div className="p-4 border-b flex items-center justify-between">
             <h3 className="text-lg font-semibold">My Members</h3>
-            <button className="text-sm text-indigo-600" onClick={refresh}>Refresh</button>
+            <button className="text-sm text-indigo-600" onClick={() => void refetch()}>Refresh</button>
           </div>
-          {usersLoading ? (
+          {isLoading ? (
             <div className="p-4 text-gray-600">Loading…</div>
           ) : users.length === 0 ? (
             <div className="p-4 text-gray-600">No members yet.</div>
@@ -53,11 +55,18 @@ export default function AgentTools() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map(u => (
+                  {users.map((u: Profile) => (
                     <tr key={u.id} className="border-t">
                       <td className="px-3 py-2">
                         {editRow === u.id ? (
-                          <input value={editName} onChange={e=>setEditName(e.target.value)} className="border rounded px-2 py-1 w-40" />
+                          <input
+                            data-cy="agent-edit-name"
+                            value={editName}
+                            onChange={e=>setEditName(e.target.value)}
+                            className="border rounded px-2 py-1 w-40"
+                            disabled={false}
+                            readOnly={false}
+                          />
                         ) : (u.name || '—')}
                       </td>
                       <td className="px-3 py-2">{u.email || '—'}</td>
@@ -65,28 +74,42 @@ export default function AgentTools() {
                       <td className="px-3 py-2">{u.region || '—'}</td>
                       <td className="px-3 py-2">
                         {editRow === u.id ? (
-                          <input value={editPhone} onChange={e=>setEditPhone(e.target.value)} className="border rounded px-2 py-1 w-36" />
+                          <input
+                            data-cy="agent-edit-phone"
+                            value={editPhone}
+                            onChange={e=>setEditPhone(e.target.value)}
+                            className="border rounded px-2 py-1 w-36"
+                            disabled={false}
+                            readOnly={false}
+                          />
                         ) : (u.phone || '—')}
                       </td>
                       <td className="px-3 py-2">
                         {editRow === u.id ? (
-                          <input value={editOrgId} onChange={e=>setEditOrgId(e.target.value)} className="border rounded px-2 py-1 w-28" />
+                          <input
+                            data-cy="agent-edit-orgid"
+                            value={editOrgId}
+                            onChange={e=>setEditOrgId(e.target.value)}
+                            className="border rounded px-2 py-1 w-28"
+                            disabled={false}
+                            readOnly={false}
+                          />
                         ) : (u.orgId || '—')}
                       </td>
                       <td className="px-3 py-2 text-right">
                         {editRow === u.id ? (
                           <>
-                            <button className="text-green-700 mr-2" onClick={async ()=>{
+                            <button className="text-green-700 mr-2" onClick={() => { void (async ()=>{
                               try {
                                 if (!u.id) return;
-                                await updateDoc(doc(db, 'members', u.id), { name: editName, phone: editPhone, orgId: editOrgId });
+                                await updateDoc(doc(firestore, 'members', u.id), { name: editName, phone: editPhone, orgId: editOrgId });
                                 setEditRow(null);
                                 setSuccess('Member updated');
-                                refresh();
+                                void refetch();
                               } catch (e) {
                                 setError(e instanceof Error ? e.message : String(e));
                               }
-                            }}>Save</button>
+                            })(); }}>Save</button>
                             <button className="text-gray-600" onClick={()=> setEditRow(null)}>Cancel</button>
                           </>
                         ) : (

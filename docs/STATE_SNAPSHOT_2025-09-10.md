@@ -12,6 +12,7 @@ Highlights
 Pending
 - Stabilize failing E2E specs (selectors adjusted; re-run pending).
 - Finish prod Payment Element (set publishable key + functions secrets).
-- Run nameLower backfill to completion and log summary.
+- Backfill nameLower: completed via Admin dialog.
+  - Result (emulator seed on 2025-09-11): pages=1, updated=6, nextStartAfter=null
+  - Traceability: entries written to `admin_jobs` with `job=backfillNameLower`; last record shows `nextStartAfter=null`.
 - Optional: token rotation UI, async exports, additional charts.
-

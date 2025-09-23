@@ -1,0 +1,1 @@
+I am proceeding with the refactoring of the portal pages as planned. This will take some time.

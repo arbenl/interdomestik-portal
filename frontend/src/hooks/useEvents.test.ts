@@ -1,34 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
 import { useEvents } from './useEvents';
-import { getDocs } from 'firebase/firestore';
+import { renderHookWithProviders, waitFor } from '@/test-utils';
+
 
 describe('useEvents', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('returns events list', async () => {
-    const docs = [
-      { id: 'e1', data: () => ({ title: 'Welcome', startAt: { seconds: 1 }, location: 'PRISHTINA' }) },
+    const mockEvents = [
+      { id: 'evt1', title: 'Spring Fair', startsAt: 1700000000000 },
     ];
-    (getDocs as vi.Mock).mockResolvedValue({ docs });
-    const { result } = renderHook(() => useEvents(5));
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.events).toHaveLength(1);
+    __setFunctionsResponse((_name: string, _payload: any) => mockEvents);
+    const { result } = renderHookWithProviders(() => useEvents(5));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.data).toEqual(mockEvents);
   });
 
   it('handles empty list', async () => {
-    (getDocs as vi.Mock).mockResolvedValue({ docs: [] });
-    const { result } = renderHook(() => useEvents(5));
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.events).toEqual([]);
+    __setFunctionsResponse(() => []);
+    const { result } = renderHookWithProviders(() => useEvents(5));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.data).toEqual([]);
   });
 
   it('handles errors', async () => {
-    const err = new Error('boom');
-    (getDocs as vi.Mock).mockRejectedValue(err);
-    const { result } = renderHook(() => useEvents(5));
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.error).toBe(err);
+    __setFunctionsResponse(() => { throw new Error('boom'); });
+    const { result } = renderHookWithProviders(() => useEvents(5));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.error).toBeTruthy();
   });
 });
-

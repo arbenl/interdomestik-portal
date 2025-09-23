@@ -1,20 +1,22 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { auth, functions } from '../firebase';
-import { signOut } from 'firebase/auth';
-import { httpsCallable } from 'firebase/functions';
-import { useMemberProfile } from '../hooks/useMemberProfile';
-import DigitalMembershipCard from '../components/DigitalMembershipCard';
-import Button from '../components/ui/Button';
-import { useToast } from '../components/ui/useToast';
-import RegionSelect from '../components/RegionSelect';
-import { ProfileInput } from '../validation/profile';
+'use client';
 
-const upsertProfile = httpsCallable(functions, 'upsertProfile');
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { useMemberProfile } from '@/hooks/useMemberProfile';
+import DigitalMembershipCard from '@/components/DigitalMembershipCard';
+import { Button } from '@/components/ui';
+import { useToast } from '@/components/ui/useToast';
+import RegionSelect from '@/components/RegionSelect';
+import { ProfileInput } from '@/validation/profile';
+import type { Profile } from '@/types';
+import { useHttpsCallable } from '../hooks/useHttpsCallable';
 
 export default function Profile() {
   const { user } = useAuth();
-  const { profile, activeMembership, loading, error: profileError } = useMemberProfile(user?.uid);
+  const { data: profile, isLoading, error: profileError } = useMemberProfile(user?.uid);
+  const { callFunction: upsertProfile, error: upsertError, loading: upsertLoading } = useHttpsCallable('upsertProfile');
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -32,6 +34,20 @@ export default function Profile() {
       setRegion(profile.region || '');
     }
   }, [profile]);
+
+  useEffect(() => {
+    if (upsertError) {
+      const code = upsertError.code || 'unknown';
+      const message = upsertError.message || 'Update failed';
+      setError(`${message}${code ? ` (code: ${code})` : ''}`);
+      push({ type: 'error', message });
+      try {
+        setDebugInfo(JSON.stringify({ code, message, details: upsertError.details }, null, 2));
+      } catch {
+        setDebugInfo(String(message));
+      }
+    }
+  }, [upsertError, push]);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -52,33 +68,19 @@ export default function Profile() {
     setSuccess(null);
     const v = validate();
     if (v) { setError(v); return; }
-    try {
-      await upsertProfile({ name: name.trim(), phone: phone.trim(), region });
-      // Refresh Auth user to pick up displayName updates from server
-      if (auth.currentUser) {
-        try { await auth.currentUser.reload(); } catch (e) {
-          console.warn('Failed to reload auth user', e);
-        }
-      }
-      setSuccess('Profile updated successfully!');
-      push({ type: 'success', message: 'Profile updated' });
-      setDebugInfo(null);
-    } catch (err) {
-      const anyErr = err as Record<string, unknown>;
-      const code = (anyErr?.code as string) || (anyErr?.name as string) || 'unknown';
-      const message = (anyErr?.message as string) || 'Update failed';
-      const details = anyErr?.details;
-      setError(`${message}${code ? ` (code: ${code})` : ''}`);
-      push({ type: 'error', message });
-      try {
-        setDebugInfo(JSON.stringify({ code, message, details }, null, 2));
-      } catch {
-        setDebugInfo(String(message));
+    await upsertProfile({ name: name.trim(), phone: phone.trim(), region });
+    // Refresh Auth user to pick up displayName updates from server
+    if (auth.currentUser) {
+      try { await auth.currentUser.reload(); } catch (e) {
+        console.warn('Failed to reload auth user', e);
       }
     }
+    setSuccess('Profile updated successfully!');
+    push({ type: 'success', message: 'Profile updated' });
+    setDebugInfo(null);
   };
 
-  if (loading) {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
@@ -93,7 +95,7 @@ export default function Profile() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2">
           <h2 className="text-2xl font-bold mb-4">My Profile</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Email</label>
               <input
@@ -101,6 +103,7 @@ export default function Profile() {
                 value={user?.email || ''}
                 disabled
                 className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                autoComplete="email"
               />
             </div>
             <div>
@@ -112,6 +115,7 @@ export default function Profile() {
                 onChange={(e) => setName(e.target.value)}
                 required
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                autoComplete="name"
               />
             </div>
             <div>
@@ -122,6 +126,7 @@ export default function Profile() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                autoComplete="tel"
               />
             </div>
             <div>
@@ -136,8 +141,8 @@ export default function Profile() {
             {profileError && <p className="text-sm text-red-600">Error loading profile: {profileError.message}</p>}
             {success && <p className="text-sm text-green-600">{success}</p>}
             <div className="flex justify-between items-center">
-              <Button type="submit">Update Profile</Button>
-              <Button variant="ghost" onClick={handleSignOut}>Sign Out</Button>
+              <Button type="submit" disabled={upsertLoading}>Update Profile</Button>
+              <Button variant="ghost" onClick={() => { void handleSignOut(); }}>Sign Out</Button>
             </div>
           </form>
         </div>
@@ -151,7 +156,7 @@ export default function Profile() {
             );
             type TS = { seconds?: number } | undefined;
             const profileExpires = (profile as unknown as { expiresAt?: TS })?.expiresAt?.seconds;
-            const expiresAtSec = activeMembership?.expiresAt?.seconds ?? profileExpires;
+            const expiresAtSec = profile?.expiresAt?.seconds ?? profileExpires;
             const hasActive = typeof expiresAtSec === 'number' && expiresAtSec * 1000 > Date.now();
             const validUntil = typeof expiresAtSec === 'number' ? new Date(expiresAtSec * 1000).toLocaleDateString() : '—';
             const status = hasActive ? 'active' : (typeof expiresAtSec === 'number' ? 'expired' : 'none');

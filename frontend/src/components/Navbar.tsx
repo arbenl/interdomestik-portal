@@ -1,8 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useRef, useState } from 'react';
 import { signOut as fbSignOut } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth } from '@/lib/firebase';
+import { queryClient } from '../queryClient';
+import { getMemberProfile, getMembershipHistory, getInvoices } from '../services/member';
+import { getUsers } from '../services/admin';
 
 export default function Navbar() {
   const { user } = useAuth();
@@ -25,17 +28,35 @@ export default function Navbar() {
     document.addEventListener('click', onDoc);
     return () => document.removeEventListener('click', onDoc);
   }, []);
+
+  const prefetchPortalData = () => {
+    if (user) {
+      void queryClient.prefetchQuery({ queryKey: ['memberProfile', user.uid], queryFn: () => getMemberProfile(user.uid) });
+      void queryClient.prefetchQuery({ queryKey: ['membershipHistory', user.uid], queryFn: () => getMembershipHistory(user.uid) });
+    }
+  };
+
+  const prefetchAdminData = () => {
+    void queryClient.prefetchQuery({ queryKey: ['users', { region: 'ALL', status: 'ALL', expiringDays: null }], queryFn: () => getUsers({ allowedRegions: [], region: 'ALL', status: 'ALL', expiringDays: null, pageParam: null, limitNum: 25 }) });
+  };
+
+  const prefetchBillingData = () => {
+    if (user) {
+      void queryClient.prefetchQuery({ queryKey: ['invoices', user.uid], queryFn: () => getInvoices(user.uid) });
+    }
+  };
+
   return (
     <nav className="flex items-center justify-between px-4 py-2 border-b bg-white">
       <ul className="flex gap-4 text-sm list-none m-0 p-0">
         <li><Link to="/">Home</Link></li>
-        <li><Link to="/portal">Portal</Link></li>
+        <li onMouseEnter={prefetchPortalData}><Link to="/portal">Portal</Link></li>
         <li><Link to="/signin">Sign In</Link></li>
         <li><Link to="/signup">Sign Up</Link></li>
-        <li><Link to="/profile">Profile</Link></li>
+        <li onMouseEnter={prefetchPortalData}><Link to="/profile">Profile</Link></li>
         <li><Link to="/agent">Agent</Link></li>
-        <li><Link to="/admin">Admin</Link></li>
-        <li><Link to="/billing">Billing</Link></li>
+        <li onMouseEnter={prefetchAdminData}><Link to="/admin">Admin</Link></li>
+        <li onMouseEnter={prefetchBillingData}><Link to="/billing">Billing</Link></li>
       </ul>
       {greeting && (
         <div className="relative" ref={menuRef}>
@@ -52,13 +73,11 @@ export default function Navbar() {
               <Link to="/membership" onClick={() => setOpen(false)} className="block px-3 py-2 text-sm hover:bg-gray-50">History</Link>
               <button
                 type="button"
-                onClick={async () => {
-                  try {
-                    await fbSignOut(auth);
-                  } finally {
+                onClick={() => {
+                  void fbSignOut(auth).finally(() => {
                     setOpen(false);
-                    navigate('/signin');
-                  }
+                    void navigate('/signin');
+                  });
                 }}
                 className="w-full text-left block px-3 py-2 text-sm text-red-600 hover:bg-gray-50"
               >

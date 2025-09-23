@@ -64,3 +64,10 @@ export function verifyCardToken(token: string): (CardClaims & { kid?: string }) 
     return null;
   }
 }
+
+export function getCardKeyStatus(): { activeKid: string; kids: string[] } {
+  const secrets = getSecrets() as any;
+  const activeKid = String(secrets.activeKid || 'v1');
+  const kids = Object.keys(secrets).filter((k) => k !== 'activeKid');
+  return { activeKid, kids };
+}

@@ -4,16 +4,23 @@
   "description": "Member portal for Interdomestik organization",
   "main": "index.js",
   "scripts": {
-    "build": "npm --prefix frontend run build && npm --prefix functions run build",
-    "test": "npm run test:rules",
-    "test:rules": "firebase emulators:exec --only firestore \"mocha --require ts-node/register test/**/*.test.ts\"",
-    "lint": "npm --prefix frontend run lint && npm --prefix functions run lint",
-    "deploy": "firebase deploy",
-    "serve": "firebase serve",
-    "cypress:open": "cypress open",
-    "cypress:run": "cypress run",
-    "e2e:local": "cypress run --config baseUrl=http://localhost:5000",
-    "prepare": "husky"
+    "dev": "pnpm --filter frontend dev",
+    "dev:emu": "firebase emulators:start --project demo-interdomestik",
+    "seed:raw": "tsx --tsconfig scripts/tsconfig.scripts.json scripts/emulator/seed.ts",
+    "dev:seed": "tsx --tsconfig scripts/tsconfig.scripts.json scripts/emulator/run-seed.ts",
+    "emu:seed": "firebase emulators:exec --project demo-interdomestik \"pnpm seed:raw\"",
+    "dev:emu:seed": "concurrently \"pnpm dev:emu\" \"pnpm dev:seed\"",
+    "dev:stop": "kill-port 9099 8080 5001 5000 4400 4500",
+    "build": "pnpm --filter frontend build",
+    "lint": "pnpm --filter frontend lint && pnpm --filter functions lint",
+    "test": "pnpm --filter frontend test && pnpm --filter functions test",
+    "typecheck": "pnpm --filter frontend typecheck && pnpm --filter functions typecheck",
+    "test:ci": "pnpm --filter frontend test:run && pnpm --filter functions test",
+    "test:rules": "vitest -c vitest.config.rules.ts",
+    
+    "check": "node scripts/check-errors.js",
+    "verify:frontend": "pnpm --filter frontend typecheck && pnpm --filter frontend lint --no-fix && pnpm --filter frontend build && pnpm --filter frontend test:ci",
+    "specify": "uvx --from git+https://github.com/github/spec-kit.git specify"
   },
   "keywords": [
     "member-portal",
@@ -23,29 +30,47 @@
   "author": "Manus AI",
   "license": "MIT",
   "dependencies": {
-    "firebase": "^12.2.1"
+    "firebase": "^12.2.1",
+    "firebase-admin": "^13.5.0"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",
     "@types/chai": "^5.2.2",
     "@types/mocha": "^10.0.10",
+    "@types/node": "^24.3.3",
+    "@vitest/coverage-v8": "^1.6.1",
     "chai": "^6.0.1",
-    "cypress": "^15.2.0",
+    "concurrently": "^9.2.1",
+    "dotenv": "^17.2.2",
     "firebase-tools": "^14.16.0",
+    "husky": "^9.1.7",
+    "kill-port": "^2.0.1",
+    "lint-staged": "^16.1.6",
     "mocha": "^11.7.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.1.6"
+    "vitest": "^3.2.4",
+    "zod": "^4.1.8"
+  },
+  "engines": {
+    "node": ">=20.19.4 <21",
+    "pnpm": ">=10.16.1 <11"
   },
   "lint-staged": {
     "frontend/src/**/*.{ts,tsx}": [
       "npm --prefix frontend run lint",
-      "npm --prefix frontend run typecheck"
+      "sh -c 'npm --prefix frontend run typecheck'"
     ],
     "functions/src/**/*.ts": [
       "npm --prefix functions run lint",
-      "npm --prefix functions run typecheck"
+      "sh -c 'npm --prefix functions run typecheck'"
     ]
+  },
+  "packageManager": "pnpm@10.16.1+sha512.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706",
+  "pnpm": {
+    "overrides": {
+      "vite": "^7.1.7"
+    }
   }
 }

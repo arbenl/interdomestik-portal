@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { useMemberProfile } from '../hooks/useMemberProfile';
-import { useInvoices } from '../hooks/useInvoices';
-import useToast from '../components/ui/useToast';
-import Button from '../components/ui/Button';
-import PaymentElementBox from '../components/payments/PaymentElementBox';
+import { useAuth } from '@/hooks/useAuth';
+import { useMemberProfile } from '@/hooks/useMemberProfile';
+import { useInvoices } from '@/hooks/useInvoices';
+import { useToast } from '@/components/ui/useToast';
+import { Button } from '@/components/ui';
+import PaymentElementBox from '@/components/payments/PaymentElementBox';
+import { functions } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import type { Invoice } from '@/types';
 
 function formatMoney(amount: number, currency: string) {
   try {
@@ -26,12 +29,12 @@ function getStripeWebhookUrl(projectId: string) {
 
 export default function Billing() {
   const { user } = useAuth();
-  const { profile } = useMemberProfile(user?.uid);
-  const { invoices, loading, error, refresh } = useInvoices(user?.uid);
+  const { data: profile } = useMemberProfile(user?.uid);
+  const { data: invoices, isLoading, error, refetch } = useInvoices(user?.uid);
   const { push } = useToast();
   const [busy, setBusy] = useState(false);
-  const projectId = 'demo-interdomestik';
-  const ENABLE_PAYMENTS_UI = true; // feature flag scaffolding
+  const projectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) || 'demo-interdomestik';
+  const ENABLE_PAYMENTS_UI = String(import.meta.env.VITE_ENABLE_PAYMENTS_UI ?? 'true') === 'true';
 
   async function simulatePayment() {
     if (!user) return;
@@ -51,9 +54,9 @@ export default function Billing() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`Webhook error: ${res.status}`);
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise<void>((r) => setTimeout(r, 300));
       localStorage.setItem('renewed_at', String(Date.now()));
-      await refresh();
+      void refetch();
       push({ type: 'success', message: 'Payment recorded. Membership activated.' });
     } catch (e) {
       console.error(e);
@@ -99,56 +102,38 @@ export default function Billing() {
             <div className="font-medium">{expiry}</div>
           </div>
         </div>
-        <div className="mt-3 flex items-center gap-3">
-          <label className="inline-flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={!!profile?.autoRenew} onChange={async (e)=>{
-              try {
-                const { httpsCallable } = await import('firebase/functions');
-                const { functions } = await import('../firebase');
-                const fn = httpsCallable<{ autoRenew: boolean }, { ok: boolean }>(functions, 'setAutoRenew');
-                await fn({ autoRenew: e.target.checked });
-                push({ type: 'success', message: e.target.checked ? 'Auto-renew enabled' : 'Auto-renew disabled' });
-              } catch {
-                push({ type: 'error', message: 'Failed to update auto-renew' });
-              }
-            }} />
-            Enable auto-renew (beta)
-          </label>
-        </div>
         <div className="mt-3 text-sm text-gray-500">For local testing, use the button below to simulate a paid invoice via the emulator-friendly webhook.</div>
         <div className="mt-3 flex items-center gap-2">
-          <Button onClick={simulatePayment} disabled={busy}>
+          <Button onClick={() => { void simulatePayment(); }} disabled={busy}>
             {busy ? 'Simulating…' : 'Add test paid invoice'}
           </Button>
-          <Button variant="ghost" onClick={async ()=>{
+          <Button variant="ghost" onClick={() => { void (async ()=>{
             try {
-              const { httpsCallable } = await import('firebase/functions');
-              const { functions } = await import('../firebase');
               const fn = httpsCallable<{ uid?: string; year?: number }, { ok: boolean }>(functions, 'resendMembershipCard');
               await fn({});
               alert('Card email queued. Check your inbox.');
             } catch {
               alert('Failed to resend card');
             }
-          }}>Resend card email</Button>
+          })(); }}>Resend card email</Button>
         </div>
       </div>
 
       <h2 className="text-xl font-semibold mb-2">Invoices</h2>
-      {loading && <div className="text-gray-600">Loading…</div>}
+      {isLoading && <div className="text-gray-600">Loading…</div>}
       {error && (
         <div className="border border-red-300 bg-red-50 text-red-800 rounded p-2 mb-3">
           Failed to load invoices: {error.message}
         </div>
       )}
-      {(!loading && invoices.length === 0) ? (
+      {(!isLoading && invoices?.length === 0) ? (
         <div className="text-gray-600">No invoices yet.</div>
       ) : (
         <div className="divide-y border rounded">
-          {invoices.map((inv) => (
+          {invoices?.map((inv: Invoice) => (
             <div key={inv.id} className="p-3 flex items-center justify-between">
               <div>
-                <div className="font-medium">{inv.invoiceId || inv.id}</div>
+                <div className="font-medium">{inv.id}</div>
                 <div className="text-xs text-gray-500">{inv.created ? new Date(inv.created.seconds * 1000).toLocaleString() : ''}</div>
               </div>
               <div className="text-right">

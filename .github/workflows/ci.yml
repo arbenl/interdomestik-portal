@@ -2,106 +2,110 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
-
-env:
-  # Toggle to skip heavy jobs while billing is limited. Set repo/org variable CI_LIGHT=false to re-enable.
-  CI_LIGHT: ${{ vars.CI_LIGHT || 'true' }}
+    branches: [ main ]
 
 jobs:
-  lint:
+  build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm ci
-      - run: npm --prefix frontend ci
-      - run: npm --prefix functions ci
-      - run: npm run lint
-
-  frontend-unit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+          node-version-file: '.nvmrc'
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm --prefix frontend ci
-      - run: npm --prefix frontend run build
-      - run: npm --prefix frontend run test:coverage -- --run
-      - name: Upload frontend coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-coverage
-          path: frontend/coverage
-
-  functions-unit:
-    if: env.CI_LIGHT != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm --prefix functions ci
-      - run: npm --prefix functions run build
-      - name: Install Firebase CLI
-        run: npm i -g firebase-tools
-      - name: Run functions tests with coverage (emulators)
-        env:
-          FIRESTORE_EMULATOR_HOST: localhost:8085
-          FIREBASE_AUTH_EMULATOR_HOST: localhost:9099
+          version: 10.16.1
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
         run: |
-          npm --prefix functions run test:coverage
-      - name: Upload functions coverage
-        uses: actions/upload-artifact@v4
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
         with:
-          name: functions-coverage
-          path: functions/coverage
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - name: Install dependencies
+        run: pnpm install
+      - name: Verify Frontend
+        run: pnpm --filter frontend verify:frontend
 
-  rules:
-    if: env.CI_LIGHT != 'true'
+  functions-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm ci
-      - name: Install Firebase CLI
-        run: npm i -g firebase-tools
-      - name: Run rules tests
-        env:
-          FIRESTORE_EMULATOR_HOST: localhost:8085
-        run: npm test
+          node-version-file: '.nvmrc'
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.16.1
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run Functions tests (emulators)
+        run: pnpm --filter functions test
 
   e2e:
-    if: env.CI_LIGHT != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm ci
-      - run: npm --prefix frontend ci
-      - run: npm --prefix functions ci
-      - run: npm --prefix frontend run build
-      - name: Install Firebase CLI
-        run: npm i -g firebase-tools
-      - name: Run E2E with emulators + hosting
-        env:
-          FIRESTORE_EMULATOR_HOST: localhost:8085
-          FB_PROJECT_ID: demo-interdomestik
+          node-version-file: '.nvmrc'
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.16.1
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
         run: |
-          firebase emulators:exec --only functions,firestore,auth,hosting "npm run cypress:run"
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - name: Install dependencies
+        run: pnpm install
+      - name: Install Playwright Browsers
+        run: pnpm --filter frontend exec playwright install --with-deps
+      - name: Run E2E tests
+        run: |
+          pnpm dev:emu &
+          sleep 30
+          pnpm --filter frontend e2e
+
+  rules-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.16.1
+      - name: Install dependencies
+        run: pnpm install
+      - name: Start Firestore emulator
+        run: pnpm dev:emu &
+      - name: Run rules tests
+        run: |
+          sleep 10
+          pnpm test:rules
+
+  # Simplified: remove dependency hygiene job (handled locally or as needed)

@@ -5,14 +5,15 @@ interface DigitalMembershipCardProps {
   memberNo: string;
   region: string;
   validUntil: string;
-  status?: 'active' | 'expired' | 'none' | string;
+  status?: 'active' | 'expired' | 'none';
   verifyUrl?: string;
+  role?: 'member' | 'agent' | 'admin';
 }
 
 import SimpleQr from './SimpleQr';
-import Button from './ui/Button';
+import { Button } from '@/components/ui';
 
-const DigitalMembershipCard: React.FC<DigitalMembershipCardProps> = ({ name, memberNo, region, validUntil, status = 'none', verifyUrl }) => {
+const DigitalMembershipCard: React.FC<DigitalMembershipCardProps> = ({ name, memberNo, region, validUntil, status = 'none', verifyUrl, role }) => {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const qrUrl = verifyUrl ? `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(verifyUrl)}` : undefined;
   const copyLink = async () => {
@@ -22,7 +23,7 @@ const DigitalMembershipCard: React.FC<DigitalMembershipCardProps> = ({ name, mem
       console.warn('Failed to copy verify URL', e);
     }
   };
-  const downloadQr = async () => {
+  const downloadQr = () => {
     try {
       const img = imgRef.current;
       if (!img) throw new Error('QR not ready');
@@ -72,6 +73,12 @@ const DigitalMembershipCard: React.FC<DigitalMembershipCardProps> = ({ name, mem
           <p className="text-gray-400">Region</p>
           <p className="font-medium">{region}</p>
         </div>
+        {role && (
+          <div>
+            <p className="text-gray-400">Role</p>
+            <p className="font-medium uppercase">{String(role)}</p>
+          </div>
+        )}
         <div>
           <p className="text-gray-400">Valid Until</p>
           <p className="font-medium">{validUntil}</p>
@@ -84,9 +91,9 @@ const DigitalMembershipCard: React.FC<DigitalMembershipCardProps> = ({ name, mem
             <div className="mb-1">Verify:</div>
             <a href={verifyUrl} className="underline text-gray-200 break-all">{verifyUrl}</a>
             <div className="mt-2 flex gap-2">
-              <Button variant="ghost" onClick={copyLink} className="px-2 py-1 text-white border border-white/20">Copy link</Button>
+              <Button variant="ghost" onClick={() => { void copyLink(); }} className="px-2 py-1 text-white border border-white/20">Copy link</Button>
               {verifyUrl && (
-                <button onClick={downloadQr} className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm">Download QR</button>
+                <button onClick={() => { downloadQr(); }} className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm">Download QR</button>
               )}
             </div>
           </div>
