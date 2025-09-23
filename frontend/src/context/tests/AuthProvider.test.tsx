@@ -1,14 +1,19 @@
 import { render, screen, act } from '@testing-library/react';
+import { useContext } from 'react';
 import { AuthProvider } from '../AuthProvider';
-import { useAuth } from '@/hooks/useAuth';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { AuthContext } from '../AuthContext';
 import { makeUser } from '../../tests/factories/user';
+import { describe, it, expect, afterEach } from 'vitest';
 
-// IMPORTANT: ensure the real hook is used for this suite
-vi.doUnmock('@/hooks/useAuth');
+declare global {
+  var __authEmit: (user: ReturnType<typeof makeUser> | null) => void;
+  var __authReset: () => void;
+}
 
 const Probe = () => {
-  const { user, loading } = useAuth();
+  const ctx = useContext(AuthContext);
+  if (!ctx) return null;
+  const { user, loading } = ctx;
   if (loading) return <div>Loading...</div>;
   if (user) return <div>logged in as {user.email}</div>;
   return <div>logged out</div>;
@@ -16,39 +21,45 @@ const Probe = () => {
 
 describe('AuthProvider', () => {
   afterEach(() => {
-    global.__authReset();
+    global.__authReset?.();
   });
 
   it('shows logged out state', async () => {
     render(
       <AuthProvider>
         <Probe />
-      </AuthProvider>
+      </AuthProvider>,
     );
+
     await act(async () => {
       global.__authEmit(null);
+      await Promise.resolve();
     });
-    expect(screen.getByText('logged out')).toBeInTheDocument();
+
+    expect(await screen.findByText('logged out')).toBeInTheDocument();
   });
 
   it('reacts to id token changes', async () => {
     render(
       <AuthProvider>
         <Probe />
-      </AuthProvider>
+      </AuthProvider>,
     );
 
+    const user = makeUser({ email: 'test@example.com' });
+
     await act(async () => {
-      global.__authEmit(makeUser({ email: 'test@example.com' }));
+      global.__authEmit(user);
+      await Promise.resolve();
     });
 
-    expect(screen.getByText(/logged in as test@example.com/i)).toBeInTheDocument();
+    expect(await screen.findByText(/logged in as test@example.com/i)).toBeInTheDocument();
 
     await act(async () => {
       global.__authEmit(null);
+      await Promise.resolve();
     });
 
-    expect(screen.queryByText(/test@example.com/i)).not.toBeInTheDocument();
-    expect(screen.getByText('logged out')).toBeInTheDocument();
+    expect(await screen.findByText('logged out')).toBeInTheDocument();
   });
 });

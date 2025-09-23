@@ -21,7 +21,6 @@ describe('DigitalMembershipCard', () => {
     expect(screen.getByText('Member One')).toBeInTheDocument();
     expect(screen.getByText('PRISHTINA')).toBeInTheDocument();
     expect(screen.getByText('2025-12-31')).toBeInTheDocument();
-    expect(screen.getByText(/ACTIVE/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/ACTIVE/i).length).toBeGreaterThan(0);
   });
 });
-

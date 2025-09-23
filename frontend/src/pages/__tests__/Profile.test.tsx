@@ -1,12 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
-import { renderWithProviders, screen, fireEvent, waitFor } from '@/test-utils';
+import { renderWithProviders, fireEvent, waitFor, within } from '@/test-utils';
 import Profile from '../Profile';
 import { useAuth } from '@/hooks/useAuth';
 import { useMemberProfile } from '@/hooks/useMemberProfile';
+import { useHttpsCallable } from '@/hooks/useHttpsCallable';
 import { makeUser } from '@/tests/factories/user';
 
 vi.mock('@/hooks/useAuth');
 vi.mock('@/hooks/useMemberProfile');
+vi.mock('@/hooks/useHttpsCallable');
 
 describe('Profile page', () => {
   it('updates profile successfully', async () => {
@@ -20,14 +22,17 @@ describe('Profile page', () => {
       signUp: vi.fn(),
       signOutUser: vi.fn(),
     });
-    const mutate = vi.fn();
-    vi.mocked(useMemberProfile).mockReturnValue({ data: { name: 'User One' }, isLoading: false, error: null, mutate } as any);
-    renderWithProviders(<Profile />);
-    const nameInput = screen.getByLabelText(/Name/i);
+    const refetch = vi.fn();
+    vi.mocked(useMemberProfile).mockReturnValue({ data: { name: 'User One', region: 'PRISHTINA', phone: '' }, isLoading: false, error: null, refetch } as any);
+    const callFunction = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useHttpsCallable).mockReturnValue({ data: null, loading: false, error: null, callFunction, reset: vi.fn() } as any);
+    const { container } = renderWithProviders(<Profile />);
+    const scope = within(container);
+    const nameInput = scope.getByLabelText(/Name/i);
     fireEvent.change(nameInput, { target: { value: 'User One Updated' } });
-    fireEvent.click(screen.getByRole('button', { name: /Update Profile/i }));
+    fireEvent.click(scope.getByRole('button', { name: /Update Profile/i }));
     await waitFor(() => {
-      expect(mutate).toHaveBeenCalledWith({ name: 'User One Updated' });
+      expect(callFunction).toHaveBeenCalledWith({ name: 'User One Updated', phone: '', region: 'PRISHTINA' });
     });
   });
 });

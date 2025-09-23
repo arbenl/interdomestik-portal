@@ -1,49 +1,51 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { renderWithProviders, screen, within, fireEvent } from '@/test-utils';
-import Admin from '../Admin';
-import { useAuth } from '@/hooks/useAuth';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithProviders, within, fireEvent, waitFor } from '@/test-utils';
+import { ExportsPanel } from '@/features/admin/exports/ExportsPanel';
 
-const seededExports = [
-  { id: 'exp1', type: 'members', status: 'running', startedAt: 1700000000000 },
-];
+const pushMock = vi.fn();
+vi.mock('@/components/ui/useToast', () => ({ useToast: () => ({ push: pushMock }) }));
 
-__fsSeed('exports', seededExports);
-
-vi.mock('@/hooks/useAuth');
+const seededExports = Array.from({ length: 6 }, (_, index) => ({
+  id: `exp${index + 1}`,
+  type: 'members',
+  status: index === 0 ? 'running' : 'done',
+  startedAt: 1700000000000 - index * 1000,
+}));
 
 describe('Admin Exports panel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuth as Mock).mockReturnValue({
-      isAdmin: true,
-      isAgent: false,
-      user: { uid: 'test-admin-uid' },
-      loading: false,
-      allowedRegions: ['PRISHTINA'],
-    });
+    pushMock.mockReset();
+    __fsSeed('exports', seededExports);
   });
 
   it('renders exports list with actions and disables start when running', async () => {
-    renderWithProviders(<Admin />);
-    const panel = await screen.findByTestId('exports-panel');
-    expect(within(panel).getByText('exp1')).toBeInTheDocument();
-    expect(within(panel).getByRole('button', { name: /Start Members CSV Export/i })).toBeDisabled();
+    const { container } = renderWithProviders(<ExportsPanel />);
+    const panel = await within(container).findByTestId('exports-panel');
+    expect(await within(panel).findByText('exp1')).toBeInTheDocument();
+    const startBtn = await within(panel).findByRole('button', { name: /Start Members CSV Export/i });
+    await waitFor(() => {
+      expect(startBtn).toBeDisabled();
+    });
   });
 
   it('toggles Show more/Show less and resubscribes', async () => {
-    renderWithProviders(<Admin />);
-    const panel = await screen.findByTestId('exports-panel');
-    const toggleBtn = within(panel).getByRole('button', { name: /Show more/i });
+    const { container } = renderWithProviders(<ExportsPanel />);
+    const panel = await within(container).findByTestId('exports-panel');
+    const toggleBtn = await within(panel).findByRole('button', { name: /Show more/i });
     fireEvent.click(toggleBtn);
     expect(within(panel).getByRole('button', { name: /Show less/i })).toBeInTheDocument();
   });
 
   it('starts export and shows success toast', async () => {
     __fsSeed('exports', [{ id: 'exp1', type: 'members', status: 'done' }]);
-    renderWithProviders(<Admin />);
-    const panel = await screen.findByTestId('exports-panel');
-    const startBtn = within(panel).getByRole('button', { name: /Start Members CSV Export/i });
+    const { container } = renderWithProviders(<ExportsPanel />);
+    const panel = await within(container).findByTestId('exports-panel');
+    const startBtn = await within(panel).findByRole('button', { name: /Start Members CSV Export/i });
     fireEvent.click(startBtn);
-    // You would also test for the toast message here if it were implemented
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith({ type: 'success', message: 'Members CSV export started' });
+    });
   });
 });

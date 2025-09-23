@@ -17,6 +17,7 @@ const ExportsPanel = lazy(() => import('@/features/admin/exports/ExportsPanel').
 const CardKeysPanel = lazy(() => import('@/features/admin/card-keys/CardKeysPanel').then(m => ({ default: m.CardKeysPanel })));
 const MaintenancePanel = lazy(() => import('@/features/admin/maintenance/MaintenancePanel').then(m => ({ default: m.MaintenancePanel })));
 const AuditLogsPanel = lazy(() => import('@/features/admin/audit/AuditLogsPanel').then(m => ({ default: m.AuditLogsPanel })));
+const ReportsPanel = lazy(() => import('@/features/admin/reports/ReportsPanel').then(m => ({ default: m.ReportsPanel })));
 
 export default function Admin() {
   const { isAdmin, canRegister, allowedRegions, loading: roleLoading } = useAgentOrAdmin();
@@ -79,6 +80,11 @@ export default function Admin() {
           <PanelBoundary>
             <Suspense fallback={loadingFallback}>
               <MetricsPanel />
+            </Suspense>
+          </PanelBoundary>
+          <PanelBoundary>
+            <Suspense fallback={loadingFallback}>
+              <ReportsPanel />
             </Suspense>
           </PanelBoundary>
           <PanelBoundary>

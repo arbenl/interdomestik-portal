@@ -31,7 +31,7 @@ export function OrgPanel({ push }: { push: (t: { type: 'success' | 'error'; mess
   }
 
   return (
-    <div className="mb-6 p-4 border rounded bg-white">
+    <div data-testid="orgs-panel" className="mb-6 p-4 border rounded bg-white">
       <h3 className="text-lg font-semibold mb-2">Organizations</h3>
       <div className="flex gap-2 items-end mb-3">
         <div>

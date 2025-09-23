@@ -15,7 +15,10 @@ export default function SignIn() {
   const { push } = useToast();
 
   useEffect(() => {
-    console.log('Firebase Project ID:', auth.app.options.projectId);
+    const projectId = auth?.app?.options?.projectId;
+    if (projectId) {
+      console.log('Firebase Project ID:', projectId);
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

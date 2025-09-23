@@ -1,27 +1,26 @@
-import { renderWithProviders, screen, fireEvent, waitFor } from '@/test-utils';
-import { vi, type Mock, describe, it, expect } from 'vitest';
-import Admin from '../Admin';
-import useAgentOrAdmin from '@/hooks/useAgentOrAdmin';
+import { renderWithProviders, screen, fireEvent, waitFor, within } from '@/test-utils';
+import { vi, describe, it, expect, type Mock } from 'vitest';
+import { OrgPanel } from '@/features/admin/organizations/OrgPanel';
 import { useOrganizations } from '@/hooks/admin/useOrganizations';
 
-vi.mock('@/hooks/useAgentOrAdmin');
 vi.mock('@/hooks/admin/useOrganizations');
+
+const mockedUseOrganizations = useOrganizations as unknown as Mock;
 
 describe('Admin Organizations panel', () => {
   it('creates organization', async () => {
-    (useAgentOrAdmin as Mock).mockReturnValue({ isAdmin: true, canRegister: true, allowedRegions: ['PRISHTINA'], loading: false });
     const create = vi.fn().mockResolvedValue({ data: { ok: true } });
-    (useOrganizations as Mock).mockReturnValue({ data: [], isLoading: false, error: null, create });
+    mockedUseOrganizations.mockReturnValue({ data: [], isLoading: false, error: null, create });
 
-    renderWithProviders(<Admin />);
+    const push = vi.fn();
+    renderWithProviders(<OrgPanel push={push} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Organizations')).toBeInTheDocument();
-    });
+    const panel = await screen.findByTestId('orgs-panel');
+    const panelScope = within(panel);
 
-    const nameInput = screen.getByLabelText(/Name/i);
+    const nameInput = panelScope.getByLabelText(/Name/i);
     fireEvent.change(nameInput, { target: { value: 'Test Org' } });
-    fireEvent.click(screen.getByRole('button', { name: /Create Org/i }));
+    fireEvent.click(panelScope.getByRole('button', { name: /Create Org/i }));
 
     await waitFor(() => {
       expect(create).toHaveBeenCalledWith({
@@ -29,6 +28,10 @@ describe('Admin Organizations panel', () => {
         email: '',
         seats: 10,
       });
+    });
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith({ type: 'success', message: 'Organization created' });
     });
   });
 });
