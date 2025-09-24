@@ -54,3 +54,7 @@ coverage/
 
 # AI agent artifacts
 .gemini/
+# Playwright browser caches and test output
+.playwright-browsers/
+frontend/.playwright-browsers/
+frontend/test-results/

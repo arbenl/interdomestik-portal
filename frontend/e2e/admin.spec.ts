@@ -1,20 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 test('Admin Login and Panel Access', async ({ page }) => {
-  // Navigate to the sign-in page
   await page.goto('/signin');
+  await page.getByLabel(/email/i).fill('admin@example.com');
+  await page.getByLabel(/password/i).fill('Passw0rd!');
+  await page.getByRole('button', { name: /sign in/i }).click();
 
-  // Fill in the admin credentials from the seed script
-  await page.fill('input[type="email"]', 'admin@example.com');
-  await page.fill('input[type="password"]', 'Passw0rd!');
+  await expect(page).toHaveURL(/\/profile$/);
 
-  // Click the sign-in button
-  await page.click('button[type="submit"]');
-
-  // Wait for navigation to the admin panel
-  await page.waitForURL('/admin');
-
-  // Check that the Admin Panel heading is visible
-  const heading = page.locator('h2', { hasText: 'Admin Panel' });
+  await page.goto('/admin');
+  const heading = page.locator('h2', { hasText: /Admin Panel/i });
   await expect(heading).toBeVisible();
 });
