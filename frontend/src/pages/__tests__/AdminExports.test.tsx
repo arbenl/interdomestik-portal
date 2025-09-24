@@ -48,4 +48,41 @@ describe('Admin Exports panel', () => {
       expect(pushMock).toHaveBeenCalledWith({ type: 'success', message: 'Members CSV export started' });
     });
   });
+
+  it('surfaces load failures once and resumes after refresh', async () => {
+    global.__fsThrow(new Error('firestore unavailable'));
+    renderWithProviders(<ExportsPanel />);
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith({ type: 'error', message: 'Failed to load exports' });
+    });
+    expect(pushMock).toHaveBeenCalledTimes(1);
+
+    global.__fsReset();
+    const restoredExports = [{ id: 'exp1', type: 'members', status: 'done', createdAt: Date.now() }];
+    global.__fsSeed('exports', restoredExports);
+    const refreshBtn = await screen.findByRole('button', { name: /Refresh/i });
+    fireEvent.click(refreshBtn);
+
+    await screen.findByText('exp1');
+    expect(pushMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a friendly message when the export callable rejects with permission denied', async () => {
+    global.__fsSeed('exports', [{ id: 'exp1', type: 'members', status: 'done' }]);
+    global.__setFunctionsResponse(() => {
+      const error = new Error('nope') as Error & { code: string };
+      error.code = 'functions/permission-denied';
+      throw error;
+    });
+
+    renderWithProviders(<ExportsPanel />);
+    const panel = await screen.findByTestId('exports-panel');
+    const startBtn = await within(panel).findByRole('button', { name: /Start Members CSV Export/i });
+    fireEvent.click(startBtn);
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith({ type: 'error', message: 'You need admin access to start exports.' });
+    });
+  });
 });
