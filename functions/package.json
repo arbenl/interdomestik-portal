@@ -6,7 +6,7 @@
   },
   "scripts": {
     "build": "tsc -p .",
-    "serve": "firebase emulators:start --only functions,firestore,hosting,auth --project demo-interdomestik",
+    "serve": "firebase emulators:start --only functions,firestore,hosting,auth --project interdomestik-dev",
     "seed": "ts-node ../scripts/seeds/emulatorSeed.ts",
     "deploy": "pnpm run build && pnpm dlx firebase-tools deploy --only functions",
     "test": "firebase emulators:exec --only firestore,auth \"mocha --timeout 10000 --require ts-node/register test/**/*.test.ts\"",

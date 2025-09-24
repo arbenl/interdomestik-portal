@@ -1,26 +1,30 @@
-import { useEffect, useMemo, useState } from 'react';
-import { collection, onSnapshot, addDoc } from 'firebase/firestore';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
+import callFunction from '@/services/functionsClient';
 
 type ExportJob = {
   id: string;
   type: string;
   status: string;
   startedAt?: number | { seconds?: number };
+  createdAt?: number | { seconds?: number };
 };
 
 const MAX_COLLAPSED_ROWS = 5;
 
-function toMillis(input: ExportJob['startedAt']): number | null {
+type Timestampish = number | { seconds?: number } | undefined;
+
+function toMillis(input: Timestampish): number | null {
   if (typeof input === 'number') return input;
   if (input && typeof input.seconds === 'number') return input.seconds * 1000;
   return null;
 }
 
-function formatStartedAt(input: ExportJob['startedAt']): string {
-  const millis = toMillis(input);
+function formatStartedAt(job: ExportJob): string {
+  const millis = toMillis(job.startedAt ?? job.createdAt);
   if (!millis) return '—';
   return new Date(millis).toLocaleString();
 }
@@ -30,30 +34,44 @@ export function ExportsPanel() {
   const [expanded, setExpanded] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const { push } = useToast();
+  const errorShownRef = useRef(false);
+  const pausedRef = useRef(false);
 
-  useEffect(() => {
-    const ref = collection(firestore, 'exports');
-    const unsubscribe = onSnapshot(ref, (snapshot) => {
+  const loadJobs = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
+    if (pausedRef.current && !force) return;
+    try {
+      const ref = collection(firestore, 'exports');
+      const snapshot = await getDocs(ref);
       const next = snapshot.docs.map((doc) => {
         const data = doc.data() as ExportJob;
         return { ...data, id: data.id ?? doc.id };
       });
       setJobs(next);
-    }, (error: unknown) => {
+      errorShownRef.current = false;
+      pausedRef.current = false;
+    } catch (error) {
       console.error('[exports] Failed to load exports', error);
-      push({ type: 'error', message: 'Failed to load exports' });
-    });
-
-    return unsubscribe;
+      if (!errorShownRef.current) {
+        push({ type: 'error', message: 'Failed to load exports' });
+        errorShownRef.current = true;
+      }
+      pausedRef.current = true;
+    }
   }, [push]);
 
+  useEffect(() => {
+    void loadJobs({ force: true });
+    const interval = window.setInterval(() => { void loadJobs(); }, 6000);
+    return () => window.clearInterval(interval);
+  }, [loadJobs]);
+
   const hasRunning = useMemo(
-    () => jobs.some((job) => job.status === 'running'),
+    () => jobs.some((job) => ['running', 'pending'].includes(job.status)),
     [jobs],
   );
 
   const sortedJobs = useMemo(
-    () => [...jobs].sort((a, b) => (toMillis(b.startedAt) ?? 0) - (toMillis(a.startedAt) ?? 0)),
+    () => [...jobs].sort((a, b) => (toMillis(b.startedAt ?? b.createdAt) ?? 0) - (toMillis(a.startedAt ?? a.createdAt) ?? 0)),
     [jobs],
   );
 
@@ -63,16 +81,24 @@ export function ExportsPanel() {
   const handleStart = async () => {
     setIsStarting(true);
     try {
-      const ref = collection(firestore, 'exports');
-      await addDoc(ref, {
-        type: 'members',
-        status: 'running',
-        startedAt: Date.now(),
-      });
+      const result = await callFunction<{ ok?: boolean; id?: string }, { preset?: 'BASIC' | 'FULL' }>('startMembersExport', { preset: 'BASIC' });
+      if (result && typeof result === 'object' && 'ok' in result && result.ok === false) {
+        throw new Error('Export request failed');
+      }
       push({ type: 'success', message: 'Members CSV export started' });
+      void loadJobs({ force: true });
     } catch (error) {
       console.error('[exports] Failed to start export', error);
-      push({ type: 'error', message: 'Failed to start export' });
+      let message = 'Failed to start export';
+      if (typeof error === 'object' && error && 'code' in error && typeof (error as { code: unknown }).code === 'string') {
+        const code = (error as { code: string }).code;
+        if (code.endsWith('permission-denied')) message = 'You need admin access to start exports.';
+        else if (code.endsWith('resource-exhausted')) message = 'Another export is already running. Please wait.';
+        else if (code.endsWith('unavailable')) message = 'Export service temporarily unreachable. Try again shortly.';
+      } else if (error instanceof Error && error.message) {
+        message = error.message;
+      }
+      push({ type: 'error', message });
     } finally {
       setIsStarting(false);
     }
@@ -85,12 +111,21 @@ export function ExportsPanel() {
           <h3 className="text-lg font-semibold">Exports</h3>
           <p className="text-sm text-gray-600">Download data extracts for offline processing.</p>
         </div>
-        <Button
-          onClick={() => { void handleStart(); }}
-          disabled={hasRunning || isStarting}
-        >
-          Start Members CSV Export
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={() => { void handleStart(); }}
+            disabled={hasRunning || isStarting}
+          >
+            Start Members CSV Export
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => { void loadJobs({ force: true }); }}
+            disabled={isStarting}
+          >
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -109,7 +144,7 @@ export function ExportsPanel() {
                 <td className="px-3 py-2 font-mono text-xs">{job.id}</td>
                 <td className="px-3 py-2 capitalize">{job.type}</td>
                 <td className="px-3 py-2 capitalize">{job.status}</td>
-                <td className="px-3 py-2">{formatStartedAt(job.startedAt)}</td>
+                <td className="px-3 py-2">{formatStartedAt(job)}</td>
               </tr>
             ))}
             {visibleJobs.length === 0 && (

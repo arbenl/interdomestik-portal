@@ -37,7 +37,12 @@ export default function Navbar() {
   };
 
   const prefetchAdminData = () => {
-    void queryClient.prefetchQuery({ queryKey: ['users', { region: 'ALL', status: 'ALL', expiringDays: null }], queryFn: () => getUsers({ allowedRegions: [], region: 'ALL', status: 'ALL', expiringDays: null, pageParam: null, limitNum: 25 }) });
+    void queryClient.prefetchInfiniteQuery({
+      queryKey: ['users', { region: 'ALL', status: 'ALL', expiringDays: null }],
+      queryFn: ({ pageParam }) => getUsers({ allowedRegions: [], region: 'ALL', status: 'ALL', expiringDays: null, pageParam, limitNum: 25 }),
+      getNextPageParam: () => null,
+      initialPageParam: null,
+    });
   };
 
   const prefetchBillingData = () => {

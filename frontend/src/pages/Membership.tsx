@@ -33,22 +33,25 @@ const MembershipPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="text-gray-700">
-              {history?.map((item: Membership) => (
-                <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-100">
-                  <td className="py-3 px-4">{item.year}</td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        item.status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
-                      }`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">{item.startedAt ? new Date(item.startedAt.seconds * 1000).toLocaleDateString() : '—'}</td>
-                  <td className="py-3 px-4">{item.expiresAt ? new Date(item.expiresAt.seconds * 1000).toLocaleDateString() : '—'}</td>
-                  <td className="py-3 px-4">{item.price} {item.currency}</td>
-                </tr>
-              ))}
+              {history?.map((item: Membership, index: number) => {
+                const key = item.id ?? `${item.year ?? 'unknown'}-${item.startedAt?.seconds ?? 'start'}-${index}`;
+                return (
+                  <tr key={key} className="border-b border-gray-200 hover:bg-gray-100">
+                    <td className="py-3 px-4">{item.year}</td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          item.status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+                        }`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">{item.startedAt ? new Date(item.startedAt.seconds * 1000).toLocaleDateString() : '—'}</td>
+                    <td className="py-3 px-4">{item.expiresAt ? new Date(item.expiresAt.seconds * 1000).toLocaleDateString() : '—'}</td>
+                    <td className="py-3 px-4">{item.price} {item.currency}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

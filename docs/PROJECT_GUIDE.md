@@ -70,7 +70,7 @@ pnpm --filter frontend dev
 ```
 4) (Optional) Seed demo data (emulators only)
 ```
-curl -X POST http://localhost:5001/demo-interdomestik/europe-west1/seedDatabase
+curl -X POST http://localhost:5001/<project-id>/europe-west1/seedDatabase
 ```
 Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example.com`) with password `password123`, plus events and membership docs.
 
@@ -95,9 +95,9 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
 - `pnpm dev:all`: Starts the Firebase emulators and the frontend development server.
 
 ## Quick Reference
-- Project id (emulators): `demo-interdomestik`
+- Project id (emulators): defaults to `interdomestik-dev` (override with `VITE_FIREBASE_EMULATOR_PROJECT_ID` if you start emulators with a different project).
 - Emulator ports: Hosting 5000, Functions 5001, Firestore 8080, Auth 9099
-- Webhook (emulator): `http://localhost:5001/demo-interdomestik/europe-west1/stripeWebhook` (also via Hosting rewrite at `/stripeWebhook`)
+- Webhook (emulator): `http://localhost:5001/<project-id>/europe-west1/stripeWebhook` (also via Hosting rewrite at `/stripeWebhook`)
 
 ## Testing
 - Unit (frontend): Vitest + jsdom — colocate as `*.test.ts(x)` near code.
@@ -115,7 +115,8 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
 - `clearDatabase` (HTTPS): development utility to purge Auth users and member docs
 - Callables: `upsertProfile`, `startMembership`, `setUserRole`, `searchUserByEmail`, `agentCreateMember`
 - `dailyRenewalReminders` (scheduled): sends reminder emails for 30/7/1‑day windows
-- `seedDatabase` (HTTPS, emulator only): creates demo users, memberships, and events
+- `seedDatabase` (HTTPS, emulator only): creates demo users, memberships, and events.
+  - When you start the emulators with a non-default project id, update the seed URL to match, e.g. `curl -X POST http://localhost:5001/<your-project-id>/europe-west1/seedDatabase`.
 
 ## Security Model
 - Auth with custom claims (`role`, `allowedRegions`) governs admin/agent permissions
@@ -156,7 +157,7 @@ Local webhook example (no signature):
 curl -X POST \
   -H 'Content-Type: application/json' \
   -d '{"uid":"<UID>","invoiceId":"inv_test_1","amount":2500,"currency":"EUR"}' \
-  http://localhost:5001/demo-interdomestik/europe-west1/stripeWebhook
+  http://localhost:5001/interdomestik-dev/europe-west1/stripeWebhook
 ```
 
 ## Email

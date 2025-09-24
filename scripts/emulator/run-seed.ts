@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const PROJECT_ID = 'demo-interdomestik';
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || 'interdomestik-dev';
 
 interface EmulatorConfig {
   host: string;
@@ -97,7 +97,7 @@ async function main() {
 
   if (authReachable && firestoreReachable) {
     console.log('ℹ️ Emulators detected on configured ports: seeding directly.');
-    runCommand('pnpm', ['seed:raw'], {});
+    runCommand('pnpm', ['seed:raw'], { env: { ...process.env, FIREBASE_PROJECT_ID: PROJECT_ID } });
   } else {
     console.log('ℹ️ Emulators not detected. Starting them in the background...');
     
@@ -108,7 +108,7 @@ async function main() {
     await new Promise(resolve => setTimeout(resolve, 10000));
 
     console.log('   Running seed script...');
-    runCommand('pnpm', ['seed:raw'], {});
+    runCommand('pnpm', ['seed:raw'], { env: { ...process.env, FIREBASE_PROJECT_ID: PROJECT_ID } });
   }
 }
 

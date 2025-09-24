@@ -7,11 +7,19 @@ import AgentRegistrationCard from '@/components/AgentRegistrationCard';
 import type { Profile } from '@/types';
 
 export default function AgentTools() {
-  const { user, isAdmin, isAgent, allowedRegions, loading } = useAuth();
+  const { isAdmin, isAgent, allowedRegions, loading } = useAuth();
   const canRegister = isAdmin || isAgent;
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { data, isLoading, refetch } = useUsers({ allowedRegions: isAgent && user ? [user.uid] : [], limit: 20, region: 'ALL', status: 'ALL', expiringDays: null });
+  const agentRegions = isAgent ? allowedRegions : [];
+  const { data, isLoading, refetch } = useUsers({
+    allowedRegions: agentRegions,
+    limit: 20,
+    region: 'ALL',
+    status: 'ALL',
+    expiringDays: null,
+    enabled: isAgent
+  });
   const [editRow, setEditRow] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');

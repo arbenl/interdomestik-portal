@@ -38,7 +38,7 @@ vi.mock('firebase/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('firebase/auth')>();
 
   const AUTH_SINGLETON: { app: { options: { projectId: string } }; currentUser: User } = {
-    app: { options: { projectId: 'demo-interdomestik' } },
+    app: { options: { projectId: 'interdomestik-dev' } },
     currentUser: null as User,
   };
 
@@ -256,15 +256,21 @@ vi.mock('@stripe/react-stripe-js', () => ({
  * Firebase app module — avoid env lookups during tests.
  * ------------------------------------------------------------------------ */
 vi.mock('@/lib/firebase', () => {
-  const auth = { app: { options: { projectId: 'demo-interdomestik' } }, currentUser: null };
+  const auth = { app: { options: { projectId: 'interdomestik-dev' } }, currentUser: null };
   const firestore = {};
   const functions = {};
   const noop = () => {};
+  const projectId = 'interdomestik-dev';
+  const emulatorProjectId = 'interdomestik-dev';
+  const usingEmulators = false;
   return {
     __esModule: true,
     auth,
     firestore,
     functions,
+    projectId,
+    emulatorProjectId,
+    usingEmulators,
     getAuth: () => auth,
     getFirestore: () => firestore,
     getFunctions: () => functions,

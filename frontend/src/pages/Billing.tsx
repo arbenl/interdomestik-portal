@@ -5,7 +5,7 @@ import { useInvoices } from '@/hooks/useInvoices';
 import { useToast } from '@/components/ui/useToast';
 import { Button } from '@/components/ui';
 import PaymentElementBox from '@/components/payments/PaymentElementBox';
-import { functions } from '@/lib/firebase';
+import { functions, projectId as firebaseProjectId, emulatorProjectId } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import type { Invoice } from '@/types';
 
@@ -33,15 +33,15 @@ export default function Billing() {
   const { data: invoices, isLoading, error, refetch } = useInvoices(user?.uid);
   const { push } = useToast();
   const [busy, setBusy] = useState(false);
-  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'demo-interdomestik';
-  const emulatorProjectId = import.meta.env.VITE_FIREBASE_EMULATOR_PROJECT_ID || projectId;
+  const projectId = firebaseProjectId || 'interdomestik-dev';
+  const emulatorProject = emulatorProjectId;
   const ENABLE_PAYMENTS_UI = String(import.meta.env.VITE_ENABLE_PAYMENTS_UI ?? 'true') === 'true';
 
   async function simulatePayment() {
     if (!user) return;
     setBusy(true);
     try {
-      const url = getStripeWebhookUrl(projectId, emulatorProjectId);
+      const url = getStripeWebhookUrl(projectId, emulatorProject);
       const body = {
         uid: user.uid,
         invoiceId: `inv_${Date.now()}`,
@@ -131,18 +131,21 @@ export default function Billing() {
         <div className="text-gray-600">No invoices yet.</div>
       ) : (
         <div className="divide-y border rounded">
-          {invoices?.map((inv: Invoice) => (
-            <div key={inv.id} className="p-3 flex items-center justify-between">
-              <div>
-                <div className="font-medium">{inv.id}</div>
-                <div className="text-xs text-gray-500">{inv.created ? new Date(inv.created.seconds * 1000).toLocaleString() : ''}</div>
+          {invoices?.map((inv: Invoice, index: number) => {
+            const key = inv.id || inv.invoiceId || `${inv.created?.seconds ?? 0}-${index}`;
+            return (
+              <div key={key} className="p-3 flex items-center justify-between">
+                <div>
+                  <div className="font-medium">{inv.id}</div>
+                  <div className="text-xs text-gray-500">{inv.created ? new Date(inv.created.seconds * 1000).toLocaleString() : ''}</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">{formatMoney(inv.amount || 0, inv.currency || 'EUR')}</div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">{inv.status || 'unknown'}</div>
+                </div>
               </div>
-              <div className="text-right">
-                <div className="font-medium">{formatMoney(inv.amount || 0, inv.currency || 'EUR')}</div>
-                <div className="text-xs uppercase tracking-wide text-gray-500">{inv.status || 'unknown'}</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

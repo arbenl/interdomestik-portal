@@ -1,23 +1,30 @@
 import { useState, useCallback } from 'react';
 import { safeErrorMessage } from '../../../utils/errors';
+import { emulatorProjectId } from '@/lib/firebase';
 
-const PROJECT_ID = import.meta.env.VITE_FIREBASE_EMULATOR_PROJECT_ID
-  || import.meta.env.VITE_FIREBASE_PROJECT_ID
-  || 'demo-interdomestik';
-const EMU_BASE = `http://127.0.0.1:5001/${PROJECT_ID}/europe-west1`;
+const EMU_BASE = `http://127.0.0.1:5001/${emulatorProjectId}/europe-west1`;
+
+async function callEmulator(path: string, init: RequestInit = {}) {
+  const res = await fetch(`${EMU_BASE}/${path}`, {
+    headers: {
+      'x-emulator-admin': 'true',
+      ...(init.headers ?? {}),
+    },
+    ...init,
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`${path} failed: ${res.status}${body ? ` – ${body}` : ''}`);
+  }
+  return res;
+}
 
 async function seedDatabase() {
-  const res = await fetch(`${EMU_BASE}/seedDatabase`);
-  if (!res.ok) {
-    throw new Error(`Seed failed: ${res.status}`);
-  }
+  await callEmulator('seedDatabase');
 }
 
 async function clearDatabase() {
-  const res = await fetch(`${EMU_BASE}/clearDatabase`);
-  if (!res.ok) {
-    throw new Error(`Clear failed: ${res.status}`);
-  }
+  await callEmulator('clearDatabase');
 }
 
 /**

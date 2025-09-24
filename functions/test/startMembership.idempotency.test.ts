@@ -4,7 +4,7 @@ const functionsTest = require('firebase-functions-test');
 import { admin, db } from '../src/firebaseAdmin';
 import { startMembership } from '../src/index';
 
-const testEnv = functionsTest({ projectId: 'demo-interdomestik' });
+const testEnv = functionsTest({ projectId: 'interdomestik-dev' });
 
 describe('startMembership idempotency', () => {
   const adminCtx = { auth: { uid: 'admin', token: { role: 'admin' } } } as any;
@@ -25,4 +25,3 @@ describe('startMembership idempotency', () => {
     expect(q.size).to.equal(1);
   });
 });
-

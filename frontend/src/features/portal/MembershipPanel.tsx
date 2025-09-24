@@ -50,9 +50,15 @@ export function MembershipPanel() {
       </div>
       <h3>Membership History</h3>
       <ul>
-        {history?.map((item: Membership) => (
-          <li key={item.id}>{item.status} - {new Date((item.expiresAt as { seconds: number }).seconds * 1000).toLocaleDateString()}</li>
-        ))}
+        {history?.map((item: Membership, index: number) => {
+          const expiresAtSec = item.expiresAt?.seconds ?? null;
+          const label = expiresAtSec ? new Date(expiresAtSec * 1000).toLocaleDateString() : 'N/A';
+          const key = item.id
+            || `membership-${item.year ?? 'unknown'}-${expiresAtSec ?? 'no-expiry'}-${index}`;
+          return (
+            <li key={key}>{item.status} - {label}</li>
+          );
+        })}
       </ul>
     </div>
   );

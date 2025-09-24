@@ -5,10 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "pnpm --filter frontend dev",
-    "dev:emu": "firebase emulators:start --project demo-interdomestik",
+    "dev:emu": "firebase emulators:start --project interdomestik-dev",
     "seed:raw": "tsx --tsconfig scripts/tsconfig.scripts.json scripts/emulator/seed.ts",
     "dev:seed": "tsx --tsconfig scripts/tsconfig.scripts.json scripts/emulator/run-seed.ts",
-    "emu:seed": "firebase emulators:exec --project demo-interdomestik \"pnpm seed:raw\"",
+    "emu:seed": "firebase emulators:exec --project interdomestik-dev \"pnpm seed:raw\"",
     "dev:emu:seed": "concurrently \"pnpm dev:emu\" \"pnpm dev:seed\"",
     "dev:stop": "kill-port 9099 8080 5001 5000 4400 4500",
     "build": "pnpm --filter frontend build",

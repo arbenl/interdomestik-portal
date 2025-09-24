@@ -5,7 +5,7 @@ import { admin, db } from '../src/firebaseAdmin';
 import { createCoupon, listCoupons, resendMembershipCard } from '../src/index';
 import { activateMembership } from '../src/lib/startMembership';
 
-const testEnv = functionsTest({ projectId: 'demo-interdomestik' });
+const testEnv = functionsTest({ projectId: 'interdomestik-dev' });
 
 describe('admin callables', () => {
   const adminCtx = { auth: { uid: 'admin', token: { role: 'admin' } } } as any;

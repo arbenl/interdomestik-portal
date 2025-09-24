@@ -8,14 +8,21 @@ import { useToast } from '@/components/ui/useToast';
 import { useUrlState } from '@/utils/urlState';
 import { safeErrorMessage } from '@/utils/errors';
 
-export function MembersPanel({ allowedRegions }: { allowedRegions: string[] }) {
+export function MembersPanel({ allowedRegions }: { allowedRegions?: string[] }) {
+  const safeAllowedRegions = Array.isArray(allowedRegions) ? allowedRegions : [];
   const [filters, setFilters] = useUrlState({
     region: 'ALL',
     status: 'ALL',
     expiringSoon: false,
   });
 
-const { data, error, fetchNextPage, hasNextPage, isLoading } = useUsers({ allowedRegions, limit: 25, region: filters.region, status: filters.status, expiringDays: filters.expiringSoon ? 30 : null });
+  const { data, error, fetchNextPage, hasNextPage, isLoading } = useUsers({
+    allowedRegions: safeAllowedRegions,
+    limit: 25,
+    region: filters.region,
+    status: filters.status,
+    expiringDays: filters.expiringSoon ? 30 : null,
+  });
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { push } = useToast();

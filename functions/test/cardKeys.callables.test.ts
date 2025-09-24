@@ -4,7 +4,7 @@ const functionsTest = require('firebase-functions-test');
 import { db } from '../src/firebaseAdmin';
 import { getCardKeyStatusCallable, revokeCardToken } from '../src/index';
 
-const testEnv = functionsTest({ projectId: 'demo-interdomestik' });
+const testEnv = functionsTest({ projectId: 'interdomestik-dev' });
 
 describe('card keys callables', () => {
   const adminCtx = { auth: { uid: 'admin', token: { role: 'admin' } } } as any;
@@ -35,4 +35,3 @@ describe('card keys callables', () => {
     expect(doc.get('reason')).to.equal('lost');
   });
 });
-

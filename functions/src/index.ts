@@ -301,7 +301,7 @@ export const verifyMembership = functions
       }
 
       // Optional captcha (prod only if configured)
-      const isEmu = !!(process.env.FUNCTIONS_EMULATOR || process.env.FIREBASE_EMULATOR_HUB || process.env.FIRESTORE_EMULATOR_HOST || process.env.GCLOUD_PROJECT === 'demo-interdomestik');
+      const isEmu = !!(process.env.FUNCTIONS_EMULATOR || process.env.FIREBASE_EMULATOR_HUB || process.env.FIRESTORE_EMULATOR_HOST);
       const recaptchaSecret = process.env.RECAPTCHA_SECRET as string | undefined;
       if (!isEmu && recaptchaSecret) {
         const token = String((req.headers['x-recaptcha-token'] || '')).trim();
@@ -592,21 +592,54 @@ if (process.env.FUNCTIONS_EMULATOR) {
       res.set("Access-Control-Allow-Headers", "Content-Type");
       if (req.method === 'OPTIONS') { res.status(204).end(); return; }
 
+      const ensureUser = async (createRequest: admin.auth.CreateRequest) => {
+        const { email } = createRequest;
+        if (!email) throw new Error('User email is required for seeding');
+        try {
+          return await admin.auth().createUser(createRequest);
+        } catch (err: any) {
+          if (err.code === 'auth/email-already-exists') {
+            const existing = await admin.auth().getUserByEmail(email);
+            const updates: admin.auth.UpdateRequest = {};
+            if (createRequest.displayName && existing.displayName !== createRequest.displayName) {
+              updates.displayName = createRequest.displayName;
+            }
+            if (createRequest.emailVerified && !existing.emailVerified) {
+              updates.emailVerified = true;
+            }
+            if (Object.keys(updates).length > 0) {
+              await admin.auth().updateUser(existing.uid, updates);
+            }
+            return existing;
+          }
+          throw err;
+        }
+      };
+
+      const upsertMember = async (uid: string, data: Record<string, unknown>) => {
+        const ref = db.collection('members').doc(uid);
+        const snapshot = await ref.get();
+        const createdAt = snapshot.exists && snapshot.get('createdAt') ? snapshot.get('createdAt') : Timestamp.now();
+        await ref.set({
+          createdAt,
+          updatedAt: Timestamp.now(),
+          ...data,
+        }, { merge: true });
+      };
+
       // Create two member accounts
-      const member1 = await admin.auth().createUser({
+      const member1 = await ensureUser({
         email: 'member1@example.com',
         password: 'password123',
         displayName: 'Member One',
         emailVerified: true,
       });
-      await db.collection('members').doc(member1.uid).set({
+      await upsertMember(member1.uid, {
         name: 'Member One',
         email: 'member1@example.com',
         memberNo: 'INT-2025-000001',
         region: 'PRISHTINA',
         role: 'member',
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
       });
       await db.collection('members').doc(member1.uid).collection('memberships').doc('2025').set({
         year: 2025,
@@ -620,38 +653,38 @@ if (process.env.FUNCTIONS_EMULATOR) {
         updatedAt: Timestamp.now(),
       });
 
-      const member2 = await admin.auth().createUser({
+      const member2 = await ensureUser({
         email: 'member2@example.com',
         password: 'password123',
         displayName: 'Member Two',
         emailVerified: true,
       });
-      await db.collection('members').doc(member2.uid).set({
+      await upsertMember(member2.uid, {
         name: 'Member Two',
         email: 'member2@example.com',
         memberNo: 'INT-2025-000002',
         region: 'PEJA',
         role: 'member',
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
       });
 
       // Create an admin for admin-screen testing
-      const adminUser = await admin.auth().createUser({
+      const adminUser = await ensureUser({
         email: 'admin@example.com',
         password: 'password123',
         displayName: 'Admin User',
         emailVerified: true,
       });
-      await admin.auth().setCustomUserClaims(adminUser.uid, { role: 'admin', allowedRegions: ['PRISHTINA', 'PEJA'] });
-      await db.collection('members').doc(adminUser.uid).set({
+      await admin.auth().setCustomUserClaims(adminUser.uid, {
+        ...(adminUser.customClaims || {}),
+        role: 'admin',
+        allowedRegions: ['PRISHTINA', 'PEJA'],
+      });
+      await upsertMember(adminUser.uid, {
         name: 'Admin User',
         email: 'admin@example.com',
         memberNo: 'INT-2025-999999',
         region: 'PRISHTINA',
         role: 'admin',
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
       });
 
       // Create several agents for testing agent ownership flows
@@ -662,16 +695,18 @@ if (process.env.FUNCTIONS_EMULATOR) {
       ] as const;
       const agents: Array<{ uid: string; email: string; regions: string[] }> = [];
       for (const a of agentDefs) {
-        const u = await admin.auth().createUser({ email: a.email, password: 'password123', displayName: a.name, emailVerified: true });
-        await admin.auth().setCustomUserClaims(u.uid, { role: 'agent', allowedRegions: a.regions });
-        await db.collection('members').doc(u.uid).set({
+        const u = await ensureUser({ email: a.email, password: 'password123', displayName: a.name, emailVerified: true });
+        await admin.auth().setCustomUserClaims(u.uid, {
+          ...(u.customClaims || {}),
+          role: 'agent',
+          allowedRegions: a.regions,
+        });
+        await upsertMember(u.uid, {
           name: a.name,
           email: a.email,
           memberNo: `INT-2025-A${Math.floor(Math.random()*900+100)}`,
           region: a.regions[0],
           role: 'agent',
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
         });
         agents.push({ uid: u.uid, email: a.email, regions: a.regions as unknown as string[] });
       }
@@ -704,7 +739,7 @@ if (process.env.FUNCTIONS_EMULATOR) {
         const email = `seed${String(i).padStart(3, '0')}@example.com`;
         const region = regions[(i - 1) % regions.length];
         const agentUid = regionToAgentUid.get(region);
-        const user = await admin.auth().createUser({ email, password: 'password123', displayName: name, emailVerified: true });
+        const user = await ensureUser({ email, password: 'password123', displayName: name, emailVerified: true });
         const memberNo = `INT-${yearNow}-${seq}`;
         const createdAt = Timestamp.fromDate(new Date(Date.now() - i * 864000));
         await db.collection('members').doc(user.uid).set({
@@ -720,7 +755,7 @@ if (process.env.FUNCTIONS_EMULATOR) {
           expiresAt: null,
           createdAt,
           updatedAt: createdAt,
-        });
+        }, { merge: true });
         // Activate current or previous year randomly (roughly 70% current)
         const activeThisYear = i % 10 !== 0 && i % 3 !== 0; // skip for some variety
         if (activeThisYear) {
@@ -993,7 +1028,7 @@ export const startMembersExport = functions
       await exportRef.set({
         type: 'members_csv',
         status: 'pending',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
         createdBy: actor,
         filters,
         columns,
@@ -1021,10 +1056,10 @@ export const exportsWorkerOnCreate = functions
     const dateKey = `${ts.getUTCFullYear()}-${String(ts.getUTCMonth() + 1).padStart(2, '0')}-${String(ts.getUTCDate()).padStart(2, '0')}_${String(ts.getUTCHours()).padStart(2, '0')}${String(ts.getUTCMinutes()).padStart(2, '0')}`;
     const path = data.path || `exports/members/members_${dateKey}_${id}.csv`;
     const ref = db.collection('exports').doc(id);
-    await ref.set({ status: 'running', path, startedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    await ref.set({ status: 'running', path, startedAt: FieldValue.serverTimestamp() }, { merge: true });
     try {
       const { rows, size, url } = await streamMembersCsv({ exportId: id, filters: data.filters || {}, columns: data.columns || [], actorUid: actor, path });
-      await ref.set({ status: 'success', count: rows, size, url, finishedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      await ref.set({ status: 'success', count: rows, size, url, finishedAt: FieldValue.serverTimestamp() }, { merge: true });
       try {
         const m = await db.collection('members').doc(actor).get();
         const email = (m.get('email') as string | undefined);
@@ -1035,7 +1070,7 @@ export const exportsWorkerOnCreate = functions
         }
       } catch {}
     } catch (e) {
-      await ref.set({ status: 'error', error: String(e), finishedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      await ref.set({ status: 'error', error: String(e), finishedAt: FieldValue.serverTimestamp() }, { merge: true });
     }
   });
 

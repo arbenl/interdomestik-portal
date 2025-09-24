@@ -1,9 +1,22 @@
 import { useState } from 'react';
+import { emulatorProjectId } from '@/lib/firebase';
 
-const PROJECT_ID = import.meta.env.VITE_FIREBASE_EMULATOR_PROJECT_ID
-  || import.meta.env.VITE_FIREBASE_PROJECT_ID
-  || 'demo-interdomestik';
-const EMU_BASE = `http://127.0.0.1:5001/${PROJECT_ID}/europe-west1`;
+const EMU_BASE = `http://127.0.0.1:5001/${emulatorProjectId}/europe-west1`;
+
+async function callEmulator(path: string, init: RequestInit = {}) {
+  const res = await fetch(`${EMU_BASE}/${path}`, {
+    headers: {
+      'x-emulator-admin': 'true',
+      ...(init.headers ?? {}),
+    },
+    ...init,
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`${path} failed: ${res.status}${body ? ` – ${body}` : ''}`);
+  }
+  return res;
+}
 
 export function useEmulator() {
   const [loading, setLoading] = useState(false);
@@ -19,8 +32,7 @@ export function useEmulator() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${EMU_BASE}/seedDatabase`);
-      if (!res.ok) throw new Error(`Seed failed: ${res.status}`);
+      await callEmulator('seedDatabase');
       handleSuccess('Emulator seeded with test users');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed seeding emulator';
@@ -34,8 +46,7 @@ export function useEmulator() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${EMU_BASE}/clearDatabase`);
-      if (!res.ok) throw new Error(`Clear failed: ${res.status}`);
+      await callEmulator('clearDatabase');
       handleSuccess('Emulator database cleared');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed clearing emulator';

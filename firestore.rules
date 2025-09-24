@@ -51,7 +51,10 @@ service cloud.firestore {
     match /orgs/{id} { allow read, write: if false; }
     match /registry/{kind}/{key} { allow read, write: if false; }
     match /audit_logs/{id} { allow read, write: if false; }
-    match /exports/{id} { allow read, write: if false; }
+    match /exports/{id} {
+      allow read, create: if isAdmin();
+      allow update, delete: if false;
+    }
 
     // Default deny
     match /{document=**} {
