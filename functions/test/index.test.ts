@@ -52,6 +52,7 @@ describe('Cloud Functions Logic', () => {
   describe('setUserRoleLogic', () => {
     it('should set a user role', async () => {
       const authInstance = admin.auth();
+      sinon.stub(authInstance, 'getUser').resolves({ customClaims: { mfaEnabled: true } } as any);
       sinon.stub(authInstance, 'setCustomUserClaims').resolves();
       const data = { uid: 'test-uid', role: 'admin', allowedRegions: ['PRISHTINA'] };
       const context = { auth: { uid: 'admin-uid', token: { role: 'admin' } } };

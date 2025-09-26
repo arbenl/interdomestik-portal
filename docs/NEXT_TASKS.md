@@ -7,6 +7,8 @@ Tracking: PR #3 (refactor/admin-portal-modularization → main)
 Legend: [ ] TODO • [~] In Progress • [x] Done • (P1/P2/P3) Priority
 
 ## Phase 10 - Architecture Refactor & Optimization
+- [x] (P1) Responsive portal shell: desktop left rail + mobile bottom tabs in `PortalShell`; add icons and events/support stubs before GA.
+- [x] (P1) Scope portal dashboard query cache per signed-in user (include uid/allowedRegions in TanStack Query key).
 - [x] (P1) Refactor monolithic `Admin.tsx` into modular feature panels.
 - [x] (P1) Refactor Member Portal pages into modular feature panels.
 - [x] (P1) Introduce TanStack Query for data fetching and caching.
@@ -75,6 +77,10 @@ Notes:
 - [ ] (P3) Retention policy for attachments
 
 ## Phase 5 — Security & Compliance
+- [x] (P1) Staff MFA gating: callable `updateMfaPreference`, portal reminder banner, exports require MFA acknowledgement.
+- [x] (P1) Document vault MVP: callable `shareDocument`, Firestore ACLs, portal UI with audit notes.
+- [x] (P1) Renewal automation hooks: scheduled dispatch + callable trigger with webhook targets.
+- [x] (P2) Admin metrics: automation log dashboard + assistant telemetry snapshot.
 - [ ] (P1) Rules review: ensure `adminHasRegion`/`agentHasRegion` used across all paths; deny defaults
 - [ ] (P1) Secrets: verify Stripe keys in Functions secrets; rotation notes
 - [ ] (P2) Audit completeness: all mutating actions logged with actor/target/ts; TTL plan
@@ -88,7 +94,7 @@ Notes:
 
 ## Phase 7 — Observability & Ops
 - [ ] (P2) Structured logs for key actions; reduce noise
-- [ ] (P2) Metrics & alerts: webhook failures, verify latency, renewals/day; SLOs + alerting
+- [~] (P2) Metrics & alerts: webhook failures, verify latency, renewals/day; SLOs + alerting — assistant latency telemetry + automation alerts shipped 2025-09-25; SLO wiring pending
 - [ ] (P2) Runbooks for webhook/export/rules/key rotation incidents
 - [ ] (P3) Backups: scheduled Firestore exports; tested restore
 - [ ] (P2) Define SLOs for `verifyMembership` latency and webhook success; wire alerts (email/Slack)

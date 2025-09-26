@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.exportsWorkerOnCreate = exports.startMembersExport = exports.startMembersExportLegacy = exports.generateMonthlyReportNow = exports.exportMonthlyReport = exports.monthlyMembershipReport = exports.cleanupExpiredData = exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.revokeCardToken = exports.getCardKeyStatusCallable = exports.resendMembershipCard = exports.listCoupons = exports.createCoupon = exports.listOrganizations = exports.createOrganization = exports.setAutoRenew = exports.getCardToken = exports.createPaymentIntent = exports.backfillNameLower = exports.importMembersCsv = exports.getUserClaims = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
+exports.exportsWorkerOnCreate = exports.startMembersExport = exports.startMembersExportLegacy = exports.generateMonthlyReportNow = exports.exportMonthlyReport = exports.monthlyMembershipReport = exports.cleanupExpiredData = exports.dailyRenewalReminders = exports.stripeWebhook = exports.verifyMembership = exports.clearDatabase = exports.revokeCardToken = exports.getCardKeyStatusCallable = exports.resendMembershipCard = exports.listCoupons = exports.createCoupon = exports.listOrganizations = exports.createOrganization = exports.setAutoRenew = exports.getCardToken = exports.processRenewalAutomations = exports.triggerRenewalAutomations = exports.shareDocument = exports.updateMfaPreference = exports.startAssistantSuggestion = exports.upsertPortalLayout = exports.getPortalLayout = exports.getPortalDashboard = exports.createPaymentIntent = exports.backfillNameLower = exports.importMembersCsv = exports.getUserClaims = exports.agentCreateMember = exports.searchUserByEmail = exports.startMembership = exports.setUserRole = exports.upsertProfile = exports.exportMembersCsv = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const firestore_1 = require("firebase-admin/firestore");
 const firebaseAdmin_1 = require("./firebaseAdmin");
@@ -54,6 +54,11 @@ Object.defineProperty(exports, "exportMembersCsv", { enumerable: true, get: func
 const exports_1 = require("./lib/exports");
 const exportsV2_1 = require("./lib/exportsV2");
 const logger_1 = require("./lib/logger");
+const dashboard_1 = require("./lib/dashboard");
+const assistant_1 = require("./lib/assistant");
+const security_1 = require("./lib/security");
+const documents_1 = require("./lib/documents");
+const automation_1 = require("./lib/automation");
 // Region constant for consistency
 const REGION = "europe-west1";
 // Callable functions ---------------------------------------------------------
@@ -84,6 +89,66 @@ exports.backfillNameLower = functions
 exports.createPaymentIntent = functions
     .region(REGION)
     .https.onCall((data, context) => (0, payments_1.createPaymentIntentLogic)(data, context));
+exports.getPortalDashboard = functions
+    .region(REGION)
+    .https.onCall(async (_data, context) => {
+    try {
+        return await (0, dashboard_1.getPortalDashboardLogic)(context);
+    }
+    catch (error) {
+        (0, logger_1.log)('get_portal_dashboard_error', { error: String(error) });
+        throw error;
+    }
+});
+exports.getPortalLayout = functions
+    .region(REGION)
+    .https.onCall(async (_data, context) => {
+    try {
+        return await (0, dashboard_1.getPortalLayoutLogic)(context);
+    }
+    catch (error) {
+        (0, logger_1.log)('get_portal_layout_error', { error: String(error) });
+        throw error;
+    }
+});
+exports.upsertPortalLayout = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => {
+    try {
+        return await (0, dashboard_1.upsertPortalLayoutLogic)(data, context);
+    }
+    catch (error) {
+        (0, logger_1.log)('upsert_portal_layout_error', { error: String(error) });
+        throw error;
+    }
+});
+exports.startAssistantSuggestion = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => {
+    try {
+        return await (0, assistant_1.startAssistantSuggestionLogic)(data, context);
+    }
+    catch (error) {
+        (0, logger_1.log)('start_assistant_suggestion_error', { error: String(error) });
+        throw error;
+    }
+});
+exports.updateMfaPreference = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => (0, security_1.updateMfaPreferenceLogic)(data, context));
+exports.shareDocument = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => (0, documents_1.shareDocumentLogic)(data, context));
+exports.triggerRenewalAutomations = functions
+    .region(REGION)
+    .https.onCall(async (_data, context) => (0, automation_1.runRenewalHooks)(context));
+exports.processRenewalAutomations = functions
+    .region(REGION)
+    .pubsub.schedule('0 6 * * *')
+    .timeZone('Europe/Brussels')
+    .onRun(async () => {
+    await (0, automation_1.runRenewalHooks)(null);
+});
 // Returns a signed card token for QR verification links (JWT HS256)
 exports.getCardToken = functions
     .region(REGION)

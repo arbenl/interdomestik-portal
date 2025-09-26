@@ -51,6 +51,10 @@ describe('Admin Card Keys panel', () => {
       user: { uid: 'test-admin-uid' },
       loading: false,
       allowedRegions: ['PRISHTINA'],
+      mfaEnabled: true,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
     });
   });
 

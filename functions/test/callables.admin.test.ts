@@ -2,10 +2,15 @@ import { expect } from 'chai';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const functionsTest = require('firebase-functions-test');
 import { admin, db } from '../src/firebaseAdmin';
-import { createCoupon, listCoupons, resendMembershipCard } from '../src/index';
+import { createCoupon, listCoupons, resendMembershipCard, startAssistantSuggestion } from '../src/index';
 import { activateMembership } from '../src/lib/startMembership';
 
 const testEnv = functionsTest({ projectId: 'interdomestik-dev' });
+
+async function clearCollection(path: string) {
+  const docs = await db.collection(path).listDocuments();
+  await Promise.all(docs.map(docRef => docRef.delete()));
+}
 
 describe('admin callables', () => {
   const adminCtx = { auth: { uid: 'admin', token: { role: 'admin' } } } as any;
@@ -58,6 +63,49 @@ describe('admin callables', () => {
     }
   });
 });
-  after(() => {
-    testEnv.cleanup();
+
+describe('assistant callables', () => {
+  const memberCtx = { auth: { uid: 'assistant-member', token: { role: 'member' } } } as any;
+  const adminCtx = { auth: { uid: 'assistant-admin', token: { role: 'admin' } } } as any;
+
+  beforeEach(async () => {
+    await clearCollection('assistantTelemetry');
   });
+
+  it('rejects unauthenticated requests', async () => {
+    const wrap = testEnv.wrap(startAssistantSuggestion as any);
+    try {
+      await wrap({ prompt: 'hello' }, { auth: null } as any);
+      throw new Error('expected unauthenticated error');
+    } catch (error: any) {
+      expect(error.code).to.equal('unauthenticated');
+    }
+  });
+
+  it('stores conversation and returns contextual guidance', async () => {
+    const wrap = testEnv.wrap(startAssistantSuggestion as any);
+    const result = await wrap({ prompt: 'How do I renew a membership?' }, adminCtx) as any;
+    expect(result.reply).to.match(/renew/i);
+    const log = await db.collection('assistantSessions').doc('assistant-admin').collection('messages').limit(2).get();
+    expect(log.docs.length).to.be.greaterThan(0);
+    expect(result.latencyMs).to.be.greaterThan(0);
+
+    const sessionDoc = await db.collection('assistantSessions').doc('assistant-admin').get();
+    expect(sessionDoc.get('metrics.lastLatencyMs')).to.be.greaterThan(0);
+    expect(sessionDoc.get('metrics.requestCount')).to.equal(1);
+
+    const telemetrySnap = await db.collection('assistantTelemetry').where('uid', '==', 'assistant-admin').get();
+    expect(telemetrySnap.empty).to.equal(false);
+    expect(telemetrySnap.docs[0].get('latencyMs')).to.be.greaterThan(0);
+  });
+
+  it('provides member-friendly fallback messaging', async () => {
+    const wrap = testEnv.wrap(startAssistantSuggestion as any);
+    const result = await wrap({ prompt: 'hello assistant' }, memberCtx) as any;
+    expect(result.reply).to.match(/membership|billing/i);
+  });
+});
+
+after(() => {
+  testEnv.cleanup();
+});

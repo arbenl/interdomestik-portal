@@ -7,6 +7,7 @@ export type AuthContextType = {
   isAdmin: boolean;
   isAgent: boolean;
   allowedRegions: string[];
+  mfaEnabled: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOutUser: () => Promise<void>;

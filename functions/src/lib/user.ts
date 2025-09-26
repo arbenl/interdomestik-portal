@@ -9,7 +9,9 @@ export async function setUserRoleLogic(data: any, context: functions.https.Calla
   requireAdmin(context);
   const { uid, role, allowedRegions } = setUserRoleSchema.parse(data);
 
-  await admin.auth().setCustomUserClaims(uid, { role, allowedRegions });
+  const userRecord = await admin.auth().getUser(uid);
+  const existingClaims = userRecord.customClaims ?? {};
+  await admin.auth().setCustomUserClaims(uid, { ...existingClaims, role, allowedRegions });
   await db.collection('members').doc(uid).set({ role, allowedRegions }, { merge: true });
 
   // Audit log

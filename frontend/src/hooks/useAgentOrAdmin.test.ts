@@ -7,7 +7,17 @@ vi.mock('@/hooks/useAuth');
 
 describe('useAgentOrAdmin', () => {
   it('maps claims to flags and regions', async () => {
-    (useAuth as Mock).mockReturnValue({ isAdmin: true, isAgent: false, allowedRegions: ['PRISHTINA'], loading: false });
+    (useAuth as Mock).mockReturnValue({
+      user: { uid: 'admin-1' },
+      isAdmin: true,
+      isAgent: false,
+      allowedRegions: ['PRISHTINA'],
+      loading: false,
+      mfaEnabled: true,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
+    });
     const { result } = renderHookWithProviders(() => useAgentOrAdmin());
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.isAdmin).toBe(true);

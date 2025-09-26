@@ -17,6 +17,7 @@ describe('Navbar', () => {
       isAgent: false,
       allowedRegions: [],
       loading: false,
+      mfaEnabled: false,
       signIn: vi.fn(),
       signUp: vi.fn(),
       signOutUser: vi.fn(),

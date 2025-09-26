@@ -12,6 +12,7 @@ import RegionSelect from '@/components/RegionSelect';
 import { ProfileInput } from '@/validation/profile';
 import type { Profile } from '@/types';
 import { useHttpsCallable } from '../hooks/useHttpsCallable';
+import PortalShell from '@/components/layout/PortalShell';
 
 export default function Profile() {
   const { user } = useAuth();
@@ -85,7 +86,8 @@ export default function Profile() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <PortalShell>
+      <div className="max-w-4xl mx-auto p-4">
       {isLocal && debugInfo && (
         <div className="mb-4 border border-red-300 bg-red-50 text-red-800 rounded p-3">
           <div className="font-semibold mb-1">Debug: upsertProfile error</div>
@@ -182,6 +184,7 @@ export default function Profile() {
           })()}
         </div>
       </div>
-    </div>
+      </div>
+    </PortalShell>
   );
 }

@@ -18,6 +18,11 @@ import { monthlyReportCsv } from './lib/reports';
 import { generateMembersCsv, saveCsvToStorage } from './lib/exports';
 import { normalizeColumns, streamMembersCsv } from './lib/exportsV2';
 import { log } from './lib/logger';
+import { getPortalDashboardLogic, getPortalLayoutLogic, upsertPortalLayoutLogic } from './lib/dashboard';
+import { startAssistantSuggestionLogic } from './lib/assistant';
+import { updateMfaPreferenceLogic } from './lib/security';
+import { shareDocumentLogic } from './lib/documents';
+import { runRenewalHooks } from './lib/automation';
 
 // Region constant for consistency
 const REGION = "europe-west1" as const;
@@ -58,6 +63,70 @@ export const backfillNameLower = functions
 export const createPaymentIntent = functions
   .region(REGION)
   .https.onCall((data, context) => createPaymentIntentLogic(data as any, context));
+
+export const getPortalDashboard = functions
+  .region(REGION)
+  .https.onCall(async (_data, context) => {
+    try {
+      return await getPortalDashboardLogic(context);
+    } catch (error) {
+      log('get_portal_dashboard_error', { error: String(error) });
+      throw error;
+    }
+  });
+
+export const getPortalLayout = functions
+  .region(REGION)
+  .https.onCall(async (_data, context) => {
+    try {
+      return await getPortalLayoutLogic(context);
+    } catch (error) {
+      log('get_portal_layout_error', { error: String(error) });
+      throw error;
+    }
+  });
+
+export const upsertPortalLayout = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => {
+    try {
+      return await upsertPortalLayoutLogic(data, context);
+    } catch (error) {
+      log('upsert_portal_layout_error', { error: String(error) });
+      throw error;
+    }
+  });
+
+export const startAssistantSuggestion = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => {
+    try {
+      return await startAssistantSuggestionLogic(data, context);
+    } catch (error) {
+      log('start_assistant_suggestion_error', { error: String(error) });
+      throw error;
+    }
+  });
+
+export const updateMfaPreference = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => updateMfaPreferenceLogic(data, context));
+
+export const shareDocument = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => shareDocumentLogic(data, context));
+
+export const triggerRenewalAutomations = functions
+  .region(REGION)
+  .https.onCall(async (_data, context) => runRenewalHooks(context));
+
+export const processRenewalAutomations = functions
+  .region(REGION)
+  .pubsub.schedule('0 6 * * *')
+  .timeZone('Europe/Brussels')
+  .onRun(async () => {
+    await runRenewalHooks(null);
+  });
 
 // Returns a signed card token for QR verification links (JWT HS256)
 export const getCardToken = functions

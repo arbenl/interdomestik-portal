@@ -46,6 +46,60 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Portal layouts: owner or admin may read/write customization documents
+    match /portalLayouts/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update, delete: if isOwner(uid) || isAdmin();
+    }
+
+    // Assistant session logs: owner or admins may read conversation history
+    match /assistantSessions/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update, delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /documentShares/{shareId} {
+      function canViewShare() {
+        return isAdmin() ||
+          (resource.data.ownerUid != null && isOwner(resource.data.ownerUid)) ||
+          (resource.data.allowedUids != null && resource.data.allowedUids.hasAny([request.auth.uid]));
+      }
+
+      allow read: if signedIn() && canViewShare();
+      allow create, update, delete: if false;
+
+      match /activity/{activityId} {
+        allow read: if signedIn() && (
+          isAdmin() ||
+          (get(/databases/$(database)/documents/documentShares/$(shareId)).data.ownerUid != null &&
+            isOwner(get(/databases/$(database)/documents/documentShares/$(shareId)).data.ownerUid)) ||
+          (get(/databases/$(database)/documents/documentShares/$(shareId)).data.allowedUids != null &&
+            get(/databases/$(database)/documents/documentShares/$(shareId)).data.allowedUids.hasAny([request.auth.uid]))
+        );
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /automationLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /automationAlerts/{alertId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /assistantTelemetry/{entryId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Internal/administrative collections: deny client access
     match /coupons/{id} { allow read, write: if false; }
     match /orgs/{id} { allow read, write: if false; }

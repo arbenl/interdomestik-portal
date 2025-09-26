@@ -22,6 +22,10 @@ describe('AgentTools page', () => {
       isAgent: true,
       allowedRegions: ['PRISHTINA'],
       loading: false,
+      mfaEnabled: true,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
     });
     vi.mocked(useUsers).mockReturnValue({
       data: { pages: [{ users: [{ id: 'u1', name: 'John', email: 'john@example.com', phone: '123', orgId: 'ORG', memberNo: '001', region: 'PRISHTINA' }] }] },
@@ -41,6 +45,10 @@ describe('AgentTools page', () => {
       isAgent: false,
       allowedRegions: [],
       loading: false,
+      mfaEnabled: false,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
     } as any);
     vi.mocked(useUsers).mockReturnValue({ isLoading: false, error: null, data: { pages: [] } } as any);
 
@@ -84,6 +92,11 @@ describe('AgentTools page', () => {
       isAdmin: false,
       isAgent: false,
       allowedRegions: [],
+      mfaEnabled: false,
+      user: null,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
     } as any);
 
     renderWithProviders(<AgentTools />);

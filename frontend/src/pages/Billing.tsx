@@ -8,6 +8,7 @@ import PaymentElementBox from '@/components/payments/PaymentElementBox';
 import { functions, projectId as firebaseProjectId, emulatorProjectId } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import type { Invoice } from '@/types';
+import PortalShell from '@/components/layout/PortalShell';
 
 function formatMoney(amount: number, currency: string) {
   try {
@@ -69,11 +70,13 @@ export default function Billing() {
 
   if (!user) {
     return (
-      <div className="max-w-3xl">
-        <h1 className="text-2xl font-bold mb-3">Billing & Subscription</h1>
-        <p className="text-gray-600 mb-4">Please sign in to view billing.</p>
-        <a className="text-indigo-600 underline" href="/signin">Go to Sign In</a>
-      </div>
+      <PortalShell>
+        <div className="max-w-3xl">
+          <h1 className="text-2xl font-bold mb-3">Billing & Subscription</h1>
+          <p className="text-gray-600 mb-4">Please sign in to view billing.</p>
+          <a className="text-indigo-600 underline" href="/signin">Go to Sign In</a>
+        </div>
+      </PortalShell>
     );
   }
 
@@ -82,7 +85,8 @@ export default function Billing() {
   const expiry = typeof expiresAtSec === 'number' ? new Date(expiresAtSec * 1000).toISOString().slice(0, 10) : '—';
 
   return (
-    <div className="max-w-3xl">
+    <PortalShell>
+      <div className="max-w-3xl">
       <h1 className="text-2xl font-bold mb-1">Billing & Subscription</h1>
       <p className="text-gray-600 mb-4">Manage your membership payments and invoices.</p>
 
@@ -148,6 +152,7 @@ export default function Billing() {
           })}
         </div>
       )}
-    </div>
+      </div>
+    </PortalShell>
   );
 }

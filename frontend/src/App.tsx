@@ -14,7 +14,11 @@ const AgentTools = lazy(() => import('@/pages/AgentTools'));
 const Admin = lazy(() => import('@/pages/Admin'));
 const Billing = lazy(() => import('@/pages/Billing'));
 const Membership = lazy(() => import('@/pages/Membership'));
+const PortalEvents = lazy(() => import('@/pages/PortalEvents'));
+const PortalSupport = lazy(() => import('@/pages/PortalSupport'));
+const PortalDocuments = lazy(() => import('@/pages/PortalDocuments'));
 const Verify = lazy(() => import('@/pages/Verify'));
+const PortalLayout = lazy(() => import('@/features/portal/PortalLayout').then(m => ({ default: m.PortalLayout })));
 
 export default function App() {
   return (
@@ -26,37 +30,24 @@ export default function App() {
           <Route path="signup" element={<SignUp />} />
           <Route path="verify" element={<Verify />} />
           <Route
-            path="portal"
+            path="portal/*"
             element={
               <RoleProtectedRoute roles={['member', 'agent', 'admin']}>
-                <MemberPortal />
+                <PortalLayout />
               </RoleProtectedRoute>
             }
-          />
-          <Route
-            path="billing"
-            element={
-              <RoleProtectedRoute roles={['member', 'agent', 'admin']}>
-                <Billing />
-              </RoleProtectedRoute>
-            }
-          />
-          <Route
-            path="profile"
-            element={
-              <RoleProtectedRoute roles={['member', 'agent', 'admin']}>
-                <Profile />
-              </RoleProtectedRoute>
-            }
-          />
-          <Route
-            path="membership"
-            element={
-              <RoleProtectedRoute roles={['member', 'agent', 'admin']}>
-                <Membership />
-              </RoleProtectedRoute>
-            }
-          />
+          >
+            <Route index element={<MemberPortal />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="membership" element={<Membership />} />
+            <Route path="billing" element={<Billing />} />
+            <Route path="documents" element={<PortalDocuments />} />
+            <Route path="events" element={<PortalEvents />} />
+            <Route path="support" element={<PortalSupport />} />
+          </Route>
+          <Route path="profile" element={<Navigate to="/portal/profile" replace />} />
+          <Route path="membership" element={<Navigate to="/portal/membership" replace />} />
+          <Route path="billing" element={<Navigate to="/portal/billing" replace />} />
           <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route
             path="agent"

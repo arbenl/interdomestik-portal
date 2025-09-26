@@ -10,7 +10,17 @@ vi.mock('@/hooks/useAuth');
 describe('BillingPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useAuth).mockReturnValue({ user: { uid: 'user-1' } } as any);
+    vi.mocked(useAuth).mockReturnValue({
+      user: { uid: 'user-1' },
+      isAdmin: false,
+      isAgent: false,
+      allowedRegions: [],
+      loading: false,
+      mfaEnabled: false,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
+    } as any);
   });
 
   it('shows loading state while invoices fetch', () => {

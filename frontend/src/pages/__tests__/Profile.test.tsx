@@ -7,6 +7,11 @@ import { useHttpsCallable } from '@/hooks/useHttpsCallable';
 import { makeUser } from '@/tests/factories/user';
 
 vi.mock('@/hooks/useAuth');
+vi.mock('@/hooks/useMfaPreference', () => ({
+  __esModule: true,
+  default: () => ({ mfaEnabled: true, setMfaPreference: vi.fn(), updating: false }),
+  useMfaPreference: () => ({ mfaEnabled: true, setMfaPreference: vi.fn(), updating: false }),
+}));
 vi.mock('@/hooks/useMemberProfile');
 vi.mock('@/hooks/useHttpsCallable');
 
@@ -18,6 +23,7 @@ describe('Profile page', () => {
       isAdmin: false,
       isAgent: false,
       allowedRegions: [],
+      mfaEnabled: false,
       signIn: vi.fn(),
       signUp: vi.fn(),
       signOutUser: vi.fn(),

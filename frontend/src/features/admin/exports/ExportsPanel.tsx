@@ -4,6 +4,7 @@ import { firestore } from '@/lib/firebase';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
 import callFunction from '@/services/functionsClient';
+import { useAuth } from '@/hooks/useAuth';
 
 type ExportJob = {
   id: string;
@@ -36,6 +37,8 @@ export function ExportsPanel() {
   const { push } = useToast();
   const errorShownRef = useRef(false);
   const pausedRef = useRef(false);
+  const { mfaEnabled } = useAuth();
+  const requiresMfa = !mfaEnabled;
 
   const loadJobs = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
     if (pausedRef.current && !force) return;
@@ -79,6 +82,10 @@ export function ExportsPanel() {
   const hasMore = sortedJobs.length > MAX_COLLAPSED_ROWS;
 
   const handleStart = async () => {
+    if (requiresMfa) {
+      push({ type: 'error', message: 'Enable MFA before starting exports.' });
+      return;
+    }
     setIsStarting(true);
     try {
       const result = await callFunction<{ ok?: boolean; id?: string }, { preset?: 'BASIC' | 'FULL' }>('startMembersExport', { preset: 'BASIC' });
@@ -114,7 +121,7 @@ export function ExportsPanel() {
         <div className="flex gap-3">
           <Button
             onClick={() => { void handleStart(); }}
-            disabled={hasRunning || isStarting}
+            disabled={hasRunning || isStarting || requiresMfa}
           >
             Start Members CSV Export
           </Button>
@@ -127,6 +134,12 @@ export function ExportsPanel() {
           </Button>
         </div>
       </div>
+
+      {requiresMfa ? (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Multi-factor authentication is required before launching new exports.
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">

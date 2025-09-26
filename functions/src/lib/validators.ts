@@ -31,6 +31,22 @@ export const setUserRoleSchema = z.object({
   allowedRegions: z.array(regionEnum).optional().default([]),
 });
 
+export const updateMfaPreferenceSchema = z.object({
+  enabled: z.boolean(),
+  uid: z.string().min(6).optional(),
+});
+
+export const shareDocumentSchema = z.object({
+  documentId: z.string().min(6).max(120).optional(),
+  fileName: z.string().min(1).max(200),
+  storagePath: z.string().min(1).max(500),
+  mimeType: z.string().min(3).max(120).optional(),
+  note: z.string().max(500).optional(),
+  recipients: z.array(z.object({
+    uid: z.string().min(6).max(120),
+  })).min(1, 'At least one recipient is required'),
+});
+
 export const startMembershipSchema = z.object({
   uid: z.string().min(6),
   year: z.number().int().min(2020).max(2100),

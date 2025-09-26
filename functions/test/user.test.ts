@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { searchUserByEmailLogic, setUserRoleLogic } from '../src/lib/user';
-import { admin } from '../src/firebaseAdmin';
+import { admin, db } from '../src/firebaseAdmin';
 
 describe('user logic', () => {
   afterEach(() => sinon.restore());
@@ -25,5 +25,37 @@ describe('user logic', () => {
       expect(e.code).to.equal('not-found');
     }
   });
-});
 
+  it('setUserRoleLogic preserves existing custom claims such as mfaEnabled', async () => {
+    const authInstance = admin.auth();
+    sinon.stub(authInstance, 'getUser').resolves({ customClaims: { mfaEnabled: true, role: 'member' } } as any);
+    const setCustomClaims = sinon.stub(authInstance, 'setCustomUserClaims').resolves();
+
+    const membersSet = sinon.stub().resolves();
+    const auditAdd = sinon.stub().resolves();
+    sinon.stub(db, 'collection').callsFake((path: string) => {
+      if (path === 'members') {
+        return {
+          doc: () => ({ set: membersSet }),
+        } as any;
+      }
+      if (path === 'audit_logs') {
+        return {
+          add: auditAdd,
+        } as any;
+      }
+      throw new Error(`Unexpected collection ${path}`);
+    });
+
+    const ctx = { auth: { uid: 'admin1', token: { role: 'admin' } } } as any;
+    await setUserRoleLogic({ uid: 'user-42', role: 'agent', allowedRegions: ['PRISHTINA'] }, ctx);
+
+    sinon.assert.calledWith(setCustomClaims, 'user-42', {
+      mfaEnabled: true,
+      role: 'agent',
+      allowedRegions: ['PRISHTINA'],
+    });
+    sinon.assert.called(membersSet);
+    sinon.assert.called(auditAdd);
+  });
+});

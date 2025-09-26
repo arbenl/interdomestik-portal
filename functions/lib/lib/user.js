@@ -45,7 +45,9 @@ const rbac_1 = require("./rbac");
 async function setUserRoleLogic(data, context) {
     (0, rbac_1.requireAdmin)(context);
     const { uid, role, allowedRegions } = validators_1.setUserRoleSchema.parse(data);
-    await firebaseAdmin_1.admin.auth().setCustomUserClaims(uid, { role, allowedRegions });
+    const userRecord = await firebaseAdmin_1.admin.auth().getUser(uid);
+    const existingClaims = userRecord.customClaims ?? {};
+    await firebaseAdmin_1.admin.auth().setCustomUserClaims(uid, { ...existingClaims, role, allowedRegions });
     await firebaseAdmin_1.db.collection('members').doc(uid).set({ role, allowedRegions }, { merge: true });
     // Audit log
     try {

@@ -19,13 +19,28 @@ vi.mock('@/components/payments/PaymentElementBox', () => ({
 }));
 
 vi.mock('@/hooks/useAuth');
+vi.mock('@/hooks/useMfaPreference', () => ({
+  __esModule: true,
+  default: () => ({ mfaEnabled: true, setMfaPreference: vi.fn(), updating: false }),
+  useMfaPreference: () => ({ mfaEnabled: true, setMfaPreference: vi.fn(), updating: false }),
+}));
 vi.mock('@/hooks/useMemberProfile');
 vi.mock('@/hooks/useInvoices');
 
 describe('Billing page', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    (useAuth as Mock).mockReturnValue({ user: { uid: 'test-uid', displayName: 'Admin User' } });
+    (useAuth as Mock).mockReturnValue({
+      user: { uid: 'test-uid', displayName: 'Admin User' },
+      isAdmin: true,
+      isAgent: false,
+      allowedRegions: ['PRISHTINA'],
+      loading: false,
+      mfaEnabled: true,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
+    });
     (useMemberProfile as Mock).mockReturnValue({ data: { name: 'Test User', expiresAt: { seconds: 1700000000 } }, isLoading: false, error: null });
     (useInvoices as Mock).mockReturnValue({ data: [], isLoading: false, error: null, refetch: refetchMock });
     pushMock.mockClear();
@@ -44,7 +59,17 @@ describe('Billing page', () => {
   });
 
   it('prompts unauthenticated visitors to sign in', async () => {
-    (useAuth as Mock).mockReturnValue({ user: null });
+    (useAuth as Mock).mockReturnValue({
+      user: null,
+      isAdmin: false,
+      isAgent: false,
+      allowedRegions: [],
+      loading: false,
+      mfaEnabled: false,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
+    });
     renderWithProviders(<Billing />);
     expect(screen.getByText(/Please sign in/i)).toBeInTheDocument();
     expect(screen.queryByTestId('payment-element')).not.toBeInTheDocument();

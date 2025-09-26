@@ -37,6 +37,52 @@
       await setDoc(doc(db, 'reports', 'r1'), { kind: 'summary' });
       await setDoc(doc(db, 'events', 'e1'), { title: 'Event', startAt: { seconds: 1 } });
       await setDoc(doc(db, 'exports', 'job-1'), { status: 'running', type: 'members', startedAt: { seconds: 1 } });
+      await setDoc(doc(db, 'assistantSessions', 'member-uid'), { uid: 'member-uid', updatedAt: { seconds: 1 } });
+      await setDoc(doc(db, 'assistantSessions', 'member-uid', 'messages', 'm1'), { role: 'assistant', content: 'Hello', createdAt: { seconds: 1 } });
+      await setDoc(doc(db, 'portalLayouts', 'member-uid'), { widgets: [{ id: 'renewalsDue' }] });
+      await setDoc(doc(db, 'automationLogs', 'log-1'), {
+        url: 'https://example.com',
+        windowDays: 30,
+        count: 5,
+        status: '200',
+        dispatchedAt: { seconds: 1 },
+        actor: 'automation',
+      });
+      await setDoc(doc(db, 'automationAlerts', 'alert-1'), {
+        url: 'https://example.com/hooks/renewals',
+        windowDays: 10,
+        count: 3,
+        status: '503',
+        severity: 'critical',
+        createdAt: { seconds: 1 },
+        message: 'Renewal webhook dispatch responded with status 503',
+        actor: 'automation',
+        acknowledged: false,
+      });
+      await setDoc(doc(db, 'documentShares', 'share-1'), {
+        ownerUid: 'admin-uid',
+        fileName: 'policy.pdf',
+        storagePath: 'documents/policy.pdf',
+        allowedUids: ['member-uid'],
+        recipients: [{ uid: 'member-uid', name: 'Member', region: 'EU' }],
+        createdAt: { seconds: 1 },
+        updatedAt: { seconds: 1 },
+      });
+      await setDoc(doc(db, 'documentShares', 'share-1', 'activity', 'event-1'), {
+        action: 'created',
+        actorUid: 'admin-uid',
+        createdAt: { seconds: 1 },
+      });
+      await setDoc(doc(db, 'assistantTelemetry', 'entry-1'), {
+        uid: 'assistant-member',
+        role: 'member',
+        latencyMs: 240,
+        fallback: false,
+        createdAt: { seconds: 1 },
+        promptLength: 20,
+        sessionRef: 'assistantSessions/assistant-member',
+        messageRef: 'assistantSessions/assistant-member/messages/m1',
+      });
     });
   });
 
@@ -117,5 +163,77 @@
       const dbAdmin = adminCtx.firestore();
       await assertSucceeds(getDocs(collection(dbAdmin, 'exports')));
       await assertSucceeds(addDoc(collection(dbAdmin, 'exports'), { status: 'running', type: 'members' }));
+    });
+
+    it('portal layouts: owners and admins can read/write, others blocked', async () => {
+      const memberCtx = testEnv!.authenticatedContext('member-uid');
+      const dbMember = memberCtx.firestore();
+      await assertSucceeds(getDoc(doc(dbMember, 'portalLayouts', 'member-uid')));
+      await assertSucceeds(setDoc(doc(dbMember, 'portalLayouts', 'member-uid'), { widgets: [{ id: 'renewalsDue' }, { id: 'churnRisk', hidden: true }] }));
+      await assertFails(setDoc(doc(dbMember, 'portalLayouts', 'other-uid'), { widgets: [] }));
+
+      const adminCtx = testEnv!.authenticatedContext('admin-uid', ADMIN_CLAIMS);
+      const dbAdmin = adminCtx.firestore();
+      await assertSucceeds(getDoc(doc(dbAdmin, 'portalLayouts', 'member-uid')));
+      await assertSucceeds(setDoc(doc(dbAdmin, 'portalLayouts', 'member-uid'), { widgets: [{ id: 'eventRegistrations' }] }));
+
+      const unauth = testEnv!.unauthenticatedContext();
+      const dbU = unauth.firestore();
+      await assertFails(getDoc(doc(dbU, 'portalLayouts', 'member-uid')));
+    });
+
+    it('assistant sessions: owners and admins can read, no client writes', async () => {
+      const memberCtx = testEnv!.authenticatedContext('member-uid');
+      const dbMember = memberCtx.firestore();
+      await assertSucceeds(getDoc(doc(dbMember, 'assistantSessions', 'member-uid')));
+      await assertSucceeds(getDoc(doc(dbMember, 'assistantSessions', 'member-uid', 'messages', 'm1')));
+      await assertFails(setDoc(doc(dbMember, 'assistantSessions', 'member-uid'), { role: 'member' }));
+      await assertFails(setDoc(doc(dbMember, 'assistantSessions', 'member-uid', 'messages', 'm2'), { role: 'user' }));
+
+      const adminCtx = testEnv!.authenticatedContext('admin-uid', ADMIN_CLAIMS);
+      const dbAdmin = adminCtx.firestore();
+      await assertSucceeds(getDoc(doc(dbAdmin, 'assistantSessions', 'member-uid')));
+
+      const otherCtx = testEnv!.authenticatedContext('other-uid');
+      const dbOther = otherCtx.firestore();
+      await assertFails(getDoc(doc(dbOther, 'assistantSessions', 'member-uid')));
+    });
+
+    it('document shares: owner, recipients, and admins can read metadata and activity', async () => {
+      const ownerCtx = testEnv!.authenticatedContext('admin-uid', ADMIN_CLAIMS);
+      const ownerDb = ownerCtx.firestore();
+      await assertSucceeds(getDoc(doc(ownerDb, 'documentShares', 'share-1')));
+      await assertSucceeds(getDoc(doc(ownerDb, 'documentShares', 'share-1', 'activity', 'event-1')));
+
+      const recipientCtx = testEnv!.authenticatedContext('member-uid');
+      const recipientDb = recipientCtx.firestore();
+      await assertSucceeds(getDoc(doc(recipientDb, 'documentShares', 'share-1')));
+      await assertSucceeds(getDoc(doc(recipientDb, 'documentShares', 'share-1', 'activity', 'event-1')));
+
+      const otherCtx = testEnv!.authenticatedContext('other-uid');
+      const otherDb = otherCtx.firestore();
+      await assertFails(getDoc(doc(otherDb, 'documentShares', 'share-1')));
+    });
+
+    it('automation logs: admin-only read', async () => {
+      const adminCtx = testEnv!.authenticatedContext('admin-uid', ADMIN_CLAIMS);
+      const adminDb = adminCtx.firestore();
+      await assertSucceeds(getDoc(doc(adminDb, 'automationLogs', 'log-1')));
+      await assertSucceeds(getDoc(doc(adminDb, 'automationAlerts', 'alert-1')));
+
+      const memberCtx = testEnv!.authenticatedContext('member-uid');
+      const memberDb = memberCtx.firestore();
+      await assertFails(getDoc(doc(memberDb, 'automationLogs', 'log-1')));
+      await assertFails(getDoc(doc(memberDb, 'automationAlerts', 'alert-1')));
+    });
+
+    it('assistant telemetry: admin-only read', async () => {
+      const adminCtx = testEnv!.authenticatedContext('admin-uid', ADMIN_CLAIMS);
+      const adminDb = adminCtx.firestore();
+      await assertSucceeds(getDoc(doc(adminDb, 'assistantTelemetry', 'entry-1')));
+
+      const memberCtx = testEnv!.authenticatedContext('member-uid');
+      const memberDb = memberCtx.firestore();
+      await assertFails(getDoc(doc(memberDb, 'assistantTelemetry', 'entry-1')));
     });
   });

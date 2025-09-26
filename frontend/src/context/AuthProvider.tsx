@@ -15,6 +15,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAgent, setIsAgent] = useState(false);
   const [allowedRegions, setAllowedRegions] = useState<string[]>([]);
+  const [mfaEnabled, setMfaEnabled] = useState(false);
   const authRef = useRef(getAuth());
 
   useEffect(() => {
@@ -26,11 +27,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         setIsAdmin(claims.role === 'admin');
         setIsAgent(claims.role === 'agent');
         setAllowedRegions(Array.isArray(claims.allowedRegions) ? claims.allowedRegions : []);
+        setMfaEnabled(Boolean(claims.mfaEnabled));
       } else {
         setUser(null);
         setIsAdmin(false);
         setIsAgent(false);
         setAllowedRegions([]);
+        setMfaEnabled(false);
       }
       setLoading(false);
     });
@@ -43,6 +46,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     isAdmin,
     isAgent,
     allowedRegions,
+    mfaEnabled,
     async signIn(email, password) {
       await signInWithEmailAndPassword(authRef.current, email, password);
     },
@@ -52,7 +56,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     async signOutUser() {
       await signOut(authRef.current);
     }
-  }), [user, loading, isAdmin, isAgent, allowedRegions]);
+  }), [user, loading, isAdmin, isAgent, allowedRegions, mfaEnabled]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

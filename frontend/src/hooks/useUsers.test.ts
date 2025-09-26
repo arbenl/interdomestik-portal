@@ -12,6 +12,14 @@ describe('useUsers', () => {
     vi.clearAllMocks();
     (useAuth as Mock).mockReturnValue({
       allowedRegions: ['PRISHTINA'],
+      mfaEnabled: false,
+      user: { uid: 'admin-1' },
+      loading: false,
+      isAdmin: true,
+      isAgent: false,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
     });
   });
 

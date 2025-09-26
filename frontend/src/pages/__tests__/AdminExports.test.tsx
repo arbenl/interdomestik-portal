@@ -3,7 +3,9 @@ import { renderWithProviders, screen, within, fireEvent, waitFor } from '@/test-
 import { ExportsPanel } from '@/features/admin/exports/ExportsPanel';
 
 const pushMock = vi.fn();
+const useAuthMock = vi.fn();
 vi.mock('@/components/ui/useToast', () => ({ useToast: () => ({ push: pushMock }) }));
+vi.mock('@/hooks/useAuth', () => ({ useAuth: () => useAuthMock() }));
 
 const seededExports = Array.from({ length: 6 }, (_, index) => ({
   id: `exp${index + 1}`,
@@ -17,6 +19,17 @@ describe('Admin Exports panel', () => {
     vi.clearAllMocks();
     pushMock.mockReset();
     global.__fsSeed('exports', seededExports);
+    useAuthMock.mockReturnValue({
+      user: { uid: 'admin-1', email: 'admin@example.com' },
+      loading: false,
+      isAdmin: true,
+      isAgent: false,
+      allowedRegions: ['PRISHTINA'],
+      mfaEnabled: true,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
+    });
   });
 
   it('renders exports list with actions and disables start when running', async () => {
@@ -27,6 +40,25 @@ describe('Admin Exports panel', () => {
     await waitFor(() => {
       expect(startBtn).toBeDisabled();
     });
+  });
+
+  it('prevents starting exports when MFA is not enabled', async () => {
+    useAuthMock.mockReturnValue({
+      user: { uid: 'admin-1' },
+      loading: false,
+      isAdmin: true,
+      isAgent: false,
+      allowedRegions: ['PRISHTINA'],
+      mfaEnabled: false,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOutUser: vi.fn(),
+    });
+    renderWithProviders(<ExportsPanel />);
+    const panel = await screen.findByTestId('exports-panel');
+    const startBtn = await within(panel).findByRole('button', { name: /Start Members CSV Export/i });
+    expect(startBtn).toBeDisabled();
+    expect(within(panel).getByText((content) => content.toLowerCase().includes('multi-factor authentication is required'))).toBeInTheDocument();
   });
 
   it('toggles Show more/Show less and resubscribes', async () => {
