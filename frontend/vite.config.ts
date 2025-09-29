@@ -1,7 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'node:path';
 import { visualizer } from 'rollup-plugin-visualizer';
-import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -14,7 +13,6 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    tailwindcss(),
     visualizer({
       open: process.env.ANALYZE === 'true',
       gzipSize: true,
