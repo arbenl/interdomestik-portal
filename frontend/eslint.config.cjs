@@ -1,12 +1,10 @@
-const js = require('@eslint/js');
 const globals = require('globals');
-const tseslint = require('typescript-eslint');
+const baseConfig = require('eslint-config-custom');
 const eslintPluginReactHooks = require('eslint-plugin-react-hooks');
 const eslintPluginReactRefresh = require('eslint-plugin-react-refresh');
 
 module.exports = [
-  js.configs.recommended,
-  ...tseslint.configs.recommended,
+  ...baseConfig,
   {
     ignores: ['dist/**', 'coverage/**', 'eslint.config.cjs', 'scripts/**']
   },
