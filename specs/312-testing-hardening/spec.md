@@ -36,3 +36,7 @@ Strengthen automated coverage around the membership portal so regressions in adm
 ## Verification Log
 - 2025-09-24: `pnpm --filter frontend build`
 - 2025-09-24: `pnpm --filter frontend test`
+- 2025-10-01: `pnpm --filter frontend build`
+- 2025-10-01: `pnpm --filter frontend test:ci`
+- 2025-10-01: `VITE_USE_EMULATORS=1 pnpm --filter frontend e2e`
+- 2025-10-01: `FIRESTORE_EMULATOR_HOST=localhost:8080 pnpm test:rules`

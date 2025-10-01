@@ -32,3 +32,9 @@ This release includes a comprehensive overhaul of the frontend architecture, dev
 -   **Code Quality**:
     -   Fixed dozens of TypeScript and ESLint errors, including `no-floating-promises`, `no-unsafe-assignment`, and `no-explicit-any`.
     -   The frontend now passes both `pnpm build` and `pnpm lint` with zero errors.
+
+### Tooling Updates (2025-10-01)
+
+-   Added a shared ESLint flat config (`packages/eslint-config-custom`) so frontend and functions extend a single rule base.
+-   Introduced workspace-level Prettier + knip scripts and updated lint-staged to format automatically.
+-   Replaced CI emulator sleeps with `pnpm exec wait-on` and ensured functions build before Playwright/tests spin up.
