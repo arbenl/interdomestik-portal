@@ -10,5 +10,5 @@ export type AssistantReply = {
 };
 
 export async function askAssistant(prompt: string): Promise<AssistantReply> {
-  return await callFn<AssistantReply, { prompt: string }>('startAssistantSuggestion', { prompt });
+  return await callFn<{ prompt: string }, AssistantReply>('startAssistantSuggestion', { prompt });
 }

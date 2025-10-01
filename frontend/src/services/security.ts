@@ -7,7 +7,7 @@ export type UpdateMfaPreferenceResponse = {
 };
 
 export async function updateMfaPreference(enabled: boolean): Promise<UpdateMfaPreferenceResponse> {
-  const result = await callFn<UpdateMfaPreferenceResponse, { enabled: boolean }>('updateMfaPreference', { enabled });
+  const result = await callFn<{ enabled: boolean }, UpdateMfaPreferenceResponse>('updateMfaPreference', { enabled });
   return {
     ok: Boolean(result?.ok ?? true),
     uid: result?.uid ?? '',

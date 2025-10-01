@@ -8,7 +8,12 @@ import { makeUser } from '@/tests/factories/user';
 function TestComponent() {
   const { user, loading } = useContext(AuthContext);
   if (loading) return <div>Loading...</div>;
-  return <div>Welcome, {user?.displayName}</div>;
+  return (
+    <div>
+      <span>Welcome, </span>
+      <span data-testid="display-name">{user?.displayName ?? ''}</span>
+    </div>
+  );
 }
 
 describe('AuthProvider', () => {
@@ -29,7 +34,7 @@ describe('AuthProvider', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Welcome, Test User/i)).toBeInTheDocument();
+      expect(screen.getByTestId('display-name').textContent).toBe('Test User');
     });
   });
 });

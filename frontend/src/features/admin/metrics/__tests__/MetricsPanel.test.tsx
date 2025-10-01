@@ -1,24 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderWithProviders, screen } from '@/test-utils';
 import { MetricsPanel } from '../MetricsPanel';
-import useAutomationLogs from '@/hooks/useAutomationLogs';
-import useAutomationAlerts from '@/hooks/useAutomationAlerts';
-import useAssistantSessions from '@/hooks/useAssistantSessions';
-import useAssistantTelemetry from '@/hooks/useAssistantTelemetry';
+const { automationMock, alertsMock, assistantMock, telemetryMock } = vi.hoisted(() => ({
+  automationMock: vi.fn(),
+  alertsMock: vi.fn(),
+  assistantMock: vi.fn(),
+  telemetryMock: vi.fn(),
+}));
 
-vi.mock('@/hooks/useAutomationLogs');
-vi.mock('@/hooks/useAutomationAlerts');
-vi.mock('@/hooks/useAssistantSessions');
-vi.mock('@/hooks/useAssistantTelemetry');
-
-const automationMock = useAutomationLogs as unknown as vi.Mock;
-const alertsMock = useAutomationAlerts as unknown as vi.Mock;
-const assistantMock = useAssistantSessions as unknown as vi.Mock;
-const telemetryMock = useAssistantTelemetry as unknown as vi.Mock;
+vi.mock('@/hooks/useAutomationLogs', () => ({ default: automationMock }));
+vi.mock('@/hooks/useAutomationAlerts', () => ({ default: alertsMock }));
+vi.mock('@/hooks/useAssistantSessions', () => ({ default: assistantMock }));
+vi.mock('@/hooks/useAssistantTelemetry', () => ({ default: telemetryMock }));
 
 describe('MetricsPanel', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    automationMock.mockReset();
+    alertsMock.mockReset();
+    assistantMock.mockReset();
+    telemetryMock.mockReset();
   });
 
   it('renders automation logs and assistant telemetry', () => {

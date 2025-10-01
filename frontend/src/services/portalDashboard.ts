@@ -49,18 +49,18 @@ export function getDefaultPortalLayout(): PortalLayoutItem[] {
 }
 
 export async function fetchPortalDashboard(): Promise<PortalDashboardResponse> {
-  const result = await callFn<PortalDashboardResponse, Record<string, never>>('getPortalDashboard', {} as Record<string, never>);
+  const result = await callFn<Record<string, never>, PortalDashboardResponse>('getPortalDashboard', {} as Record<string, never>);
   return normalizeDashboardResponse(result);
 }
 
 export async function fetchPortalLayout(): Promise<{ widgets: PortalLayoutItem[] }> {
-  const result = await callFn<{ widgets?: PortalLayoutItem[] }, Record<string, never>>('getPortalLayout', {} as Record<string, never>);
+  const result = await callFn<Record<string, never>, { widgets?: PortalLayoutItem[] }>('getPortalLayout', {} as Record<string, never>);
   return { widgets: normalizeLayout(result.widgets) };
 }
 
 export async function savePortalLayout(widgets: PortalLayoutItem[]): Promise<{ widgets: PortalLayoutItem[] }> {
   const payload = { widgets: normalizeLayout(widgets) };
-  const result = await callFn<{ widgets?: PortalLayoutItem[] }, { widgets: PortalLayoutItem[] }>('upsertPortalLayout', payload);
+  const result = await callFn<{ widgets: PortalLayoutItem[] }, { widgets?: PortalLayoutItem[] }>('upsertPortalLayout', payload);
   return { widgets: normalizeLayout(result.widgets) };
 }
 

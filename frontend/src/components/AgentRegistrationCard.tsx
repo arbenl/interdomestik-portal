@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import callFn from '../services/functionsClient';
+import { callFn } from '../services/functionsClient';
 import RegionSelect from './RegionSelect';
 
 type AgentRegistrationProps = {

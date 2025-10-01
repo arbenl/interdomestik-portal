@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import callFn from '../services/functionsClient';
+import { callFn } from '../services/functionsClient';
 
 interface ActivateMembershipModalProps {
   user: { id: string; email?: string };
