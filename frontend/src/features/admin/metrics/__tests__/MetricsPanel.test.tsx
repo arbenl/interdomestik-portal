@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderWithProviders, screen } from '@/test-utils';
 import { MetricsPanel } from '../MetricsPanel';
-import useAutomationLogs from '@/hooks/useAutomationLogs';
-import useAutomationAlerts from '@/hooks/useAutomationAlerts';
-import useAssistantSessions from '@/hooks/useAssistantSessions';
-import useAssistantTelemetry from '@/hooks/useAssistantTelemetry';
-
 const { automationMock, alertsMock, assistantMock, telemetryMock } = vi.hoisted(() => ({
   automationMock: vi.fn(),
   alertsMock: vi.fn(),

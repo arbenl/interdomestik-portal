@@ -13,6 +13,8 @@
     "dev:stop": "kill-port 9099 8080 5001 5000 4400 4500",
     "build": "pnpm --filter frontend build",
     "lint": "pnpm --filter frontend lint && pnpm --filter functions lint",
+    "format": "prettier --write .",
+    "knip": "knip",
     "test": "pnpm --filter frontend test && pnpm --filter functions test",
     "typecheck": "pnpm --filter frontend typecheck && pnpm --filter functions typecheck",
     "test:ci": "pnpm --filter frontend test:run && pnpm --filter functions test",
@@ -42,15 +44,19 @@
     "chai": "^6.0.1",
     "concurrently": "^9.2.1",
     "dotenv": "^17.2.2",
+    "eslint-config-prettier": "^10.1.8",
     "firebase-tools": "^14.16.0",
     "husky": "^9.1.7",
     "kill-port": "^2.0.1",
+    "knip": "^5.64.1",
     "lint-staged": "^16.1.6",
+    "prettier": "^3.6.2",
     "mocha": "^11.7.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4",
+    "wait-on": "^9.0.1",
     "zod": "^4.1.8"
   },
   "engines": {
@@ -58,6 +64,7 @@
     "pnpm": ">=10.16.1 <11"
   },
   "lint-staged": {
+    "**/*.{ts,tsx,js,jsx,json,css,md}": "prettier --write",
     "frontend/src/**/*.{ts,tsx}": [
       "npm --prefix frontend run lint",
       "sh -c 'npm --prefix frontend run typecheck'"
