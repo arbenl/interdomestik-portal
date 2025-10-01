@@ -1,9 +1,27 @@
-import type { FirestoreDataConverter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
-import type { Profile, Membership, Invoice, EventItem, MonthlyReport, AuditLog, Organization, Coupon } from '@/types';
+import type {
+  FirestoreDataConverter,
+  QueryDocumentSnapshot,
+  DocumentData,
+} from 'firebase/firestore';
+import type {
+  Profile,
+  Membership,
+  Invoice,
+  EventItem,
+  MonthlyReport,
+  AuditLog,
+  Organization,
+  Coupon,
+} from '@/types';
 
 // Generic safe wrapper: only apply converter when the ref supports it (avoids breaking tests/mocks)
-type WithConv<T> = { withConverter?: (converter: FirestoreDataConverter<T>) => unknown };
-export function maybeWithConverter<T, R>(ref: R, converter: FirestoreDataConverter<T>): R {
+type WithConv<T> = {
+  withConverter?: (converter: FirestoreDataConverter<T>) => unknown;
+};
+export function maybeWithConverter<T, R>(
+  ref: R,
+  converter: FirestoreDataConverter<T>
+): R {
   try {
     const r = ref as unknown as WithConv<T>;
     if (r && typeof r.withConverter === 'function') {
@@ -15,7 +33,9 @@ export function maybeWithConverter<T, R>(ref: R, converter: FirestoreDataConvert
   return ref;
 }
 
-function toFirestoreWithoutId<T extends { id?: unknown }>(modelObject: T): DocumentData {
+function toFirestoreWithoutId<T extends { id?: unknown }>(
+  modelObject: T
+): DocumentData {
   const data: Record<string, unknown> = { ...modelObject };
   // Avoid storing local id field on documents
   delete (data as { id?: unknown }).id;

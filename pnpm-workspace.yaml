@@ -1,4 +1,4 @@
 packages:
   - frontend
   - functions
-
+  - packages/eslint-config-custom

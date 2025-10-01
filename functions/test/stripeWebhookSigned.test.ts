@@ -4,13 +4,30 @@ import { admin, db } from '../src/firebaseAdmin';
 import { stripeWebhook } from '../src/index';
 
 function makeRes() {
-  let statusCode = 200; let body: any; const headers: Record<string,string> = {};
+  let statusCode = 200;
+  let body: any;
+  const headers: Record<string, string> = {};
   const res: any = {
-    set: (k: string, v: string) => { headers[k] = v; return res; },
-    setHeader: (k: string, v: string) => { headers[k] = v; return res; },
-    status: (c: number) => { statusCode = c; return res; },
-    json: (b: any) => { body = b; return res; },
-    send: (b: any) => { body = b; return res; },
+    set: (k: string, v: string) => {
+      headers[k] = v;
+      return res;
+    },
+    setHeader: (k: string, v: string) => {
+      headers[k] = v;
+      return res;
+    },
+    status: (c: number) => {
+      statusCode = c;
+      return res;
+    },
+    json: (b: any) => {
+      body = b;
+      return res;
+    },
+    send: (b: any) => {
+      body = b;
+      return res;
+    },
   };
   return { res, get: () => ({ statusCode, body, headers }) };
 }
@@ -23,24 +40,39 @@ describe('stripeWebhook (signed mode)', () => {
     process.env.STRIPE_API_KEY = 'sk_test_dummy';
     const uid = 'u_stripe_1';
     // Seed a member doc for activation
-    await db.collection('members').doc(uid).set({
-      email: 'stripe1@example.com',
-      name: 'Stripe One',
-      memberNo: 'INT-2025-123456',
-      region: 'PRISHTINA',
-      createdAt: admin.firestore.Timestamp.now(),
-      updatedAt: admin.firestore.Timestamp.now(),
-    }, { merge: true });
+    await db.collection('members').doc(uid).set(
+      {
+        email: 'stripe1@example.com',
+        name: 'Stripe One',
+        memberNo: 'INT-2025-123456',
+        region: 'PRISHTINA',
+        createdAt: admin.firestore.Timestamp.now(),
+        updatedAt: admin.firestore.Timestamp.now(),
+      },
+      { merge: true }
+    );
     const eventId = 'evt_test_signed_1';
     const ts = Math.floor(Date.now() / 1000);
     const payload = JSON.stringify({
       id: eventId,
       type: 'invoice.payment_succeeded',
-      data: { object: { id: 'in_test_1', amount_paid: 2500, currency: 'eur', created: ts, metadata: { uid } } }
+      data: {
+        object: {
+          id: 'in_test_1',
+          amount_paid: 2500,
+          currency: 'eur',
+          created: ts,
+          metadata: { uid },
+        },
+      },
     });
     const sig = `t=${ts},v1=${createHmac('sha256', SECRET).update(`${ts}.${payload}`).digest('hex')}`;
 
-    const req: any = { method: 'POST', headers: { 'stripe-signature': sig }, rawBody: Buffer.from(payload) };
+    const req: any = {
+      method: 'POST',
+      headers: { 'stripe-signature': sig },
+      rawBody: Buffer.from(payload),
+    };
     const { res, get } = makeRes();
 
     // Act #1
@@ -50,13 +82,23 @@ describe('stripeWebhook (signed mode)', () => {
     expect(out1.body).to.have.property('ok', true);
 
     // Assert invoice write
-    const invSnap = await db.collection('billing').doc(uid).collection('invoices').doc('in_test_1').get();
+    const invSnap = await db
+      .collection('billing')
+      .doc(uid)
+      .collection('invoices')
+      .doc('in_test_1')
+      .get();
     expect(invSnap.exists).to.equal(true);
     expect(invSnap.data()!.status).to.equal('paid');
 
     // Assert membership activated for current year
     const year = new Date().getUTCFullYear();
-    const memSnap = await db.collection('members').doc(uid).collection('memberships').doc(String(year)).get();
+    const memSnap = await db
+      .collection('members')
+      .doc(uid)
+      .collection('memberships')
+      .doc(String(year))
+      .get();
     expect(memSnap.exists).to.equal(true);
     expect(memSnap.data()!.status).to.equal('active');
 

@@ -6,7 +6,10 @@ describe('startMembership.activateMembership', () => {
   const uid = 'u_act_' + Date.now();
   const year = new Date().getUTCFullYear();
   before(async () => {
-    await db.collection('members').doc(uid).set({ email: 'u@ex.com', name: 'U', region: 'PRISHTINA' });
+    await db
+      .collection('members')
+      .doc(uid)
+      .set({ email: 'u@ex.com', name: 'U', region: 'PRISHTINA' });
   });
 
   it('activates a membership', async () => {
@@ -20,4 +23,3 @@ describe('startMembership.activateMembership', () => {
     expect(r2.alreadyActive).to.equal(true);
   });
 });
-

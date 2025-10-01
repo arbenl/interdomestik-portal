@@ -11,4 +11,3 @@ export const ProfileInput = z.object({
 });
 
 export type ProfileInputType = z.infer<typeof ProfileInput>;
-

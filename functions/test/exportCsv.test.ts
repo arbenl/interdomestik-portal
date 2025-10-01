@@ -4,13 +4,29 @@ import { exportMembersCsv } from '../src/exportMembersCsv';
 
 function makeReqRes(token?: string) {
   const headers: Record<string, string> = {} as any;
-  const req: any = { method: 'GET', headers: token ? { authorization: `Bearer ${token}` } : {} };
-  let statusCode = 200; let body: any; const outHeaders: Record<string,string> = {};
+  const req: any = {
+    method: 'GET',
+    headers: token ? { authorization: `Bearer ${token}` } : {},
+  };
+  let statusCode = 200;
+  let body: any;
+  const outHeaders: Record<string, string> = {};
   const res: any = {
-    set: (k: string, v: string) => { outHeaders[k] = v; return res; },
-    setHeader: (k: string, v: string) => { outHeaders[k] = v as any; },
-    status: (c: number) => { statusCode = c; return res; },
-    send: (b: any) => { body = b; return res; },
+    set: (k: string, v: string) => {
+      outHeaders[k] = v;
+      return res;
+    },
+    setHeader: (k: string, v: string) => {
+      outHeaders[k] = v as any;
+    },
+    status: (c: number) => {
+      statusCode = c;
+      return res;
+    },
+    send: (b: any) => {
+      body = b;
+      return res;
+    },
   };
   return { req, res, get: () => ({ statusCode, body, headers: outHeaders }) };
 }
@@ -18,14 +34,36 @@ function makeReqRes(token?: string) {
 describe('exportMembersCsv', () => {
   it('responds with CSV for admin', async () => {
     // Seed two members; one active
-    await db.collection('members').doc('u1').set({ memberNo: 'INT-2025-000001', name: 'A', email: 'a@example.com', region: 'PRISHTINA' });
-    await db.collection('members').doc('u2').set({ memberNo: 'INT-2025-000002', name: 'B', email: 'b@example.com', region: 'PEJA' });
+    await db.collection('members').doc('u1').set({
+      memberNo: 'INT-2025-000001',
+      name: 'A',
+      email: 'a@example.com',
+      region: 'PRISHTINA',
+    });
+    await db.collection('members').doc('u2').set({
+      memberNo: 'INT-2025-000002',
+      name: 'B',
+      email: 'b@example.com',
+      region: 'PEJA',
+    });
     const year = 2025;
-    await db.collection('members').doc('u1').collection('memberships').doc(String(year)).set({ status: 'active', expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now()+86400000)) });
+    await db
+      .collection('members')
+      .doc('u1')
+      .collection('memberships')
+      .doc(String(year))
+      .set({
+        status: 'active',
+        expiresAt: admin.firestore.Timestamp.fromDate(
+          new Date(Date.now() + 86400000)
+        ),
+      });
 
     // Stub token verification to return admin role
     const auth = admin.auth();
-    const verifyStub = (auth as any).verifyIdToken as (t:string)=>Promise<any>;
+    const verifyStub = (auth as any).verifyIdToken as (
+      t: string
+    ) => Promise<any>;
     (auth as any).verifyIdToken = async () => ({ uid: 'admin', role: 'admin' });
 
     const { req, res, get } = makeReqRes('dummy');
@@ -37,4 +75,3 @@ describe('exportMembersCsv', () => {
     expect(String(out.body)).to.include('yes');
   });
 });
-

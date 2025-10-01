@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import type { Profile } from '@/types';
 import { useUsers } from '@/hooks/useUsers';
@@ -8,8 +7,14 @@ import { useToast } from '@/components/ui/useToast';
 import { useUrlState } from '@/utils/urlState';
 import { safeErrorMessage } from '@/utils/errors';
 
-export function MembersPanel({ allowedRegions }: { allowedRegions?: string[] }) {
-  const safeAllowedRegions = Array.isArray(allowedRegions) ? allowedRegions : [];
+export function MembersPanel({
+  allowedRegions,
+}: {
+  allowedRegions?: string[];
+}) {
+  const safeAllowedRegions = Array.isArray(allowedRegions)
+    ? allowedRegions
+    : [];
   const [filters, setFilters] = useUrlState({
     region: 'ALL',
     status: 'ALL',
@@ -37,19 +42,26 @@ export function MembersPanel({ allowedRegions }: { allowedRegions?: string[] }) 
     setSelectedUser(null);
   }, []);
 
-  const handleSuccess = useCallback((message: string) => {
-    push({ type: 'success', message });
-  }, [push]);
+  const handleSuccess = useCallback(
+    (message: string) => {
+      push({ type: 'success', message });
+    },
+    [push]
+  );
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-screen"><p>Loading...</p></div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p>Loading...</p>
+      </div>
+    );
   }
 
   if (error) {
     return <div>Error: {safeErrorMessage(error)}</div>;
   }
 
-  const users = data?.pages.flatMap(page => page.users) || [];
+  const users = data?.pages.flatMap((page) => page.users) || [];
 
   return (
     <>
@@ -59,7 +71,9 @@ export function MembersPanel({ allowedRegions }: { allowedRegions?: string[] }) 
         onActivateClick={handleActivateClick}
         onSuccess={handleSuccess}
         refresh={() => {}}
-        nextPage={() => { void fetchNextPage(); }}
+        nextPage={() => {
+          void fetchNextPage();
+        }}
         hasNext={hasNextPage}
         setRegionFilter={(region) => setFilters({ region })}
         setStatusFilter={(status) => setFilters({ status })}

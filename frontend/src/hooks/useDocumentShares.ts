@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { fetchDocumentSharesForUser, type DocumentShare } from '@/services/documents';
+import {
+  fetchDocumentSharesForUser,
+  type DocumentShare,
+} from '@/services/documents';
 
 export function useDocumentShares() {
   const { user } = useAuth();

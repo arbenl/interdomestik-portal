@@ -1,10 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderWithProviders, screen, within, fireEvent, waitFor } from '@/test-utils';
+import {
+  renderWithProviders,
+  screen,
+  within,
+  fireEvent,
+  waitFor,
+} from '@/test-utils';
 import { ExportsPanel } from '@/features/admin/exports/ExportsPanel';
 
 const pushMock = vi.fn();
 const useAuthMock = vi.fn();
-vi.mock('@/components/ui/useToast', () => ({ useToast: () => ({ push: pushMock }) }));
+vi.mock('@/components/ui/useToast', () => ({
+  useToast: () => ({ push: pushMock }),
+}));
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => useAuthMock() }));
 
 const seededExports = Array.from({ length: 6 }, (_, index) => ({
@@ -36,7 +44,9 @@ describe('Admin Exports panel', () => {
     renderWithProviders(<ExportsPanel />);
     const panel = await screen.findByTestId('exports-panel');
     expect(await within(panel).findByText('exp1')).toBeInTheDocument();
-    const startBtn = await within(panel).findByRole('button', { name: /Start Members CSV Export/i });
+    const startBtn = await within(panel).findByRole('button', {
+      name: /Start Members CSV Export/i,
+    });
     await waitFor(() => {
       expect(startBtn).toBeDisabled();
     });
@@ -56,28 +66,47 @@ describe('Admin Exports panel', () => {
     });
     renderWithProviders(<ExportsPanel />);
     const panel = await screen.findByTestId('exports-panel');
-    const startBtn = await within(panel).findByRole('button', { name: /Start Members CSV Export/i });
+    const startBtn = await within(panel).findByRole('button', {
+      name: /Start Members CSV Export/i,
+    });
     expect(startBtn).toBeDisabled();
-    expect(within(panel).getByText((content) => content.toLowerCase().includes('multi-factor authentication is required'))).toBeInTheDocument();
+    expect(
+      within(panel).getByText((content) =>
+        content
+          .toLowerCase()
+          .includes('multi-factor authentication is required')
+      )
+    ).toBeInTheDocument();
   });
 
   it('toggles Show more/Show less and resubscribes', async () => {
     renderWithProviders(<ExportsPanel />);
     const panel = await screen.findByTestId('exports-panel');
-    const toggleBtn = await within(panel).findByRole('button', { name: /Show more/i });
+    const toggleBtn = await within(panel).findByRole('button', {
+      name: /Show more/i,
+    });
     fireEvent.click(toggleBtn);
-    expect(within(panel).getByRole('button', { name: /Show less/i })).toBeInTheDocument();
+    expect(
+      within(panel).getByRole('button', { name: /Show less/i })
+    ).toBeInTheDocument();
   });
 
   it('starts export and shows success toast', async () => {
-    global.__fsSeed('exports', [{ id: 'exp1', type: 'members', status: 'done' }]);
+    global.__fsSeed('exports', [
+      { id: 'exp1', type: 'members', status: 'done' },
+    ]);
     renderWithProviders(<ExportsPanel />);
     const panel = await screen.findByTestId('exports-panel');
-    const startBtn = await within(panel).findByRole('button', { name: /Start Members CSV Export/i });
+    const startBtn = await within(panel).findByRole('button', {
+      name: /Start Members CSV Export/i,
+    });
     fireEvent.click(startBtn);
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith({ type: 'success', message: 'Members CSV export started' });
+      expect(pushMock).toHaveBeenCalledWith({
+        type: 'success',
+        message: 'Members CSV export started',
+      });
     });
   });
 
@@ -86,12 +115,17 @@ describe('Admin Exports panel', () => {
     renderWithProviders(<ExportsPanel />);
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith({ type: 'error', message: 'Failed to load exports' });
+      expect(pushMock).toHaveBeenCalledWith({
+        type: 'error',
+        message: 'Failed to load exports',
+      });
     });
     expect(pushMock).toHaveBeenCalledTimes(1);
 
     global.__fsReset();
-    const restoredExports = [{ id: 'exp1', type: 'members', status: 'done', createdAt: Date.now() }];
+    const restoredExports = [
+      { id: 'exp1', type: 'members', status: 'done', createdAt: Date.now() },
+    ];
     global.__fsSeed('exports', restoredExports);
     const refreshBtn = await screen.findByRole('button', { name: /Refresh/i });
     fireEvent.click(refreshBtn);
@@ -101,7 +135,9 @@ describe('Admin Exports panel', () => {
   });
 
   it('shows a friendly message when the export callable rejects with permission denied', async () => {
-    global.__fsSeed('exports', [{ id: 'exp1', type: 'members', status: 'done' }]);
+    global.__fsSeed('exports', [
+      { id: 'exp1', type: 'members', status: 'done' },
+    ]);
     global.__setFunctionsResponse(() => {
       const error = new Error('nope') as Error & { code: string };
       error.code = 'functions/permission-denied';
@@ -110,11 +146,16 @@ describe('Admin Exports panel', () => {
 
     renderWithProviders(<ExportsPanel />);
     const panel = await screen.findByTestId('exports-panel');
-    const startBtn = await within(panel).findByRole('button', { name: /Start Members CSV Export/i });
+    const startBtn = await within(panel).findByRole('button', {
+      name: /Start Members CSV Export/i,
+    });
     fireEvent.click(startBtn);
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith({ type: 'error', message: 'You need admin access to start exports.' });
+      expect(pushMock).toHaveBeenCalledWith({
+        type: 'error',
+        message: 'You need admin access to start exports.',
+      });
     });
   });
 });

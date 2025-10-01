@@ -13,4 +13,3 @@ describe('Button', () => {
     expect(screen.getByRole('button')).toHaveClass('bg-transparent');
   });
 });
-

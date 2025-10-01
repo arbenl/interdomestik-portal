@@ -10,11 +10,7 @@
     "isolatedModules": true,
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] },
-    "types": [
-      "vite/client",
-      "vitest/globals",
-      "@testing-library/jest-dom"
-    ],
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src", "vite-env.d.ts"],

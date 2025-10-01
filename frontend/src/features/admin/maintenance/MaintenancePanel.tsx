@@ -1,1 +1,3 @@
-export function MaintenancePanel() { return null; }
+export function MaintenancePanel() {
+  return null;
+}

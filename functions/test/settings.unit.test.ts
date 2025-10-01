@@ -22,4 +22,3 @@ describe('settings: setAutoRenewLogic', () => {
     expect(d.get('autoRenew')).to.equal(false);
   });
 });
-

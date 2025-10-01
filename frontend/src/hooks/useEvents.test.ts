@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useEvents } from './useEvents';
 import { renderHookWithProviders, waitFor } from '@/test-utils';
 
-
 describe('useEvents', () => {
   beforeEach(() => {
     vi.clearAllMocks();

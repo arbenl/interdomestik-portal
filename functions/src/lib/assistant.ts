@@ -23,16 +23,30 @@ const SECURITY_MESSAGE =
 const EXPORT_MESSAGE =
   'Exports run from Admin > Exports. Start a CSV, then monitor progress from the job list. I can help you pick the right preset if you tell me what columns you need.';
 
-function buildAssistantResponse(prompt: string, role: string | undefined): AssistantResponse {
+function buildAssistantResponse(
+  prompt: string,
+  role: string | undefined
+): AssistantResponse {
   const normalized = prompt.toLowerCase();
   const followUps: string[] = [];
 
-  if (normalized.includes('renew') || normalized.includes('expiry') || normalized.includes('expire')) {
-    followUps.push('Show renewal checklist', 'Remind members with upcoming expirations');
+  if (
+    normalized.includes('renew') ||
+    normalized.includes('expiry') ||
+    normalized.includes('expire')
+  ) {
+    followUps.push(
+      'Show renewal checklist',
+      'Remind members with upcoming expirations'
+    );
     return { reply: RENEWAL_MESSAGE, followUps, fallback: false };
   }
 
-  if (normalized.includes('invoice') || normalized.includes('payment') || normalized.includes('billing')) {
+  if (
+    normalized.includes('invoice') ||
+    normalized.includes('payment') ||
+    normalized.includes('billing')
+  ) {
     followUps.push('Open billing simulator', 'Explain invoice statuses');
     return { reply: BILLING_MESSAGE, followUps, fallback: false };
   }
@@ -42,20 +56,32 @@ function buildAssistantResponse(prompt: string, role: string | undefined): Assis
     return { reply: EVENTS_MESSAGE, followUps, fallback: false };
   }
 
-  if (normalized.includes('security') || normalized.includes('mfa') || normalized.includes('two-factor')) {
+  if (
+    normalized.includes('security') ||
+    normalized.includes('mfa') ||
+    normalized.includes('two-factor')
+  ) {
     followUps.push('Review MFA rollout plan', 'List recent security alerts');
     return { reply: SECURITY_MESSAGE, followUps, fallback: false };
   }
 
-  if (normalized.includes('export') || normalized.includes('download') || normalized.includes('csv')) {
-    followUps.push('Start members export', 'Share export troubleshooting steps');
+  if (
+    normalized.includes('export') ||
+    normalized.includes('download') ||
+    normalized.includes('csv')
+  ) {
+    followUps.push(
+      'Start members export',
+      'Share export troubleshooting steps'
+    );
     return { reply: EXPORT_MESSAGE, followUps, fallback: false };
   }
 
   if (role === 'member') {
     followUps.push('Show billing summary', 'Update my profile');
     return {
-      reply: 'I can help you check your membership status, download your digital card, or review payments. Ask about renewals, billing, or events to get started.',
+      reply:
+        'I can help you check your membership status, download your digital card, or review payments. Ask about renewals, billing, or events to get started.',
       followUps,
       fallback: true,
     };
@@ -63,16 +89,23 @@ function buildAssistantResponse(prompt: string, role: string | undefined): Assis
 
   followUps.push('Renewals guidance', 'Billing tips', 'Security roadmap');
   return {
-    reply: 'Need assistance with renewals, billing records, exports, or security? Ask me about a task and I will walk you through the recommended workflow.',
+    reply:
+      'Need assistance with renewals, billing records, exports, or security? Ask me about a task and I will walk you through the recommended workflow.',
     followUps,
     fallback: true,
   };
 }
 
 async function trimOldMessages(uid: string): Promise<void> {
-  const messagesRef = db.collection('assistantSessions').doc(uid).collection('messages');
-  const snapshot = await messagesRef.orderBy('createdAt', 'desc').offset(MAX_MESSAGES_PER_USER).get();
-  const deletions = snapshot.docs.map(doc => doc.ref.delete());
+  const messagesRef = db
+    .collection('assistantSessions')
+    .doc(uid)
+    .collection('messages');
+  const snapshot = await messagesRef
+    .orderBy('createdAt', 'desc')
+    .offset(MAX_MESSAGES_PER_USER)
+    .get();
+  const deletions = snapshot.docs.map((doc) => doc.ref.delete());
   await Promise.all(deletions);
 }
 
@@ -84,7 +117,7 @@ async function trimOldTelemetry(): Promise<void> {
     .limit(50)
     .get();
   if (snapshot.empty) return;
-  await Promise.all(snapshot.docs.map(doc => doc.ref.delete()));
+  await Promise.all(snapshot.docs.map((doc) => doc.ref.delete()));
 }
 
 async function recordAssistantTelemetry(params: {
@@ -110,19 +143,30 @@ async function recordAssistantTelemetry(params: {
   await trimOldTelemetry();
 }
 
-export async function startAssistantSuggestionLogic(data: unknown, context: functions.https.CallableContext) {
+export async function startAssistantSuggestionLogic(
+  data: unknown,
+  context: functions.https.CallableContext
+) {
   if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Sign in to use the portal assistant.');
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'Sign in to use the portal assistant.'
+    );
   }
 
   const startedAt = Date.now();
   const prompt = String((data as Record<string, unknown>)?.prompt ?? '').trim();
   if (!prompt) {
-    throw new functions.https.HttpsError('invalid-argument', 'prompt is required');
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'prompt is required'
+    );
   }
 
   const uid = context.auth.uid;
-  const role = String((context.auth.token as Record<string, unknown>)?.role ?? 'member');
+  const role = String(
+    (context.auth.token as Record<string, unknown>)?.role ?? 'member'
+  );
   const sessionRef = db.collection('assistantSessions').doc(uid);
   const messagesRef = sessionRef.collection('messages');
 
@@ -133,12 +177,15 @@ export async function startAssistantSuggestionLogic(data: unknown, context: func
   };
 
   await Promise.all([
-    sessionRef.set({
-      uid,
-      updatedAt: FieldValue.serverTimestamp(),
-      lastPrompt: prompt,
-      role,
-    }, { merge: true }),
+    sessionRef.set(
+      {
+        uid,
+        updatedAt: FieldValue.serverTimestamp(),
+        lastPrompt: prompt,
+        role,
+      },
+      { merge: true }
+    ),
     messagesRef.add(userMessage),
   ]);
 

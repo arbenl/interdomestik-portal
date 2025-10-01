@@ -1,6 +1,8 @@
 import React from 'react';
 
-export class AppBoundary extends React.Component<{ children: React.ReactNode }> {
+export class AppBoundary extends React.Component<{
+  children: React.ReactNode;
+}> {
   state = { hasError: false };
 
   static getDerivedStateFromError() {

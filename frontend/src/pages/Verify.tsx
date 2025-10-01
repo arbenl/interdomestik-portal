@@ -2,14 +2,18 @@ import React, { useEffect, useState } from 'react';
 
 declare global {
   interface Window {
-    grecaptcha?: { execute: (siteKey: string, opts: { action: string }) => Promise<string> };
+    grecaptcha?: {
+      execute: (siteKey: string, opts: { action: string }) => Promise<string>;
+    };
   }
 }
 
 async function maybeGetCaptchaToken(): Promise<string | undefined> {
   try {
     if (typeof window === 'undefined') return undefined;
-    const siteKey = (import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined) || (import.meta.env.VITE_APPCHECK_SITE_KEY as string | undefined);
+    const siteKey =
+      (import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined) ||
+      (import.meta.env.VITE_APPCHECK_SITE_KEY as string | undefined);
     if (!siteKey) return undefined;
     // If grecaptcha not present, attempt to load script once
     if (!window.grecaptcha) {
@@ -31,7 +35,13 @@ async function maybeGetCaptchaToken(): Promise<string | undefined> {
 
 const Verify: React.FC = () => {
   const [memberNo, setMemberNo] = useState('');
-  const [result, setResult] = useState<{ ok?: boolean; valid?: boolean; name?: string; memberNo?: string; region?: string } | null>(null);
+  const [result, setResult] = useState<{
+    ok?: boolean;
+    valid?: boolean;
+    name?: string;
+    memberNo?: string;
+    region?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +59,13 @@ const Verify: React.FC = () => {
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const raw = (await response.json()) as unknown;
-      const data = raw as { ok?: boolean; valid?: boolean; name?: string; memberNo?: string; region?: string };
+      const data = raw as {
+        ok?: boolean;
+        valid?: boolean;
+        name?: string;
+        memberNo?: string;
+        region?: string;
+      };
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -81,7 +97,12 @@ const Verify: React.FC = () => {
   return (
     <div className="max-w-md mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Verify Membership</h1>
-      <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          void handleSubmit(e);
+        }}
+        className="space-y-4"
+      >
         <input
           type="text"
           value={memberNo}
@@ -90,8 +111,8 @@ const Verify: React.FC = () => {
           required
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
         />
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={loading}
           className="w-full py-2 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-400"
         >
@@ -106,13 +127,23 @@ const Verify: React.FC = () => {
           <h2 className="text-lg font-bold mb-2">Verification Result</h2>
           {result.valid ? (
             <div>
-              <p className="text-green-600 font-semibold">Membership is Active</p>
-              <p><strong>Name:</strong> {result.name}</p>
-              <p><strong>Member No:</strong> {result.memberNo}</p>
-              <p><strong>Region:</strong> {result.region}</p>
+              <p className="text-green-600 font-semibold">
+                Membership is Active
+              </p>
+              <p>
+                <strong>Name:</strong> {result.name}
+              </p>
+              <p>
+                <strong>Member No:</strong> {result.memberNo}
+              </p>
+              <p>
+                <strong>Region:</strong> {result.region}
+              </p>
             </div>
           ) : (
-            <p className="text-red-600 font-semibold">Membership is not valid or not found.</p>
+            <p className="text-red-600 font-semibold">
+              Membership is not valid or not found.
+            </p>
           )}
         </div>
       )}

@@ -11,21 +11,29 @@ describe('Verify page', () => {
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ ok: true, valid: true, memberNo: 'INT-2025-000001' }),
-      } as Partial<Response>),
+        json: async () => ({
+          ok: true,
+          valid: true,
+          memberNo: 'INT-2025-000001',
+        }),
+      } as Partial<Response>)
     );
     window.history.pushState({}, '', '/verify?memberNo=INT-2025-000001');
     renderWithProviders(<Verify />);
-    expect(await screen.findByText(/Membership is Active/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Membership is Active/i)
+    ).toBeInTheDocument();
   });
   it('auto-verifies token from URL and renders not valid', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, valid: false }) } as Partial<Response>),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ ok: true, valid: false }),
+      } as Partial<Response>)
     );
     window.history.pushState({}, '', '/verify?token=t_test');
     renderWithProviders(<Verify />);
     expect(await screen.findByText(/not valid/i)).toBeInTheDocument();
   });
 });
-

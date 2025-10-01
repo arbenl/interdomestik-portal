@@ -4,27 +4,30 @@ All data fetching and server state management in the frontend is handled by TanS
 
 ## TanStack Query Patterns
 
--   **Query Naming**: Query keys should be structured as an array, starting with a string identifier for the data type, followed by any parameters.
-    ```typescript
-    // Example for a single user's profile
-    queryKey: ['profile', userId]
+- **Query Naming**: Query keys should be structured as an array, starting with a string identifier for the data type, followed by any parameters.
 
-    // Example for a list of users with filters
-    queryKey: ['users', { region, status }]
-    ```
--   **Hooks**:
-    -   `useQuery`: For fetching data that is read-only or doesn't change frequently.
-    -   `useInfiniteQuery`: For paginated lists.
-    -   `useMutation`: For creating, updating, or deleting data.
+  ```typescript
+  // Example for a single user's profile
+  queryKey: ['profile', userId];
+
+  // Example for a list of users with filters
+  queryKey: ['users', { region, status }];
+  ```
+
+- **Hooks**:
+  - `useQuery`: For fetching data that is read-only or doesn't change frequently.
+  - `useInfiniteQuery`: For paginated lists.
+  - `useMutation`: For creating, updating, or deleting data.
 
 ## Canonical Hook Shapes
 
 To ensure consistency, custom hooks that wrap TanStack Query should return objects with the following canonical property names:
 
--   **Queries**: `{ data, isLoading, error }`
--   **Mutations**: `{ mutate, isPending, error }`
+- **Queries**: `{ data, isLoading, error }`
+- **Mutations**: `{ mutate, isPending, error }`
 
 **Example `useProfile` Hook:**
+
 ```typescript
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProfile, updateProfile } from '@/services/member/profile.service';

@@ -17,15 +17,17 @@ describe('ActivateMembershipModal', () => {
         user={{ id: 'u1', email: 'member@example.com' }}
         onClose={onClose}
         onSuccess={onSuccess}
-      />,
+      />
     );
     await userEvent.click(screen.getByRole('button', { name: /activate/i }));
 
     await waitFor(() => {
-      expect(startMembershipMock).toHaveBeenCalledWith(expect.objectContaining({
-        uid: 'u1',
-        year: new Date().getFullYear(),
-      }));
+      expect(startMembershipMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          uid: 'u1',
+          year: new Date().getFullYear(),
+        })
+      );
     });
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());

@@ -1,5 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, limit, orderBy, query, type DocumentData } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  type DocumentData,
+} from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 
 export type AutomationAlert = {
@@ -43,7 +50,9 @@ export function useAutomationAlerts() {
         limit(MAX_ALERTS)
       );
       const snapshot = await getDocs(alertsQuery);
-      const alerts = snapshot.docs.map(doc => normalizeAlert(doc.id, doc.data()));
+      const alerts = snapshot.docs.map((doc) =>
+        normalizeAlert(doc.id, doc.data())
+      );
       return { alerts };
     },
     staleTime: 30_000,

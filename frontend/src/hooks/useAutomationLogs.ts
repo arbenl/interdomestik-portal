@@ -1,5 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, limit, orderBy, query, type DocumentData } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  type DocumentData,
+} from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 
 export type AutomationLog = {
@@ -15,7 +22,9 @@ export type AutomationLog = {
 const MAX_LOGS = 20;
 
 function normalizeLog(id: string, data: DocumentData): AutomationLog {
-  const dispatchedAt = data.dispatchedAt?.toDate ? data.dispatchedAt.toDate() : null;
+  const dispatchedAt = data.dispatchedAt?.toDate
+    ? data.dispatchedAt.toDate()
+    : null;
   return {
     id,
     url: typeof data.url === 'string' ? data.url : '',
@@ -37,7 +46,9 @@ export function useAutomationLogs() {
         limit(MAX_LOGS)
       );
       const snapshot = await getDocs(logsQuery);
-      const logs = snapshot.docs.map(doc => normalizeLog(doc.id, doc.data())).filter(log => log.url);
+      const logs = snapshot.docs
+        .map((doc) => normalizeLog(doc.id, doc.data()))
+        .filter((log) => log.url);
       return { logs };
     },
   });

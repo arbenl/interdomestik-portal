@@ -27,13 +27,18 @@ interface UsePortalAssistantResult {
 
 const formatDate = () => new Date().toISOString();
 const generateId = () => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID === 'function'
+  ) {
     return crypto.randomUUID();
   }
   return `id-${Math.random().toString(36).slice(2, 10)}`;
 };
 
-export function usePortalAssistant({ enabled }: UsePortalAssistantOptions): UsePortalAssistantResult {
+export function usePortalAssistant({
+  enabled,
+}: UsePortalAssistantOptions): UsePortalAssistantResult {
   const { user } = useAuth();
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [error, setError] = useState<string>();
@@ -51,10 +56,14 @@ export function usePortalAssistant({ enabled }: UsePortalAssistantOptions): UseP
       return result;
     },
     onError: (err: unknown) => {
-      setError(err instanceof Error ? err.message : 'Assistant is temporarily unavailable.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Assistant is temporarily unavailable.'
+      );
     },
     onSuccess: (result: AssistantReply) => {
-      setMessages(prev => {
+      setMessages((prev) => {
         const next: AssistantMessage[] = [...prev];
         const assistantMessage: AssistantMessage = {
           id: `assistant-${result.messageRef ?? generateId()}`,
@@ -69,34 +78,42 @@ export function usePortalAssistant({ enabled }: UsePortalAssistantOptions): UseP
     },
   });
 
-  const ask = useCallback(async (prompt: string) => {
-    if (!enabled || !user) return;
-    const trimmed = prompt.trim();
-    if (!trimmed) {
-      setError('Enter a question to get started.');
-      return;
-    }
-    setError(undefined);
-    setMessages(prev => prev.concat({
-      id: `user-${generateId()}`,
-      role: 'user',
-      content: trimmed,
-      createdAt: formatDate(),
-    }));
-    await mutation.mutateAsync(trimmed);
-  }, [enabled, mutation, user]);
+  const ask = useCallback(
+    async (prompt: string) => {
+      if (!enabled || !user) return;
+      const trimmed = prompt.trim();
+      if (!trimmed) {
+        setError('Enter a question to get started.');
+        return;
+      }
+      setError(undefined);
+      setMessages((prev) =>
+        prev.concat({
+          id: `user-${generateId()}`,
+          role: 'user',
+          content: trimmed,
+          createdAt: formatDate(),
+        })
+      );
+      await mutation.mutateAsync(trimmed);
+    },
+    [enabled, mutation, user]
+  );
 
   const canAccess = Boolean(user);
 
-  return useMemo(() => ({
-    enabled: canAccess,
-    active: enabled && canAccess,
-    messages,
-    loading: mutation.isPending,
-    error,
-    ask,
-    clearError: () => setError(undefined),
-  }), [ask, enabled, error, messages, mutation.isPending, canAccess]);
+  return useMemo(
+    () => ({
+      enabled: canAccess,
+      active: enabled && canAccess,
+      messages,
+      loading: mutation.isPending,
+      error,
+      ask,
+      clearError: () => setError(undefined),
+    }),
+    [ask, enabled, error, messages, mutation.isPending, canAccess]
+  );
 }
 
 export default usePortalAssistant;

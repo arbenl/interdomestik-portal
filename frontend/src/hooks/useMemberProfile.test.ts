@@ -7,8 +7,13 @@ vi.mock('../services/member');
 
 describe('useMemberProfile', () => {
   it('should return a member profile', async () => {
-    (getMemberProfile as Mock).mockResolvedValue({ id: '1', name: 'Test User' });
-    const { result } = renderHookWithProviders(() => useMemberProfile('test-uid'));
+    (getMemberProfile as Mock).mockResolvedValue({
+      id: '1',
+      name: 'Test User',
+    });
+    const { result } = renderHookWithProviders(() =>
+      useMemberProfile('test-uid')
+    );
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });

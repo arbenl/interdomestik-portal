@@ -11,7 +11,10 @@ export async function getProfile(uid: string): Promise<Profile | null> {
   return null;
 }
 
-export async function updateProfile(uid: string, data: Partial<Profile>): Promise<void> {
+export async function updateProfile(
+  uid: string,
+  data: Partial<Profile>
+): Promise<void> {
   const docRef = doc(firestore, 'users', uid);
   await setDoc(docRef, data, { merge: true });
 }

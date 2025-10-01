@@ -8,16 +8,16 @@ All environment variables exposed to the client-side application **must** be pre
 
 ### Key Variables
 
--   `VITE_FIREBASE_*`: These variables (`API_KEY`, `AUTH_DOMAIN`, etc.) are required for the Firebase SDK to connect to the correct project in a production environment.
--   `VITE_USE_EMULATORS`: A flag (`true` or `false`) that tells the application whether to connect to local Firebase emulators. This should only be `true` for local development.
+- `VITE_FIREBASE_*`: These variables (`API_KEY`, `AUTH_DOMAIN`, etc.) are required for the Firebase SDK to connect to the correct project in a production environment.
+- `VITE_USE_EMULATORS`: A flag (`true` or `false`) that tells the application whether to connect to local Firebase emulators. This should only be `true` for local development.
 
 ## `.env` Files
 
 The project uses a standard Vite `.env` file setup:
 
--   **`.env.example` (in `frontend/`)**: A template file that lists all required environment variables. This file is committed to the repository.
--   **`.env.local` (in `frontend/`)**: This file is used for local development overrides. It is **not** committed to the repository. For this project, it's the recommended place to set `VITE_USE_EMULATORS=true` and provide a dummy API key for the emulators.
--   **`.env.example` (at project ROOT)**: This file documents the environment variables needed for the Node.js-based seed script (`FIRESTORE_EMULATOR_HOST`, etc.).
+- **`.env.example` (in `frontend/`)**: A template file that lists all required environment variables. This file is committed to the repository.
+- **`.env.local` (in `frontend/`)**: This file is used for local development overrides. It is **not** committed to the repository. For this project, it's the recommended place to set `VITE_USE_EMULATORS=true` and provide a dummy API key for the emulators.
+- **`.env.example` (at project ROOT)**: This file documents the environment variables needed for the Node.js-based seed script (`FIRESTORE_EMULATOR_HOST`, etc.).
 
 ## Runtime Validation
 

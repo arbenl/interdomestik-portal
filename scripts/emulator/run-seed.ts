@@ -6,7 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || 'interdomestik-dev';
+const PROJECT_ID =
+  process.env.FIREBASE_PROJECT_ID ||
+  process.env.GCLOUD_PROJECT ||
+  'interdomestik-dev';
 
 interface EmulatorConfig {
   host: string;
@@ -56,10 +59,15 @@ async function findFreePort(startPort: number): Promise<number> {
  */
 async function readFirebaseConfig(): Promise<FirebaseConfig> {
   try {
-    const content = await fs.readFile(path.resolve(__dirname, '../../../firebase.json'), 'utf-8');
+    const content = await fs.readFile(
+      path.resolve(__dirname, '../../../firebase.json'),
+      'utf-8'
+    );
     return JSON.parse(content) as FirebaseConfig;
   } catch {
-    console.warn('⚠️ Could not read firebase.json, using default emulator ports.');
+    console.warn(
+      '⚠️ Could not read firebase.json, using default emulator ports.'
+    );
     return {
       emulators: {
         auth: { host: '127.0.0.1', port: 9099 },
@@ -72,7 +80,11 @@ async function readFirebaseConfig(): Promise<FirebaseConfig> {
 /**
  * Spawns a child process.
  */
-function runCommand(command: string, args: string[], options: import('child_process').SpawnOptions = {}) {
+function runCommand(
+  command: string,
+  args: string[],
+  options: import('child_process').SpawnOptions = {}
+) {
   const child = spawn(command, args, { stdio: 'inherit', ...options });
   child.on('close', (code) => {
     if (code !== 0) {
@@ -93,22 +105,35 @@ async function main() {
   const firestoreConfig = baseConfig.emulators.firestore;
 
   const authReachable = await isReachable(authConfig.port, authConfig.host);
-  const firestoreReachable = await isReachable(firestoreConfig.port, firestoreConfig.host);
+  const firestoreReachable = await isReachable(
+    firestoreConfig.port,
+    firestoreConfig.host
+  );
 
   if (authReachable && firestoreReachable) {
     console.log('ℹ️ Emulators detected on configured ports: seeding directly.');
-    runCommand('pnpm', ['seed:raw'], { env: { ...process.env, FIREBASE_PROJECT_ID: PROJECT_ID } });
+    runCommand('pnpm', ['seed:raw'], {
+      env: { ...process.env, FIREBASE_PROJECT_ID: PROJECT_ID },
+    });
   } else {
-    console.log('ℹ️ Emulators not detected. Starting them in the background...');
-    
-    const emuProcess = runCommand('firebase', ['emulators:start', '--project', PROJECT_ID], { detached: true });
+    console.log(
+      'ℹ️ Emulators not detected. Starting them in the background...'
+    );
+
+    const emuProcess = runCommand(
+      'firebase',
+      ['emulators:start', '--project', PROJECT_ID],
+      { detached: true }
+    );
     emuProcess.unref(); // Allow parent process to exit independently
 
     console.log('   Waiting for emulators to initialize (10s)...');
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    await new Promise((resolve) => setTimeout(resolve, 10000));
 
     console.log('   Running seed script...');
-    runCommand('pnpm', ['seed:raw'], { env: { ...process.env, FIREBASE_PROJECT_ID: PROJECT_ID } });
+    runCommand('pnpm', ['seed:raw'], {
+      env: { ...process.env, FIREBASE_PROJECT_ID: PROJECT_ID },
+    });
   }
 }
 

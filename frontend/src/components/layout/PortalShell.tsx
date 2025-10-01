@@ -38,9 +38,11 @@ export function PortalShell({ header, children }: PortalShellProps) {
   return (
     <div className="relative mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-6xl gap-6 px-4 pb-24 pt-4 lg:pb-8 lg:pt-6">
       <aside className="hidden w-56 flex-shrink-0 lg:flex lg:flex-col lg:gap-1">
-        <h2 className="px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Portal</h2>
+        <h2 className="px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Portal
+        </h2>
         <nav aria-label="Portal sections" className="mt-2 flex flex-col gap-1">
-          {portalLinks.map(link => (
+          {portalLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -56,7 +58,12 @@ export function PortalShell({ header, children }: PortalShellProps) {
                 const Icon = link.icon;
                 return (
                   <>
-                    <Icon className={classNames('h-5 w-5 shrink-0 transition-colors', isActive && 'text-white')} />
+                    <Icon
+                      className={classNames(
+                        'h-5 w-5 shrink-0 transition-colors',
+                        isActive && 'text-white'
+                      )}
+                    />
                     <span>{link.label}</span>
                   </>
                 );
@@ -69,9 +76,13 @@ export function PortalShell({ header, children }: PortalShellProps) {
         {showMfaPrompt ? (
           <div className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm md:flex-row md:items-center md:justify-between">
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-amber-900">Protect exports with multi-factor authentication</p>
+              <p className="text-sm font-semibold text-amber-900">
+                Protect exports with multi-factor authentication
+              </p>
               <p className="text-xs text-amber-800">
-                Staff accounts need MFA before exporting billing data or sensitive reports. Confirm your enrollment to remove this reminder.
+                Staff accounts need MFA before exporting billing data or
+                sensitive reports. Confirm your enrollment to remove this
+                reminder.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -84,7 +95,9 @@ export function PortalShell({ header, children }: PortalShellProps) {
               <button
                 type="button"
                 className="inline-flex items-center justify-center rounded-md bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white shadow transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-70"
-                onClick={() => { void setMfaPreference(true); }}
+                onClick={() => {
+                  void setMfaPreference(true);
+                }}
                 disabled={updating}
               >
                 {updating ? 'Updating…' : 'Mark MFA enabled'}
@@ -99,7 +112,7 @@ export function PortalShell({ header, children }: PortalShellProps) {
         aria-label="Portal navigation"
         className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t border-gray-200 bg-white px-2 py-2 shadow-lg lg:hidden"
       >
-        {portalLinks.map(link => (
+        {portalLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
@@ -115,7 +128,12 @@ export function PortalShell({ header, children }: PortalShellProps) {
               const Icon = link.icon;
               return (
                 <>
-                  <Icon className={classNames('mb-1 h-5 w-5 transition-colors', isActive && 'text-indigo-700')} />
+                  <Icon
+                    className={classNames(
+                      'mb-1 h-5 w-5 transition-colors',
+                      isActive && 'text-indigo-700'
+                    )}
+                  />
                   <span>{link.label}</span>
                 </>
               );
@@ -178,7 +196,11 @@ function MembershipIcon({ className }: IconProps) {
       strokeWidth={1.6}
     >
       <rect x={3.5} y={5.75} width={17} height={12.5} rx={2} />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 10h4m-4 3h6.5" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6.5 10h4m-4 3h6.5"
+      />
     </svg>
   );
 }
@@ -198,7 +220,11 @@ function BillingIcon({ className }: IconProps) {
         strokeLinejoin="round"
         d="M6.75 4.75h10.5a1.5 1.5 0 0 1 1.5 1.5v11.5a1.5 1.5 0 0 1-1.5 1.5H6.75a1.5 1.5 0 0 1-1.5-1.5V6.25a1.5 1.5 0 0 1 1.5-1.5Z"
       />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8.75 8.75h6.5M8.75 12h6.5M8.75 15.25h3.5" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8.75 8.75h6.5M8.75 12h6.5M8.75 15.25h3.5"
+      />
     </svg>
   );
 }
@@ -219,7 +245,11 @@ function DocumentsIcon({ className }: IconProps) {
         d="M8 3.75h6.25L19.5 9v11.25A1.25 1.25 0 0 1 18.25 21H8A1.25 1.25 0 0 1 6.75 19.75V5A1.25 1.25 0 0 1 8 3.75Z"
       />
       <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4v4.5H18" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.5h6M9 15.5h4" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 12.5h6M9 15.5h4"
+      />
     </svg>
   );
 }
@@ -235,8 +265,16 @@ function EventsIcon({ className }: IconProps) {
       strokeWidth={1.6}
     >
       <rect x={4} y={5.5} width={16} height={14} rx={2} />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 3.5v3m8-3v3M4 9.5h16" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 13.5h2.5v2.5H9.5Z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 3.5v3m8-3v3M4 9.5h16"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9.5 13.5h2.5v2.5H9.5Z"
+      />
     </svg>
   );
 }
@@ -252,7 +290,11 @@ function SupportIcon({ className }: IconProps) {
       strokeWidth={1.6}
     >
       <circle cx={12} cy={12} r={8} />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2.5 1.5M12 16h.01" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 8v4l2.5 1.5M12 16h.01"
+      />
     </svg>
   );
 }

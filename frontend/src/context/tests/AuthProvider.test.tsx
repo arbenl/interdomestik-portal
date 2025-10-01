@@ -28,7 +28,7 @@ describe('AuthProvider', () => {
     render(
       <AuthProvider>
         <Probe />
-      </AuthProvider>,
+      </AuthProvider>
     );
 
     await act(async () => {
@@ -43,7 +43,7 @@ describe('AuthProvider', () => {
     render(
       <AuthProvider>
         <Probe />
-      </AuthProvider>,
+      </AuthProvider>
     );
 
     const user = makeUser({ email: 'test@example.com' });
@@ -53,7 +53,9 @@ describe('AuthProvider', () => {
       await Promise.resolve();
     });
 
-    expect(await screen.findByText(/logged in as test@example.com/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/logged in as test@example.com/i)
+    ).toBeInTheDocument();
 
     await act(async () => {
       global.__authEmit(null);

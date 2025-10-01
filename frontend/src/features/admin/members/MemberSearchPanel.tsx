@@ -21,8 +21,12 @@ export function MemberSearchPanel() {
           type="text"
           placeholder="Search by name, email, or member #"
           value={searchTerm}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleSearch()}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setSearchTerm(e.target.value)
+          }
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
+            e.key === 'Enter' && handleSearch()
+          }
         />
         <Button onClick={handleSearch} disabled={isPending}>
           {isPending ? 'Searching...' : 'Search'}
@@ -39,7 +43,9 @@ export function MemberSearchPanel() {
               <li key={member.id} className="p-2 border rounded">
                 <p className="font-bold">{member.fullName}</p>
                 <p className="text-sm text-gray-600">{member.email}</p>
-                <p className="text-sm text-gray-600">Member No: {member.memberNo || 'N/A'}</p>
+                <p className="text-sm text-gray-600">
+                  Member No: {member.memberNo || 'N/A'}
+                </p>
               </li>
             ))}
           </ul>

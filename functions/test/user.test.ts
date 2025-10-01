@@ -28,8 +28,12 @@ describe('user logic', () => {
 
   it('setUserRoleLogic preserves existing custom claims such as mfaEnabled', async () => {
     const authInstance = admin.auth();
-    sinon.stub(authInstance, 'getUser').resolves({ customClaims: { mfaEnabled: true, role: 'member' } } as any);
-    const setCustomClaims = sinon.stub(authInstance, 'setCustomUserClaims').resolves();
+    sinon
+      .stub(authInstance, 'getUser')
+      .resolves({ customClaims: { mfaEnabled: true, role: 'member' } } as any);
+    const setCustomClaims = sinon
+      .stub(authInstance, 'setCustomUserClaims')
+      .resolves();
 
     const membersSet = sinon.stub().resolves();
     const auditAdd = sinon.stub().resolves();
@@ -48,7 +52,10 @@ describe('user logic', () => {
     });
 
     const ctx = { auth: { uid: 'admin1', token: { role: 'admin' } } } as any;
-    await setUserRoleLogic({ uid: 'user-42', role: 'agent', allowedRegions: ['PRISHTINA'] }, ctx);
+    await setUserRoleLogic(
+      { uid: 'user-42', role: 'agent', allowedRegions: ['PRISHTINA'] },
+      ctx
+    );
 
     sinon.assert.calledWith(setCustomClaims, 'user-42', {
       mfaEnabled: true,

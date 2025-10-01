@@ -10,11 +10,20 @@ interface AssistantDrawerProps {
   error?: string;
 }
 
-export function AssistantDrawer({ open, onClose, messages, onSend, loading, error }: AssistantDrawerProps) {
+export function AssistantDrawer({
+  open,
+  onClose,
+  messages,
+  onSend,
+  loading,
+  error,
+}: AssistantDrawerProps) {
   const [prompt, setPrompt] = useState('');
 
   const followUps = useMemo(() => {
-    const lastAssistant = [...messages].reverse().find(msg => msg.role === 'assistant');
+    const lastAssistant = [...messages]
+      .reverse()
+      .find((msg) => msg.role === 'assistant');
     return lastAssistant?.followUps ?? [];
   }, [messages]);
 
@@ -31,12 +40,23 @@ export function AssistantDrawer({ open, onClose, messages, onSend, loading, erro
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/20" role="dialog" aria-modal="true">
-      <div className="h-full w-full max-w-md bg-white shadow-xl flex flex-col" data-testid="assistant-drawer">
+    <div
+      className="fixed inset-0 z-40 flex justify-end bg-black/20"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="h-full w-full max-w-md bg-white shadow-xl flex flex-col"
+        data-testid="assistant-drawer"
+      >
         <header className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
           <div>
-            <p className="text-sm font-semibold text-gray-900">Portal Assistant</p>
-            <p className="text-xs text-gray-500">Answers, reminders, and shortcuts</p>
+            <p className="text-sm font-semibold text-gray-900">
+              Portal Assistant
+            </p>
+            <p className="text-xs text-gray-500">
+              Answers, reminders, and shortcuts
+            </p>
           </div>
           <button
             type="button"
@@ -49,9 +69,12 @@ export function AssistantDrawer({ open, onClose, messages, onSend, loading, erro
         </header>
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-sm text-gray-700">
           {messages.length === 0 ? (
-            <p data-testid="assistant-placeholder">Assistant responses will appear here. Try asking about renewals, billing, or events.</p>
+            <p data-testid="assistant-placeholder">
+              Assistant responses will appear here. Try asking about renewals,
+              billing, or events.
+            </p>
           ) : (
-            messages.map(message => (
+            messages.map((message) => (
               <div
                 key={message.id}
                 className={`flex ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}
@@ -59,10 +82,12 @@ export function AssistantDrawer({ open, onClose, messages, onSend, loading, erro
                 <div
                   className={`max-w-[80%] rounded-lg px-3 py-2 ${message.role === 'assistant' ? 'bg-indigo-50 text-indigo-900' : 'bg-indigo-600 text-white'}`}
                 >
-                  <p className="whitespace-pre-line text-sm">{message.content}</p>
+                  <p className="whitespace-pre-line text-sm">
+                    {message.content}
+                  </p>
                   {message.followUps && message.followUps.length > 0 ? (
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {message.followUps.map(suggestion => (
+                      {message.followUps.map((suggestion) => (
                         <button
                           key={suggestion}
                           type="button"
@@ -95,7 +120,7 @@ export function AssistantDrawer({ open, onClose, messages, onSend, loading, erro
               placeholder="Ask about renewals or billing"
               className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={prompt}
-              onChange={event => setPrompt(event.target.value)}
+              onChange={(event) => setPrompt(event.target.value)}
               disabled={loading}
             />
             <button
@@ -107,9 +132,14 @@ export function AssistantDrawer({ open, onClose, messages, onSend, loading, erro
             </button>
           </form>
           {followUps.length > 0 ? (
-            <p className="mt-2 text-xs text-gray-500">Try one of the follow-up shortcuts above or enter your own question.</p>
+            <p className="mt-2 text-xs text-gray-500">
+              Try one of the follow-up shortcuts above or enter your own
+              question.
+            </p>
           ) : (
-            <p className="mt-2 text-xs text-gray-500">Ask about renewals, billing, events, exports, or security.</p>
+            <p className="mt-2 text-xs text-gray-500">
+              Ask about renewals, billing, events, exports, or security.
+            </p>
           )}
         </footer>
       </div>

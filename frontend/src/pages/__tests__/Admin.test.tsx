@@ -18,7 +18,10 @@ describe('Admin page (smoke)', () => {
     vi.spyOn(useUsersHook, 'useUsers').mockReturnValue({
       data: { pages: [{ users: [], nextPage: null }], pageParams: [null] },
       isLoading: false,
-    } as unknown as UseInfiniteQueryResult<{ pages: { users: never[]; nextPage: null }[], pageParams: (null | undefined)[] }>);
+    } as unknown as UseInfiniteQueryResult<{
+      pages: { users: never[]; nextPage: null }[];
+      pageParams: (null | undefined)[];
+    }>);
     renderWithProviders(<Admin />);
     await waitFor(() => {
       expect(screen.getByText('Admin Panel')).toBeInTheDocument();

@@ -42,9 +42,13 @@ export const shareDocumentSchema = z.object({
   storagePath: z.string().min(1).max(500),
   mimeType: z.string().min(3).max(120).optional(),
   note: z.string().max(500).optional(),
-  recipients: z.array(z.object({
-    uid: z.string().min(6).max(120),
-  })).min(1, 'At least one recipient is required'),
+  recipients: z
+    .array(
+      z.object({
+        uid: z.string().min(6).max(120),
+      })
+    )
+    .min(1, 'At least one recipient is required'),
 });
 
 export const startMembershipSchema = z.object({
@@ -52,7 +56,10 @@ export const startMembershipSchema = z.object({
   year: z.number().int().min(2020).max(2100),
   price: z.number().nonnegative().optional().default(0),
   currency: z.enum(['EUR']).optional().default('EUR'),
-  paymentMethod: z.enum(['cash', 'card', 'bank', 'other']).optional().default('bank'),
+  paymentMethod: z
+    .enum(['cash', 'card', 'bank', 'other'])
+    .optional()
+    .default('bank'),
   externalRef: z.string().optional().nullable(),
 });
 

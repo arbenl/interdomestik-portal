@@ -19,7 +19,11 @@ describe('AuthProvider', () => {
   });
 
   it('shows logged out state', async () => {
-    render(<AuthProvider><Probe /></AuthProvider>);
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>
+    );
 
     await act(async () => {
       global.__authEmit(null);
@@ -30,7 +34,11 @@ describe('AuthProvider', () => {
   });
 
   it('reacts to id token changes', async () => {
-    render(<AuthProvider><Probe /></AuthProvider>);
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>
+    );
 
     await act(async () => {
       global.__authEmit(null);
@@ -44,7 +52,9 @@ describe('AuthProvider', () => {
       await Promise.resolve();
     });
 
-    expect(await screen.findByText(/logged in as test@example.com/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/logged in as test@example.com/i)
+    ).toBeInTheDocument();
 
     await act(async () => {
       global.__authEmit(null);

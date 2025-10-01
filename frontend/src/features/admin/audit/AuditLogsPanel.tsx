@@ -1,1 +1,3 @@
-export function AuditLogsPanel() { return null; }
+export function AuditLogsPanel() {
+  return null;
+}

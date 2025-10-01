@@ -1,24 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderWithProviders, screen } from '@/test-utils';
 import { MetricsPanel } from '../MetricsPanel';
-import useAutomationLogs from '@/hooks/useAutomationLogs';
-import useAutomationAlerts from '@/hooks/useAutomationAlerts';
-import useAssistantSessions from '@/hooks/useAssistantSessions';
-import useAssistantTelemetry from '@/hooks/useAssistantTelemetry';
+const { automationMock, alertsMock, assistantMock, telemetryMock } = vi.hoisted(
+  () => ({
+    automationMock: vi.fn(),
+    alertsMock: vi.fn(),
+    assistantMock: vi.fn(),
+    telemetryMock: vi.fn(),
+  })
+);
 
-vi.mock('@/hooks/useAutomationLogs');
-vi.mock('@/hooks/useAutomationAlerts');
-vi.mock('@/hooks/useAssistantSessions');
-vi.mock('@/hooks/useAssistantTelemetry');
-
-const automationMock = useAutomationLogs as unknown as vi.Mock;
-const alertsMock = useAutomationAlerts as unknown as vi.Mock;
-const assistantMock = useAssistantSessions as unknown as vi.Mock;
-const telemetryMock = useAssistantTelemetry as unknown as vi.Mock;
+vi.mock('@/hooks/useAutomationLogs', () => ({ default: automationMock }));
+vi.mock('@/hooks/useAutomationAlerts', () => ({ default: alertsMock }));
+vi.mock('@/hooks/useAssistantSessions', () => ({ default: assistantMock }));
+vi.mock('@/hooks/useAssistantTelemetry', () => ({ default: telemetryMock }));
 
 describe('MetricsPanel', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    automationMock.mockReset();
+    alertsMock.mockReset();
+    assistantMock.mockReset();
+    telemetryMock.mockReset();
   });
 
   it('renders automation logs and assistant telemetry', () => {
@@ -109,30 +111,62 @@ describe('MetricsPanel', () => {
     renderWithProviders(<MetricsPanel />);
 
     expect(screen.getByText(/Automation hooks/i)).toBeInTheDocument();
-    expect(screen.getAllByText('https://example.com/hooks/renewals')).toHaveLength(2);
+    expect(
+      screen.getAllByText('https://example.com/hooks/renewals')
+    ).toHaveLength(2);
     expect(screen.getByText('5')).toBeInTheDocument();
 
     expect(screen.getByText(/Assistant telemetry/i)).toBeInTheDocument();
-    expect(screen.getByText(/Total sessions/i).nextSibling?.textContent).toContain('2');
+    expect(
+      screen.getByText(/Total sessions/i).nextSibling?.textContent
+    ).toContain('2');
     expect(screen.getAllByText(/admin/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/How do I renew members/i)).toBeInTheDocument();
     expect(screen.getByText(/Active alerts/i)).toBeInTheDocument();
-    expect(screen.getByText(/Renewal webhook dispatch responded with status 503/i)).toBeInTheDocument();
-    expect(screen.getByText(/Avg/i).parentElement?.textContent).toContain('250');
-    expect(screen.getByText(/P95/i).parentElement?.textContent).toContain('320');
-    expect(screen.getByText(/Fallback/i).parentElement?.textContent).toContain('50.0%');
+    expect(
+      screen.getByText(/Renewal webhook dispatch responded with status 503/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Avg/i).parentElement?.textContent).toContain(
+      '250'
+    );
+    expect(screen.getByText(/P95/i).parentElement?.textContent).toContain(
+      '320'
+    );
+    expect(screen.getByText(/Fallback/i).parentElement?.textContent).toContain(
+      '50.0%'
+    );
   });
 
   it('shows empty states when data is missing', () => {
-    automationMock.mockReturnValue({ isLoading: false, isError: false, data: { logs: [] } });
-    alertsMock.mockReturnValue({ isLoading: false, isError: false, data: { alerts: [] } });
-    assistantMock.mockReturnValue({ isLoading: false, isError: false, data: { sessions: [] } });
-    telemetryMock.mockReturnValue({ isLoading: false, isError: false, data: { entries: [] } });
+    automationMock.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: { logs: [] },
+    });
+    alertsMock.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: { alerts: [] },
+    });
+    assistantMock.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: { sessions: [] },
+    });
+    telemetryMock.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: { entries: [] },
+    });
 
     renderWithProviders(<MetricsPanel />);
 
-    expect(screen.getByText(/No automation runs recorded yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/No assistant sessions recorded yet/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/No automation runs recorded yet/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/No assistant sessions recorded yet/i)
+    ).toBeInTheDocument();
     expect(screen.getByText(/No active alerts/i)).toBeInTheDocument();
   });
 });

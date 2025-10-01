@@ -1,20 +1,20 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 5
-    labels: ["deps", "automated"]
-  - package-ecosystem: "npm"
-    directory: "/frontend"
+    labels: ['deps', 'automated']
+  - package-ecosystem: 'npm'
+    directory: '/frontend'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 5
-    labels: ["deps", "frontend", "automated"]
-  - package-ecosystem: "npm"
-    directory: "/functions"
+    labels: ['deps', 'frontend', 'automated']
+  - package-ecosystem: 'npm'
+    directory: '/functions'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 5
-    labels: ["deps", "functions", "automated"]
+    labels: ['deps', 'functions', 'automated']

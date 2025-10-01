@@ -6,27 +6,42 @@ import { FieldValue as Fv, Timestamp } from 'firebase-admin/firestore';
 import type { z } from 'zod';
 
 function requireAgentOrAdmin(ctx: functions.https.CallableContext) {
-  if (!ctx.auth) throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+  if (!ctx.auth)
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
   const role = (ctx.auth.token as any).role;
   if (role !== 'agent' && role !== 'admin') {
-    throw new functions.https.HttpsError('permission-denied', 'Agent or admin only');
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Agent or admin only'
+    );
   }
   return ctx.auth;
 }
 
-function agentHasRegion(ctx: functions.https.CallableContext, region: z.infer<typeof regionEnum>): boolean {
+function agentHasRegion(
+  ctx: functions.https.CallableContext,
+  region: z.infer<typeof regionEnum>
+): boolean {
   const role = (ctx.auth!.token as any).role;
   if (role === 'admin') return true;
-  const allowed = (ctx.auth!.token as any).allowedRegions as string[] | undefined;
+  const allowed = (ctx.auth!.token as any).allowedRegions as
+    | string[]
+    | undefined;
   return Array.isArray(allowed) && allowed.includes(region);
 }
 
-export async function agentCreateMemberLogic(data: any, context: functions.https.CallableContext) {
+export async function agentCreateMemberLogic(
+  data: any,
+  context: functions.https.CallableContext
+) {
   const auth = requireAgentOrAdmin(context);
   const input = agentCreateMemberSchema.parse(data);
 
   if (!agentHasRegion(context, input.region)) {
-    throw new functions.https.HttpsError('permission-denied', 'Region not allowed');
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Region not allowed'
+    );
   }
 
   const emailLower = input.email.toLowerCase();
@@ -37,29 +52,41 @@ export async function agentCreateMemberLogic(data: any, context: functions.https
     userRecord = await admin.auth().getUserByEmail(emailLower);
   } catch {
     // Create with a random strong password (user can reset via email link later)
-    const randomPass = Math.random().toString(36).slice(2) + Math.random().toString(36).toUpperCase().slice(2);
-    userRecord = await admin.auth().createUser({ email: emailLower, password: randomPass, displayName: input.name });
+    const randomPass =
+      Math.random().toString(36).slice(2) +
+      Math.random().toString(36).toUpperCase().slice(2);
+    userRecord = await admin.auth().createUser({
+      email: emailLower,
+      password: randomPass,
+      displayName: input.name,
+    });
   }
 
   // Ensure role=member claim
   const currentClaims = (userRecord.customClaims as any) || {};
   if (!currentClaims.role) {
-    await admin.auth().setCustomUserClaims(userRecord.uid, { ...currentClaims, role: 'member' });
+    await admin.auth().setCustomUserClaims(userRecord.uid, {
+      ...currentClaims,
+      role: 'member',
+    });
   }
 
   const memberRef = db.collection('members').doc(userRecord.uid);
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(memberRef);
-    let memberNo = (snap.exists ? (snap.get('memberNo') as string | undefined) : undefined);
+    let memberNo = snap.exists
+      ? (snap.get('memberNo') as string | undefined)
+      : undefined;
     const nowTs = FieldValue.serverTimestamp();
 
     // Prepare refs
     const emailRef = db.collection('registry_email').doc(emailLower);
     const envYear = Number(process.env.MEMBER_YEAR);
-    const year = (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100)
-      ? envYear
-      : new Date().getUTCFullYear();
+    const year =
+      !Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100
+        ? envYear
+        : new Date().getUTCFullYear();
     const counterRef = db.doc(`counters/members-${year}`);
 
     // Pre-reads (all reads before any writes)
@@ -90,21 +117,25 @@ export async function agentCreateMemberLogic(data: any, context: functions.https
     // Reserve email after read checks
     tx.set(emailRef, { uid: userRecord.uid }, { merge: true });
 
-    tx.set(memberRef, {
-      email: emailLower,
-      name: input.name,
-      nameLower: input.name.toLowerCase().trim(),
-      region: input.region,
-      phone: input.phone,
-      orgId: input.orgId,
-      memberNo,
-      agentId: auth.uid,
-      status: snap.exists ? snap.get('status') ?? 'none' : 'none',
-      year: snap.exists ? snap.get('year') ?? null : null,
-      expiresAt: snap.exists ? snap.get('expiresAt') ?? null : null,
-      createdAt: snap.exists ? snap.get('createdAt') ?? nowTs : nowTs,
-      updatedAt: nowTs,
-    }, { merge: true });
+    tx.set(
+      memberRef,
+      {
+        email: emailLower,
+        name: input.name,
+        nameLower: input.name.toLowerCase().trim(),
+        region: input.region,
+        phone: input.phone,
+        orgId: input.orgId,
+        memberNo,
+        agentId: auth.uid,
+        status: snap.exists ? (snap.get('status') ?? 'none') : 'none',
+        year: snap.exists ? (snap.get('year') ?? null) : null,
+        expiresAt: snap.exists ? (snap.get('expiresAt') ?? null) : null,
+        createdAt: snap.exists ? (snap.get('createdAt') ?? nowTs) : nowTs,
+        updatedAt: nowTs,
+      },
+      { merge: true }
+    );
   });
 
   return { uid: userRecord.uid };

@@ -14,12 +14,21 @@ describe('AgentRegistrationCard', () => {
     });
 
     renderWithProviders(
-      <AgentRegistrationCard allowedRegions={['PRISHTINA']} onSuccess={onSuccess} onError={onError} />,
+      <AgentRegistrationCard
+        allowedRegions={['PRISHTINA']}
+        onSuccess={onSuccess}
+        onError={onError}
+      />
     );
-    await userEvent.type(screen.getByPlaceholderText(/Email/i), 'new@example.com');
+    await userEvent.type(
+      screen.getByPlaceholderText(/Email/i),
+      'new@example.com'
+    );
     await userEvent.type(screen.getByPlaceholderText(/Full name/i), 'New User');
     await userEvent.selectOptions(screen.getByRole('combobox'), 'PRISHTINA');
-    await userEvent.click(screen.getByRole('button', { name: /Register Member/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /Register Member/i })
+    );
 
     await waitFor(() => {
       expect(agentCreateMemberMock).toHaveBeenCalledWith({

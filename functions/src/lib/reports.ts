@@ -1,4 +1,12 @@
-export function monthlyReportCsv(data: { total?: number; revenue?: number; byRegion?: Record<string, number>; byMethod?: Record<string, number> }, month: string): string {
+export function monthlyReportCsv(
+  data: {
+    total?: number;
+    revenue?: number;
+    byRegion?: Record<string, number>;
+    byMethod?: Record<string, number>;
+  },
+  month: string
+): string {
   const rows: string[] = [];
   rows.push('metric,value');
   rows.push(`total,${data.total || 0}`);
@@ -13,4 +21,3 @@ export function monthlyReportCsv(data: { total?: number; revenue?: number; byReg
   for (const k of Object.keys(byMethod)) rows.push(`${k},${byMethod[k]}`);
   return rows.join('\n');
 }
-

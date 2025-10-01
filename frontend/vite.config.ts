@@ -1,7 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'node:path';
 import { visualizer } from 'rollup-plugin-visualizer';
-import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -9,12 +8,11 @@ export default defineConfig({
   envDir: '..',
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src')
-    }
+      '@': path.resolve(__dirname, 'src'),
+    },
   },
   plugins: [
     react(),
-    tailwindcss(),
     visualizer({
       open: process.env.ANALYZE === 'true',
       gzipSize: true,
@@ -25,7 +23,12 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/functions'],
+          firebase: [
+            'firebase/app',
+            'firebase/auth',
+            'firebase/firestore',
+            'firebase/functions',
+          ],
           react: ['react', 'react-dom', 'react-router-dom'],
         },
       },

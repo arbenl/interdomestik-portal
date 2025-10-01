@@ -19,12 +19,21 @@ export function BillingPanel() {
     <div>
       <h3>Billing</h3>
       <ul>
-        {invoices?.length ? invoices.map((invoice: Invoice, index: number) => {
-          const key = invoice.id || invoice.invoiceId || `${invoice.created?.seconds ?? 0}-${index}`;
-          return (
-            <li key={key}>{invoice.status} - {invoice.amount}</li>
-          );
-        }) : <li>No invoices yet.</li>}
+        {invoices?.length ? (
+          invoices.map((invoice: Invoice, index: number) => {
+            const key =
+              invoice.id ||
+              invoice.invoiceId ||
+              `${invoice.created?.seconds ?? 0}-${index}`;
+            return (
+              <li key={key}>
+                {invoice.status} - {invoice.amount}
+              </li>
+            );
+          })
+        ) : (
+          <li>No invoices yet.</li>
+        )}
       </ul>
       <Link to="/billing">Manage Subscription</Link>
     </div>

@@ -8,7 +8,7 @@ describe('PaymentElementBox', () => {
     renderWithProviders(
       <ToastProvider>
         <PaymentElementBox amountCents={2500} currency="EUR" />
-      </ToastProvider>,
+      </ToastProvider>
     );
     expect(screen.getByText(/Payments \(emulator\)/i)).toBeInTheDocument();
   });

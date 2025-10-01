@@ -23,13 +23,18 @@ interface UsePortalDashboardResult {
   error: unknown;
   widgets: PortalWidgetSummary[];
   layout: PortalLayoutItem[];
-  availableWidgets: Array<{ id: PortalLayoutItem['id']; title: string; description: string; hidden: boolean }>;
+  availableWidgets: Array<{
+    id: PortalLayoutItem['id'];
+    title: string;
+    description: string;
+    hidden: boolean;
+  }>;
   refresh: () => Promise<void>;
   updateLayout: (widgets: PortalLayoutItem[]) => Promise<void>;
   updating: boolean;
 }
 
-const FALLBACK_WIDGETS = getDefaultPortalLayout().map(item => ({
+const FALLBACK_WIDGETS = getDefaultPortalLayout().map((item) => ({
   id: item.id,
   title: PORTAL_WIDGET_METADATA[item.id].title,
   value: '—',
@@ -37,13 +42,20 @@ const FALLBACK_WIDGETS = getDefaultPortalLayout().map(item => ({
   trend: 'flat' as const,
 }));
 
-export function usePortalDashboard({ enabled }: UsePortalDashboardOptions): UsePortalDashboardResult {
+export function usePortalDashboard({
+  enabled,
+}: UsePortalDashboardOptions): UsePortalDashboardResult {
   const { user, isAdmin, isAgent, allowedRegions } = useAuth();
   const queryClient = useQueryClient();
   const canAccess = Boolean(user) && enabled && (isAdmin || isAgent);
   const userCacheKey = user?.uid ?? 'anonymous';
-  const allowedRegionsKey = allowedRegions.length > 0 ? [...allowedRegions].sort().join(',') : 'none';
-  const dashboardQueryKey = ['portalDashboard', userCacheKey, allowedRegionsKey] as const;
+  const allowedRegionsKey =
+    allowedRegions.length > 0 ? [...allowedRegions].sort().join(',') : 'none';
+  const dashboardQueryKey = [
+    'portalDashboard',
+    userCacheKey,
+    allowedRegionsKey,
+  ] as const;
 
   const dashboardQuery = useQuery({
     queryKey: dashboardQueryKey,
@@ -57,23 +69,23 @@ export function usePortalDashboard({ enabled }: UsePortalDashboardOptions): UseP
     queryFn: fetchPortalLayout,
     enabled: canAccess,
     staleTime: Infinity,
-    select: data => data.widgets,
+    select: (data) => data.widgets,
   });
 
   const mutation = useMutation({
     mutationFn: savePortalLayout,
-    onSuccess: result => {
+    onSuccess: (result) => {
       queryClient.setQueryData(['portalLayout', userCacheKey], result.widgets);
     },
   });
 
   const layout = canAccess
-    ? layoutQuery.data ?? getDefaultPortalLayout()
+    ? (layoutQuery.data ?? getDefaultPortalLayout())
     : getDefaultPortalLayout();
 
   const dataMap = useMemo(() => {
     const map = new Map<PortalWidgetSummary['id'], PortalWidgetSummary>();
-    dashboardQuery.data?.widgets.forEach(widget => {
+    dashboardQuery.data?.widgets.forEach((widget) => {
       map.set(widget.id, widget);
     });
     return map;
@@ -82,26 +94,35 @@ export function usePortalDashboard({ enabled }: UsePortalDashboardOptions): UseP
   const widgets = useMemo(() => {
     if (!canAccess) return FALLBACK_WIDGETS;
     return layout
-      .filter(item => !item.hidden && SUPPORTED_WIDGET_IDS.includes(item.id))
-      .map(item => dataMap.get(item.id) ?? {
-        id: item.id,
-        title: PORTAL_WIDGET_METADATA[item.id].title,
-        value: '—',
-        helper: PORTAL_WIDGET_METADATA[item.id].description,
-        trend: 'flat' as const,
-      });
+      .filter((item) => !item.hidden && SUPPORTED_WIDGET_IDS.includes(item.id))
+      .map(
+        (item) =>
+          dataMap.get(item.id) ?? {
+            id: item.id,
+            title: PORTAL_WIDGET_METADATA[item.id].title,
+            value: '—',
+            helper: PORTAL_WIDGET_METADATA[item.id].description,
+            trend: 'flat' as const,
+          }
+      );
   }, [layout, dataMap, canAccess]);
 
-  const availableWidgets = useMemo(() => layout.map(item => ({
-    id: item.id,
-    title: PORTAL_WIDGET_METADATA[item.id].title,
-    description: PORTAL_WIDGET_METADATA[item.id].description,
-    hidden: Boolean(item.hidden),
-  })), [layout]);
+  const availableWidgets = useMemo(
+    () =>
+      layout.map((item) => ({
+        id: item.id,
+        title: PORTAL_WIDGET_METADATA[item.id].title,
+        description: PORTAL_WIDGET_METADATA[item.id].description,
+        hidden: Boolean(item.hidden),
+      })),
+    [layout]
+  );
 
   const refresh = async (): Promise<void> => {
     const dash = queryClient.invalidateQueries({ queryKey: dashboardQueryKey });
-    const lay = queryClient.invalidateQueries({ queryKey: ['portalLayout', userCacheKey] });
+    const lay = queryClient.invalidateQueries({
+      queryKey: ['portalLayout', userCacheKey],
+    });
     await Promise.all([dash, lay]);
   };
 
@@ -112,7 +133,12 @@ export function usePortalDashboard({ enabled }: UsePortalDashboardOptions): UseP
 
   return {
     enabled: canAccess,
-    isLoading: canAccess && (dashboardQuery.isFetching || layoutQuery.isFetching || dashboardQuery.isLoading || layoutQuery.isLoading),
+    isLoading:
+      canAccess &&
+      (dashboardQuery.isFetching ||
+        layoutQuery.isFetching ||
+        dashboardQuery.isLoading ||
+        layoutQuery.isLoading),
     isError: Boolean(dashboardQuery.error || layoutQuery.error),
     error: dashboardQuery.error || layoutQuery.error,
     widgets,

@@ -12,7 +12,9 @@ type TestGlobal = typeof globalThis & {
   __fsSeedDefault?: (rows: any[]) => void;
   __fsThrow?: (error?: unknown) => void;
   __fsReset?: () => void;
-  __setFunctionsResponse?: (impl: (name: string, payload: any) => any | Promise<any>) => void;
+  __setFunctionsResponse?: (
+    impl: (name: string, payload: any) => any | Promise<any>
+  ) => void;
   __resetFunctions?: () => void;
   __stripeReset?: () => void;
 };
@@ -24,7 +26,9 @@ declare global {
   var __fsSeedDefault: (_rows: any[]) => void;
   var __fsThrow: (_error?: unknown) => void;
   var __fsReset: () => void;
-  var __setFunctionsResponse: (_impl: (name: string, payload: any) => any | Promise<any>) => void;
+  var __setFunctionsResponse: (
+    _impl: (name: string, payload: any) => any | Promise<any>
+  ) => void;
   var __resetFunctions: () => void;
   var __stripeReset: () => void;
 }
@@ -37,7 +41,10 @@ const testGlobal = globalThis as TestGlobal;
 vi.mock('firebase/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('firebase/auth')>();
 
-  const AUTH_SINGLETON: { app: { options: { projectId: string } }; currentUser: User } = {
+  const AUTH_SINGLETON: {
+    app: { options: { projectId: string } };
+    currentUser: User;
+  } = {
     app: { options: { projectId: 'interdomestik-dev' } },
     currentUser: null as User,
   };
@@ -49,9 +56,13 @@ vi.mock('firebase/auth', async (importOriginal) => {
     if (typeof callbackOrObserver === 'function') {
       return callbackOrObserver as (u: User) => void;
     }
-    const maybeObserver = callbackOrObserver as { next?: (u: User) => void } | undefined;
+    const maybeObserver = callbackOrObserver as
+      | { next?: (u: User) => void }
+      | undefined;
     if (maybeObserver?.next) return maybeObserver.next.bind(maybeObserver);
-    throw new Error('Auth observer mock requires a callback or observer with next()');
+    throw new Error(
+      'Auth observer mock requires a callback or observer with next()'
+    );
   };
 
   const subscribe = (_auth: unknown, callbackOrObserver: unknown) => {
@@ -99,16 +110,20 @@ const fsStore = new Map<string, any[]>();
 let defaultRows: any[] = [];
 let fsError: unknown = null;
 
-const toDocs = (rows: any[] = []): DocLike[] => rows.map((row, index) => ({
-  id: row?.id ?? String(index + 1),
-  data: () => row,
-}));
+const toDocs = (rows: any[] = []): DocLike[] =>
+  rows.map((row, index) => ({
+    id: row?.id ?? String(index + 1),
+    data: () => row,
+  }));
 
-const pathFromSegments = (segments: any[]): string => segments
-  .flat()
-  .map(segment => (typeof segment === 'string' ? segment : segment?.__path ?? ''))
-  .filter(Boolean)
-  .join('/');
+const pathFromSegments = (segments: any[]): string =>
+  segments
+    .flat()
+    .map((segment) =>
+      typeof segment === 'string' ? segment : (segment?.__path ?? '')
+    )
+    .filter(Boolean)
+    .join('/');
 
 const ensureNoFsError = () => {
   if (fsError) throw fsError;
@@ -136,11 +151,19 @@ vi.mock('firebase/firestore', async (importOriginal) => {
   const actual = await importOriginal<typeof import('firebase/firestore')>();
 
   const getFirestore = vi.fn(() => ({ __kind: 'firestore' }));
-  const collection = vi.fn((dbOrRef: any, ...segments: string[]) => ({ __path: pathFromSegments(segments) }));
-  const doc = vi.fn((dbOrRef: any, ...segments: string[]) => ({ __path: pathFromSegments(segments) }));
+  const collection = vi.fn((dbOrRef: any, ...segments: string[]) => ({
+    __path: pathFromSegments(segments),
+  }));
+  const doc = vi.fn((dbOrRef: any, ...segments: string[]) => ({
+    __path: pathFromSegments(segments),
+  }));
   const query = vi.fn((ref: any) => ref);
-  const where = vi.fn((_field: string, _op: string, _value: any) => (x: any) => x);
-  const orderBy = vi.fn((_field: string, _direction?: 'asc' | 'desc') => (x: any) => x);
+  const where = vi.fn(
+    (_field: string, _op: string, _value: any) => (x: any) => x
+  );
+  const orderBy = vi.fn(
+    (_field: string, _direction?: 'asc' | 'desc') => (x: any) => x
+  );
   const limit = vi.fn((_n: number) => (x: any) => x);
 
   const getDocs = vi.fn(async (refOrQuery: any): Promise<SnapshotLike> => {
@@ -158,25 +181,31 @@ vi.mock('firebase/firestore', async (importOriginal) => {
     return { exists: () => !!first, id: first?.id ?? '1', data: () => first };
   });
 
-  const onSnapshot = vi.fn((refOrQuery: any, cb: (snapshot: SnapshotLike) => void) => {
-    ensureNoFsError();
-    const path = refOrQuery?.__path ?? '';
-    const rows = fsStore.get(path) ?? defaultRows;
-    cb({ docs: toDocs(rows) });
-    return () => {};
-  });
+  const onSnapshot = vi.fn(
+    (refOrQuery: any, cb: (snapshot: SnapshotLike) => void) => {
+      ensureNoFsError();
+      const path = refOrQuery?.__path ?? '';
+      const rows = fsStore.get(path) ?? defaultRows;
+      cb({ docs: toDocs(rows) });
+      return () => {};
+    }
+  );
 
   const setDoc = vi.fn(async (ref: any, data: any) => {
     ensureNoFsError();
     const path = ref?.__path ?? '';
     const rows = fsStore.get(path) ?? [];
     const id = data?.id ?? String(rows.length + 1);
-    const next = rows.filter((row: any) => (row.id ?? '') !== id).concat([{ ...data, id }]);
+    const next = rows
+      .filter((row: any) => (row.id ?? '') !== id)
+      .concat([{ ...data, id }]);
     fsStore.set(path, next);
   });
 
   const updateDoc = vi.fn(async (ref: any, data: any) => setDoc(ref, data));
-  const addDoc = vi.fn(async (colRef: any, data: any) => setDoc({ __path: colRef?.__path ?? '' }, data));
+  const addDoc = vi.fn(async (colRef: any, data: any) =>
+    setDoc({ __path: colRef?.__path ?? '' }, data)
+  );
 
   return {
     ...actual,
@@ -206,8 +235,12 @@ testGlobal.__fsReset ??= () => {};
  * ------------------------------------------------------------------------ */
 const callFnMock = vi.fn<(name: string, payload: any) => Promise<any>>();
 
-const applyFunctionsImpl = (impl: (name: string, payload: any) => any | Promise<any>) => {
-  callFnMock.mockImplementation(async (name: string, payload: any) => impl(name, payload));
+const applyFunctionsImpl = (
+  impl: (name: string, payload: any) => any | Promise<any>
+) => {
+  callFnMock.mockImplementation(async (name: string, payload: any) =>
+    impl(name, payload)
+  );
 };
 
 const resetFunctions = () => {
@@ -237,7 +270,9 @@ const stripeElementsGetElement = vi.fn();
 
 const resetStripe = () => {
   stripeConfirmPayment.mockReset();
-  stripeConfirmPayment.mockResolvedValue({ paymentIntent: { status: 'succeeded' } });
+  stripeConfirmPayment.mockResolvedValue({
+    paymentIntent: { status: 'succeeded' },
+  });
   stripeElementsGetElement.mockReset();
 };
 
@@ -256,7 +291,10 @@ vi.mock('@stripe/react-stripe-js', () => ({
  * Firebase app module — avoid env lookups during tests.
  * ------------------------------------------------------------------------ */
 vi.mock('@/lib/firebase', () => {
-  const auth = { app: { options: { projectId: 'interdomestik-dev' } }, currentUser: null };
+  const auth = {
+    app: { options: { projectId: 'interdomestik-dev' } },
+    currentUser: null,
+  };
   const firestore = {};
   const functions = {};
   const noop = () => {};

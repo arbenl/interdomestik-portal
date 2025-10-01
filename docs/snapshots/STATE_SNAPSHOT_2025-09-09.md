@@ -5,6 +5,7 @@
 - Commit: c18ecca0
 
 Summary
+
 - Phase 0 merged and tagged (`phase-0`).
 - Phase 1 in progress (PR #2 open):
   - Webhook mapping: `invoice.payment_succeeded` → `startMembership` (idempotent) with signed integration test.
@@ -15,10 +16,12 @@ Summary
   - Firestore client stabilized for local dev/tests (long polling; simplified persistence).
 
 Next
+
 - Wire Stripe Payment Element (or alternative PSP) when keys/provider are available.
 - E2E: renew CTA → success after wiring payment UI.
 - Optional: Paysera integration (hosted checkout + webhook) if Stripe not available.
 
 Notes
+
 - Emulators default: Hosting 5000, Functions 5001, Firestore 8085, Auth 9099.
 - Test accounts: member1@example.com, member2@example.com, admin@example.com (password: password123).

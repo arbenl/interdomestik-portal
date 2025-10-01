@@ -7,10 +7,5 @@
     "skipLibCheck": true,
     "strict": true
   },
-  "include": [
-    "src/**/*.ts",
-    "functions/**/*.ts",
-    "test/**/*.ts",
-    "*.ts"
-  ]
+  "include": ["src/**/*.ts", "functions/**/*.ts", "test/**/*.ts", "*.ts"]
 }

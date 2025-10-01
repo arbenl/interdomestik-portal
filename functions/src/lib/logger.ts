@@ -1,1 +1,3 @@
-export function log(event:string, data:Record<string,any>={}){ console.log(JSON.stringify({event,...data})); }
+export function log(event: string, data: Record<string, any> = {}) {
+  console.log(JSON.stringify({ event, ...data }));
+}

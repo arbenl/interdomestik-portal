@@ -1,7 +1,9 @@
-import { globalIgnores } from 'eslint/config'
-import tsParser from '@typescript-eslint/parser'
+import { globalIgnores } from 'eslint/config';
+import tsParser from '@typescript-eslint/parser';
+import baseConfig from 'eslint-config-custom';
 
 export default [
+  ...baseConfig,
   globalIgnores(['lib', 'node_modules']),
   {
     files: ['**/*.ts'],
@@ -11,7 +13,10 @@ export default [
       sourceType: 'commonjs',
     },
     rules: {
-      'no-console': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'no-empty': 'off',
+      'no-useless-escape': 'off',
+      'prefer-const': 'off',
     },
   },
-]
+];

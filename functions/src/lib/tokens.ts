@@ -2,7 +2,11 @@ import { createHmac, randomBytes } from 'crypto';
 
 function b64url(input: Buffer | string): string {
   const b = Buffer.isBuffer(input) ? input : Buffer.from(input);
-  return b.toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  return b
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
 }
 
 function getSecrets(): { [kid: string]: string; activeKid: string } {
@@ -12,11 +16,18 @@ function getSecrets(): { [kid: string]: string; activeKid: string } {
     try {
       const map = JSON.parse(mappingRaw || '{}');
       if (map && typeof map === 'object' && Object.keys(map).length > 0) {
-        return { [active]: map[active] || '', ...map, activeKid: active } as any;
+        return {
+          [active]: map[active] || '',
+          ...map,
+          activeKid: active,
+        } as any;
       }
     } catch {}
   }
-  const fallback = process.env.CARD_JWT_SECRET || process.env.STRIPE_SIGNING_SECRET || 'dev-card-secret-change-me';
+  const fallback =
+    process.env.CARD_JWT_SECRET ||
+    process.env.STRIPE_SIGNING_SECRET ||
+    'dev-card-secret-change-me';
   return { v1: fallback, activeKid: 'v1' } as any;
 }
 
@@ -41,20 +52,31 @@ export function signCardToken(claims: CardClaims, kid?: string): string {
   return `${enc}.${b64url(sig)}`;
 }
 
-export function verifyCardToken(token: string): (CardClaims & { kid?: string }) | null {
+export function verifyCardToken(
+  token: string
+): (CardClaims & { kid?: string }) | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
     const [h, p, s] = parts;
-    const hdr = JSON.parse(Buffer.from(h.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
+    const hdr = JSON.parse(
+      Buffer.from(h.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()
+    );
     const kid = hdr?.kid || 'v1';
     const secrets = getSecrets();
     const sec = (secrets as any)[kid] as string;
     if (!sec) return null;
-    const expected = b64url(createHmac('sha256', sec).update(`${h}.${p}`).digest());
+    const expected = b64url(
+      createHmac('sha256', sec).update(`${h}.${p}`).digest()
+    );
     if (s !== expected) return null;
-    const claims = JSON.parse(Buffer.from(p.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
-    if (typeof claims.exp === 'number' && Math.floor(Date.now() / 1000) > claims.exp) {
+    const claims = JSON.parse(
+      Buffer.from(p.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()
+    );
+    if (
+      typeof claims.exp === 'number' &&
+      Math.floor(Date.now() / 1000) > claims.exp
+    ) {
       // Token expiration is advisory; verification endpoint also checks DB state
       // Return claims anyway to allow UX with explicit expired result
       return { ...claims, kid };

@@ -9,7 +9,11 @@ const mockedUseReports = useReports as unknown as Mock;
 
 describe('Admin Reports panel', () => {
   it('renders monthly report rows with CSV link', async () => {
-    mockedUseReports.mockReturnValue({ data: [{ id: 'report-1', month: '2025-09', total: 5 }], isLoading: false, error: null });
+    mockedUseReports.mockReturnValue({
+      data: [{ id: 'report-1', month: '2025-09', total: 5 }],
+      isLoading: false,
+      error: null,
+    });
 
     renderWithProviders(<ReportsPanel />);
 

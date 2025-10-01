@@ -7,8 +7,19 @@ describe('agentCreateMemberLogic', () => {
   afterEach(() => sinon.restore());
 
   it('denies when region not allowed for agent', async () => {
-    const context: any = { auth: { uid: 'agent-1', token: { role: 'agent', allowedRegions: ['PRISHTINA'] } } };
-    const data = { email: 'new@example.com', name: 'New User', region: 'PEJA', phone: '', orgId: '' };
+    const context: any = {
+      auth: {
+        uid: 'agent-1',
+        token: { role: 'agent', allowedRegions: ['PRISHTINA'] },
+      },
+    };
+    const data = {
+      email: 'new@example.com',
+      name: 'New User',
+      region: 'PEJA',
+      phone: '',
+      orgId: '',
+    };
     try {
       await agentCreateMemberLogic(data, context);
       throw new Error('should have thrown');
@@ -18,21 +29,39 @@ describe('agentCreateMemberLogic', () => {
   });
 
   it('creates member for allowed region (stubs auth + tx)', async () => {
-    const context: any = { auth: { uid: 'agent-1', token: { role: 'agent', allowedRegions: ['PRISHTINA'] } } };
-    const data = { email: 'new@example.com', name: 'New User', region: 'PRISHTINA', phone: '', orgId: '' };
+    const context: any = {
+      auth: {
+        uid: 'agent-1',
+        token: { role: 'agent', allowedRegions: ['PRISHTINA'] },
+      },
+    };
+    const data = {
+      email: 'new@example.com',
+      name: 'New User',
+      region: 'PRISHTINA',
+      phone: '',
+      orgId: '',
+    };
 
     // Stub Auth instance methods
     const authInstance = admin.auth() as any;
     sinon.stub(authInstance, 'getUserByEmail').rejects(new Error('not found'));
-    sinon.stub(authInstance, 'createUser').resolves({ uid: 'uid-123', customClaims: {} });
+    sinon
+      .stub(authInstance, 'createUser')
+      .resolves({ uid: 'uid-123', customClaims: {} });
     sinon.stub(authInstance, 'setCustomUserClaims').resolves();
 
     // Fake transaction with get/set
     const fakeTx: any = {
-      get: sinon.stub().resolves({ exists: false, get: (_: string) => undefined }),
+      get: sinon
+        .stub()
+        .resolves({ exists: false, get: (_: string) => undefined }),
       set: sinon.stub().returns(undefined),
     };
-    sinon.stub(db, 'runTransaction').callsFake(async (fn: any) => { await fn(fakeTx); return undefined as any; });
+    sinon.stub(db, 'runTransaction').callsFake(async (fn: any) => {
+      await fn(fakeTx);
+      return undefined as any;
+    });
 
     const res = await agentCreateMemberLogic(data, context);
     expect(res).to.have.property('uid');

@@ -12,7 +12,9 @@ describe('useMembershipHistory', () => {
   });
 
   it('should return loading state initially', () => {
-    const { result } = renderHook(() => useMembershipHistory(uid), { wrapper: TestProviders });
+    const { result } = renderHook(() => useMembershipHistory(uid), {
+      wrapper: TestProviders,
+    });
     expect(result.current.isLoading).toBe(true);
   });
 
@@ -23,7 +25,9 @@ describe('useMembershipHistory', () => {
     ];
     global.__fsSeedDefault(mockHistory);
 
-    const { result } = renderHook(() => useMembershipHistory(uid), { wrapper: TestProviders });
+    const { result } = renderHook(() => useMembershipHistory(uid), {
+      wrapper: TestProviders,
+    });
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.data).toEqual(mockHistory);
@@ -35,7 +39,9 @@ describe('useMembershipHistory', () => {
     const mockError = new Error('Failed to fetch');
     global.__fsThrow(mockError);
 
-    const { result } = renderHook(() => useMembershipHistory(uid), { wrapper: TestProviders });
+    const { result } = renderHook(() => useMembershipHistory(uid), {
+      wrapper: TestProviders,
+    });
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toEqual(mockError);
@@ -45,7 +51,9 @@ describe('useMembershipHistory', () => {
   it('should handle no membership history', async () => {
     global.__fsSeedDefault([]);
 
-    const { result } = renderHook(() => useMembershipHistory(uid), { wrapper: TestProviders });
+    const { result } = renderHook(() => useMembershipHistory(uid), {
+      wrapper: TestProviders,
+    });
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.data).toEqual([]);

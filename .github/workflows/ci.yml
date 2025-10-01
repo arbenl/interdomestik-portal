@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build-test:
@@ -17,8 +17,6 @@ jobs:
           node-version-file: '.nvmrc'
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10.16.1
       - name: Get pnpm store directory
         id: pnpm-cache
         shell: bash
@@ -46,8 +44,6 @@ jobs:
           node-version-file: '.nvmrc'
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10.16.1
       - name: Install dependencies
         run: pnpm install
       - name: Run Functions tests (emulators)
@@ -63,8 +59,6 @@ jobs:
           node-version-file: '.nvmrc'
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10.16.1
       - name: Get pnpm store directory
         id: pnpm-cache
         shell: bash
@@ -81,10 +75,14 @@ jobs:
         run: pnpm install
       - name: Install Playwright Browsers
         run: pnpm --filter frontend exec playwright install --with-deps
+      - name: Build functions
+        run: pnpm --filter functions build
       - name: Run E2E tests
         run: |
           pnpm dev:emu &
-          sleep 30
+          pnpm exec wait-on http-get://localhost:9099
+          pnpm exec wait-on http-get://localhost:8080
+          pnpm exec wait-on http-get://localhost:5001
           pnpm --filter frontend e2e
 
   rules-tests:
@@ -97,15 +95,15 @@ jobs:
           node-version-file: '.nvmrc'
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10.16.1
       - name: Install dependencies
         run: pnpm install
+      - name: Build functions
+        run: pnpm --filter functions build
       - name: Start Firestore emulator
         run: pnpm dev:emu &
       - name: Run rules tests
         run: |
-          sleep 10
+          pnpm exec wait-on http-get://localhost:8080
           pnpm test:rules
 
   # Simplified: remove dependency hygiene job (handled locally or as needed)

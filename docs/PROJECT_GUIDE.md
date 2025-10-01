@@ -1,11 +1,13 @@
 # Interdomestik Member Portal — Project Guide
 
 ## Overview
+
 Interdomestik Member Portal is a cost‑optimized, secure portal built on Firebase. The frontend is React + TypeScript (Vite, Tailwind). The backend uses Firebase Cloud Functions (Node 20) with Firestore (EU region) and Firebase Auth (custom claims for RBAC).
 
 Primary personas: Members, Agents, and Admins. Core capabilities include profile management, membership activation and renewals, a member portal with a digital card, events visibility, and basic billing records.
 
 ## Architecture
+
 - Hosting: Firebase Hosting + CDN (SPA served with React Router)
 - Auth: Firebase Authentication (email/password, custom claims)
 - Data: Firestore collections: `members/{uid}`, `members/{uid}/memberships`, `events`, `billing/{uid}/invoices`, and `registry/*`
@@ -21,6 +23,7 @@ Primary personas: Members, Agents, and Admins. Core capabilities include profile
   - **Code Splitting:** Feature panels are lazily loaded using `React.lazy` and `<Suspense>`.
 
 ## Repository Structure
+
 - `frontend/`: React app (Vite).
   - Source: `frontend/src`
     - `features/`: Contains the modular features for the Admin and Portal pages.
@@ -37,6 +40,7 @@ Primary personas: Members, Agents, and Admins. Core capabilities include profile
 - Root configs: `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `tsconfig.json`, `docs/`
 
 ## Data Model
+
 - `members/{uid}`
   - email (lowercased), name, region (code), phone?, orgId?
   - memberNo (unique), agentId?
@@ -56,25 +60,35 @@ Primary personas: Members, Agents, and Admins. Core capabilities include profile
 - Uniqueness registry: `registry/memberNo/{memberNo}` and `registry/email/{emailLower}` → `{ uid }`
 
 ## Local Development
-1) Install dependencies
+
+1. Install dependencies
+
 ```
 pnpm install
 ```
-2) Start emulators (Functions, Firestore, Hosting, Auth)
+
+2. Start emulators (Functions, Firestore, Hosting, Auth)
+
 ```
 pnpm dev:emu
 ```
-3) Start frontend (Vite)
+
+3. Start frontend (Vite)
+
 ```
 pnpm --filter frontend dev
 ```
-4) (Optional) Seed demo data (emulators only)
+
+4. (Optional) Seed demo data (emulators only)
+
 ```
 curl -X POST http://localhost:5001/<project-id>/europe-west1/seedDatabase
 ```
+
 Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example.com`) with password `password123`, plus events and membership docs.
 
 ## Routing (SPA)
+
 - `/signin`, `/signup`
 - `/portal`: Member portal with a shared layout (`PortalLayout`).
   - `/portal/profile`
@@ -88,6 +102,7 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
 - `/verify`: Public membership check.
 
 ## Commands
+
 - `pnpm dev`: Starts the development server for the frontend.
 - `pnpm build`: Builds the frontend for production.
 - `pnpm test`: Runs all tests (frontend, functions, rules).
@@ -95,11 +110,13 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
 - `pnpm dev:all`: Starts the Firebase emulators and the frontend development server.
 
 ## Quick Reference
+
 - Project id (emulators): defaults to `interdomestik-dev` (override with `VITE_FIREBASE_EMULATOR_PROJECT_ID` if you start emulators with a different project).
 - Emulator ports: Hosting 5000, Functions 5001, Firestore 8080, Auth 9099
 - Webhook (emulator): `http://localhost:5001/<project-id>/europe-west1/stripeWebhook` (also via Hosting rewrite at `/stripeWebhook`)
 
 ## Testing
+
 - Unit (frontend): Vitest + jsdom — colocate as `*.test.ts(x)` near code.
 - Integration (functions): Mocha + Chai using emulators.
 - Rules: Vitest + `@firebase/rules-unit-testing` in `rules/__tests__`.
@@ -107,6 +124,7 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
 - When testing components that use TanStack Query, wrap in `QueryClientProvider`.
 
 ## Functions Reference
+
 - `verifyMembership` (HTTPS): GET with `memberNo` → `{ valid, name, region }`
 - `stripeWebhook` (HTTPS): emulator‑friendly placeholder; expects `{ uid, invoiceId?, amount, currency, created? }`; writes `billing/{uid}/invoices/{invoiceId}` with `status: 'paid'`. Hosting rewrite available at `/stripeWebhook`.
 - Exports v2:
@@ -119,6 +137,7 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
   - When you start the emulators with a non-default project id, update the seed URL to match, e.g. `curl -X POST http://localhost:5001/<your-project-id>/europe-west1/seedDatabase`.
 
 ## Security Model
+
 - Auth with custom claims (`role`, `allowedRegions`) governs admin/agent permissions
 - Firestore rules (high‑level expectations):
   - Members may read their own profile and memberships; writes are restricted
@@ -127,17 +146,20 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
   - `billing/{uid}/invoices` readable by the owner and admins; writes by backend only
 
 ## Performance & Observability
+
 - **New:** The frontend is optimized for performance using code-splitting (`React.lazy` and `<Suspense>`) and a robust data fetching layer with TanStack Query.
 - **New:** A bundle analysis can be generated by running `pnpm run build`. The report is saved as `stats.html`.
 - Functions sized for pay‑per‑use; no minimum instances
 - Logging kept minimal; enable deeper tracing only when debugging
 
 ## Deployment
+
 - All: `firebase deploy`
 - Only functions: `firebase deploy --only functions`
 - Only hosting: `firebase deploy --only hosting`
 
 ## Payments
+
 - MVP: Admin‑activated memberships with `paymentMethod` and optional `externalRef`.
 - Billing page displays `billing/{uid}/invoices` and can simulate a paid invoice via `stripeWebhook` in emulator.
 - Production: Stripe signature verification + idempotency implemented.
@@ -146,6 +168,7 @@ Creates demo users (`member1@example.com`, `member2@example.com`, `admin@example
   - Duplicate events are ignored via `webhooks_stripe/{event.id}`.
 
 Production setup:
+
 ```
 firebase functions:secrets:set STRIPE_SIGNING_SECRET
 firebase functions:secrets:set STRIPE_API_KEY
@@ -153,6 +176,7 @@ firebase deploy --only functions
 ```
 
 Local webhook example (no signature):
+
 ```
 curl -X POST \
   -H 'Content-Type: application/json' \
@@ -161,11 +185,13 @@ curl -X POST \
 ```
 
 ## Email
+
 - Prefer Firebase Trigger Email extension via SMTP (Brevo/SendGrid/SES)
 - Queue docs to `mail` collection; templates: Welcome/Activated, Receipt, Renewal Reminders
 - Include org address and support email (configurable); comply with local regulations
 
 ## Known Gaps / Next Steps
+
 - Finalize Firestore rules for `events` and `billing` per above expectations
 - Secrets hygiene: document rotation and signed‑webhook tests in staging
 - Expand test coverage and wire CI (see testing plan)

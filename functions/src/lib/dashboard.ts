@@ -2,7 +2,11 @@ import * as functions from 'firebase-functions/v1';
 import { admin, db } from '../firebaseAdmin';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 
-export type PortalWidgetId = 'renewalsDue' | 'paymentsCaptured' | 'eventRegistrations' | 'churnRisk';
+export type PortalWidgetId =
+  | 'renewalsDue'
+  | 'paymentsCaptured'
+  | 'eventRegistrations'
+  | 'churnRisk';
 
 export type PortalWidgetSummary = {
   id: PortalWidgetId;
@@ -31,10 +35,19 @@ export type PortalLayoutDocument = {
   version: 1;
 };
 
-const SUPPORTED_WIDGETS: PortalWidgetId[] = ['renewalsDue', 'paymentsCaptured', 'eventRegistrations', 'churnRisk'];
+const SUPPORTED_WIDGETS: PortalWidgetId[] = [
+  'renewalsDue',
+  'paymentsCaptured',
+  'eventRegistrations',
+  'churnRisk',
+];
 
 const formatCurrency = (amount: number) =>
-  amount.toLocaleString('en-US', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 });
+  amount.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+  });
 
 const DEFAULT_LAYOUT: PortalLayoutItem[] = [
   { id: 'renewalsDue' },
@@ -43,33 +56,47 @@ const DEFAULT_LAYOUT: PortalLayoutItem[] = [
   { id: 'churnRisk' },
 ];
 
-
 function assertAuthorized(context: functions.https.CallableContext) {
   if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'Authentication required'
+    );
   }
   const role = String((context.auth.token as any)?.role || 'member');
   if (role !== 'admin' && role !== 'agent') {
-    throw new functions.https.HttpsError('permission-denied', 'Portal dashboard available to admins or agents only');
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Portal dashboard available to admins or agents only'
+    );
   }
-  return { role, allowedRegions: normalizeRegions((context.auth.token as any)?.allowedRegions) };
+  return {
+    role,
+    allowedRegions: normalizeRegions(
+      (context.auth.token as any)?.allowedRegions
+    ),
+  };
 }
 
 function normalizeRegions(regions: unknown): string[] {
   if (!Array.isArray(regions)) return [];
   return regions
-    .map(entry => (typeof entry === 'string' ? entry : String(entry ?? '')).trim())
+    .map((entry) =>
+      (typeof entry === 'string' ? entry : String(entry ?? '')).trim()
+    )
     .filter(Boolean)
     .slice(0, 10); // Firestore `in` filter supports up to 10 values
 }
 
-async function countRenewalsDue(allowedRegions: string[] | null): Promise<{ value: number; helper: string }>
-{
+async function countRenewalsDue(
+  allowedRegions: string[] | null
+): Promise<{ value: number; helper: string }> {
   const now = Timestamp.now();
   const thresholdDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   const threshold = Timestamp.fromDate(thresholdDate);
 
-  let query = db.collection('members')
+  let query = db
+    .collection('members')
     .where('status', '==', 'active')
     .where('expiresAt', '>=', now)
     .where('expiresAt', '<=', threshold);
@@ -80,19 +107,29 @@ async function countRenewalsDue(allowedRegions: string[] | null): Promise<{ valu
 
   const snapshot = await query.count().get();
   const total = snapshot.data().count;
-  const helper = total === 0
-    ? 'No renewals due in the next 30 days'
-    : `Contact the ${total === 1 ? 'member' : 'members'} before expiry`;
+  const helper =
+    total === 0
+      ? 'No renewals due in the next 30 days'
+      : `Contact the ${total === 1 ? 'member' : 'members'} before expiry`;
   return { value: total, helper };
 }
 
-async function sumRecentPayments(allowedRegions: string[] | null): Promise<{ value: number; helper: string; delta: string; trend: 'up' | 'down' | 'flat' }>
-{
+async function sumRecentPayments(allowedRegions: string[] | null): Promise<{
+  value: number;
+  helper: string;
+  delta: string;
+  trend: 'up' | 'down' | 'flat';
+}> {
   const now = Date.now();
-  const sevenDaysAgo = Timestamp.fromDate(new Date(now - 7 * 24 * 60 * 60 * 1000));
-  const fourteenDaysAgo = Timestamp.fromDate(new Date(now - 14 * 24 * 60 * 60 * 1000));
+  const sevenDaysAgo = Timestamp.fromDate(
+    new Date(now - 7 * 24 * 60 * 60 * 1000)
+  );
+  const fourteenDaysAgo = Timestamp.fromDate(
+    new Date(now - 14 * 24 * 60 * 60 * 1000)
+  );
 
-  let baseQuery = db.collection('audit_logs')
+  let baseQuery = db
+    .collection('audit_logs')
     .where('action', '==', 'startMembership');
 
   if (allowedRegions && allowedRegions.length > 0) {
@@ -105,8 +142,14 @@ async function sumRecentPayments(allowedRegions: string[] | null): Promise<{ val
     .where('ts', '<', sevenDaysAgo)
     .get();
 
-  const recentAmount = recentSnap.docs.reduce((sum, doc) => sum + Number(doc.get('amount') || 0), 0);
-  const priorAmount = priorSnap.docs.reduce((sum, doc) => sum + Number(doc.get('amount') || 0), 0);
+  const recentAmount = recentSnap.docs.reduce(
+    (sum, doc) => sum + Number(doc.get('amount') || 0),
+    0
+  );
+  const priorAmount = priorSnap.docs.reduce(
+    (sum, doc) => sum + Number(doc.get('amount') || 0),
+    0
+  );
 
   const diff = recentAmount - priorAmount;
   let trend: 'up' | 'down' | 'flat' = 'flat';
@@ -114,44 +157,58 @@ async function sumRecentPayments(allowedRegions: string[] | null): Promise<{ val
     trend = diff > 0 ? 'up' : 'down';
   }
 
-  const delta = priorAmount === 0
-    ? (recentAmount > 0 ? '+100%' : '0%')
-    : `${((diff / priorAmount) * 100).toFixed(0)}%`;
+  const delta =
+    priorAmount === 0
+      ? recentAmount > 0
+        ? '+100%'
+        : '0%'
+      : `${((diff / priorAmount) * 100).toFixed(0)}%`;
 
-  const helper = trend === 'flat'
-    ? 'Stable vs. previous week'
-    : `${trend === 'up' ? '↑' : '↓'} ${formatCurrency(Math.abs(diff))} vs. prior week`;
+  const helper =
+    trend === 'flat'
+      ? 'Stable vs. previous week'
+      : `${trend === 'up' ? '↑' : '↓'} ${formatCurrency(Math.abs(diff))} vs. prior week`;
 
   return { value: recentAmount, helper, delta, trend };
 }
 
-async function countUpcomingEvents(): Promise<{ value: number; helper: string }>
-{
+async function countUpcomingEvents(): Promise<{
+  value: number;
+  helper: string;
+}> {
   const now = Timestamp.now();
-  const snapshot = await db.collection('events')
+  const snapshot = await db
+    .collection('events')
     .where('startAt', '>=', now)
     .orderBy('startAt', 'asc')
     .get();
   const total = snapshot.size;
-  const helper = total === 0 ? 'No upcoming events scheduled' : `${total} upcoming ${total === 1 ? 'event' : 'events'} planned`;
+  const helper =
+    total === 0
+      ? 'No upcoming events scheduled'
+      : `${total} upcoming ${total === 1 ? 'event' : 'events'} planned`;
   return { value: total, helper };
 }
 
-async function countChurnRisk(allowedRegions: string[] | null): Promise<{ value: number; helper: string }>
-{
+async function countChurnRisk(
+  allowedRegions: string[] | null
+): Promise<{ value: number; helper: string }> {
   let query = db.collection('members').where('status', '==', 'expired');
   if (allowedRegions && allowedRegions.length > 0) {
     query = query.where('region', 'in', allowedRegions);
   }
   const snapshot = await query.count().get();
   const total = snapshot.data().count;
-  const helper = total === 0
-    ? 'No members flagged as churn risk'
-    : `${total} ${total === 1 ? 'profile' : 'profiles'} need renewal outreach`;
+  const helper =
+    total === 0
+      ? 'No members flagged as churn risk'
+      : `${total} ${total === 1 ? 'profile' : 'profiles'} need renewal outreach`;
   return { value: total, helper };
 }
 
-export async function getPortalDashboardLogic(context: functions.https.CallableContext): Promise<PortalDashboardPayload> {
+export async function getPortalDashboardLogic(
+  context: functions.https.CallableContext
+): Promise<PortalDashboardPayload> {
   const { allowedRegions } = assertAuthorized(context);
   const normalizedRegions = allowedRegions.length > 0 ? allowedRegions : null;
 
@@ -220,10 +277,12 @@ function sanitizeLayout(input: unknown): PortalLayoutItem[] {
 }
 
 export function getDefaultPortalLayout(): PortalLayoutItem[] {
-  return DEFAULT_LAYOUT.map(item => ({ ...item }));
+  return DEFAULT_LAYOUT.map((item) => ({ ...item }));
 }
 
-export async function getPortalLayoutLogic(context: functions.https.CallableContext): Promise<{ widgets: PortalLayoutItem[] }> {
+export async function getPortalLayoutLogic(
+  context: functions.https.CallableContext
+): Promise<{ widgets: PortalLayoutItem[] }> {
   assertAuthorized(context);
   const uid = context.auth!.uid;
   const doc = await db.collection('portalLayouts').doc(uid).get();
@@ -235,16 +294,22 @@ export async function getPortalLayoutLogic(context: functions.https.CallableCont
   return { widgets };
 }
 
-export async function upsertPortalLayoutLogic(data: unknown, context: functions.https.CallableContext): Promise<{ widgets: PortalLayoutItem[] }> {
+export async function upsertPortalLayoutLogic(
+  data: unknown,
+  context: functions.https.CallableContext
+): Promise<{ widgets: PortalLayoutItem[] }> {
   assertAuthorized(context);
   const uid = context.auth!.uid;
   const widgets = sanitizeLayout((data as any)?.widgets);
-  await db.collection('portalLayouts').doc(uid).set({
-    uid,
-    widgets,
-    updatedAt: FieldValue.serverTimestamp(),
-    updatedBy: uid,
-    version: 1,
-  }, { merge: true });
+  await db.collection('portalLayouts').doc(uid).set(
+    {
+      uid,
+      widgets,
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: uid,
+      version: 1,
+    },
+    { merge: true }
+  );
   return { widgets };
 }

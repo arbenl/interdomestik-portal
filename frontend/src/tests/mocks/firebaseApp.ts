@@ -4,7 +4,7 @@ import type { User } from 'firebase/auth';
 // State for onIdTokenChanged listeners
 const authListeners: Set<(user: User | null) => void> = new Set();
 const _emit = (user: User | null) => {
-  authListeners.forEach(cb => cb(user));
+  authListeners.forEach((cb) => cb(user));
 };
 
 export const mockAuth = {

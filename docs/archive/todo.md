@@ -5,12 +5,8 @@
 - [x] Generate `submitClaim` Firebase Cloud Function (stub)
 - [x] Generate `authBeforeCreate` Firebase Cloud Function (optional duplicate guard)
 
-
-
 - [x] Generate CI/CD workflow (.github/workflows/firebase.yml)
 - [x] Generate Firestore Indexes (firestore.indexes.json)
-
-
 
 - [x] Generate basic frontend structure (public/index.html)
 - [x] Generate Firebase config (public/js/config.js)
@@ -20,7 +16,6 @@
 - [x] Generate main app logic (public/js/app.js)
 - [x] Generate PWA service worker (public/sw.js)
 - [x] Generate PWA manifest (public/manifest.json)
-
 
 - [x] Generate Architecture Decision Records (docs/adr.md)
 - [x] Generate Operational Runbooks (docs/runbooks.md)

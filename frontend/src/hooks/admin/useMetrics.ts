@@ -11,13 +11,21 @@ export function useMetrics(dateKey: string) {
       const ref = doc(firestore, 'metrics', `daily-${dateKey}`);
       const snap = await getDoc(ref);
       if (snap.exists()) {
-        const raw = snap.data() as { activations_total: number; activations_by_region: Record<string, number> };
-        const total = typeof raw['activations_total'] === 'number' ? raw['activations_total'] : 0;
+        const raw = snap.data() as {
+          activations_total: number;
+          activations_by_region: Record<string, number>;
+        };
+        const total =
+          typeof raw['activations_total'] === 'number'
+            ? raw['activations_total']
+            : 0;
         let byRegion: Record<string, number> = {};
         const src = raw['activations_by_region'];
         if (src && typeof src === 'object') {
           byRegion = Object.fromEntries(
-            Object.entries(src as Record<string, unknown>).filter(([, v]) => typeof v === 'number') as Array<[string, number]>
+            Object.entries(src as Record<string, unknown>).filter(
+              ([, v]) => typeof v === 'number'
+            ) as Array<[string, number]>
           );
         }
         return { activations_total: total, activations_by_region: byRegion };

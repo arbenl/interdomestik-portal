@@ -11,10 +11,13 @@ describe('PaymentElementBox confirm flow', () => {
       elements: () => ({
         create: () => ({ mount: vi.fn() }),
       }),
-      confirmPayment: vi.fn().mockResolvedValue({ paymentIntent: { status: 'succeeded' } }),
+      confirmPayment: vi
+        .fn()
+        .mockResolvedValue({ paymentIntent: { status: 'succeeded' } }),
     }));
     __setFunctionsResponse(async (name: string, _payload: any) => {
-      if (name === 'createPaymentIntent') return { clientSecret: 'cs_test_123' };
+      if (name === 'createPaymentIntent')
+        return { clientSecret: 'cs_test_123' };
       return {};
     });
   });
@@ -28,13 +31,17 @@ describe('PaymentElementBox confirm flow', () => {
     renderWithProviders(
       <ToastProvider>
         <PaymentElementBox amountCents={2500} currency="EUR" />
-      </ToastProvider>,
+      </ToastProvider>
     );
-    const startButton = await screen.findByRole('button', { name: /Start Card Payment/i });
+    const startButton = await screen.findByRole('button', {
+      name: /Start Card Payment/i,
+    });
     fireEvent.click(startButton);
 
     // Wait for the async operation to complete and the confirm button to appear
-    const confirmButton = await screen.findByRole('button', { name: /Confirm Payment/i });
+    const confirmButton = await screen.findByRole('button', {
+      name: /Confirm Payment/i,
+    });
     fireEvent.click(confirmButton);
 
     const successMsgs = await screen.findAllByText(/Payment succeeded/i);

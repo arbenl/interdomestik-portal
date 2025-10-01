@@ -4,8 +4,8 @@ This document covers strategies for maintaining a fast and efficient frontend ap
 
 ## Code Splitting
 
--   **Lazy-Loaded Panels**: All major feature panels in both the Admin and Portal sections are lazy-loaded using `React.lazy`. This means the JavaScript for a specific feature is only downloaded when the user navigates to it, keeping the initial bundle size small.
--   **Dynamic Firebase Imports**: The `firebase.ts` file uses dynamic `import()` statements to load the emulator connection logic only in development. This ensures that the emulator-specific code is tree-shaken from production builds, reducing the final bundle size.
+- **Lazy-Loaded Panels**: All major feature panels in both the Admin and Portal sections are lazy-loaded using `React.lazy`. This means the JavaScript for a specific feature is only downloaded when the user navigates to it, keeping the initial bundle size small.
+- **Dynamic Firebase Imports**: The `firebase.ts` file uses dynamic `import()` statements to load the emulator connection logic only in development. This ensures that the emulator-specific code is tree-shaken from production builds, reducing the final bundle size.
 
 ## Firestore Lite
 
