@@ -2,10 +2,13 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { db } from '../firebaseAdmin';
 
 export async function cleanupOldAuditLogs(retentionDays = 180, maxDocs = 1000) {
-  const threshold = Timestamp.fromMillis(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+  const threshold = Timestamp.fromMillis(
+    Date.now() - retentionDays * 24 * 60 * 60 * 1000
+  );
   let deleted = 0;
   while (deleted < maxDocs) {
-    const snap = await db.collection('audit_logs')
+    const snap = await db
+      .collection('audit_logs')
       .where('ts', '<=', threshold)
       .limit(500)
       .get();
@@ -19,10 +22,13 @@ export async function cleanupOldAuditLogs(retentionDays = 180, maxDocs = 1000) {
 }
 
 export async function cleanupOldMetrics(retentionDays = 400, maxDocs = 1000) {
-  const threshold = Timestamp.fromMillis(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+  const threshold = Timestamp.fromMillis(
+    Date.now() - retentionDays * 24 * 60 * 60 * 1000
+  );
   let deleted = 0;
   while (deleted < maxDocs) {
-    const snap = await db.collection('metrics')
+    const snap = await db
+      .collection('metrics')
       .where('ttlAt', '<=', threshold)
       .limit(500)
       .get();
@@ -34,4 +40,3 @@ export async function cleanupOldMetrics(retentionDays = 400, maxDocs = 1000) {
   }
   return { deleted };
 }
-

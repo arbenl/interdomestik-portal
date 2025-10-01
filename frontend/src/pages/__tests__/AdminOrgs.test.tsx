@@ -1,4 +1,10 @@
-import { renderWithProviders, screen, fireEvent, waitFor, within } from '@/test-utils';
+import {
+  renderWithProviders,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@/test-utils';
 import { vi, describe, it, expect, type Mock } from 'vitest';
 import { OrgPanel } from '@/features/admin/organizations/OrgPanel';
 import { useOrganizations } from '@/hooks/admin/useOrganizations';
@@ -10,7 +16,12 @@ const mockedUseOrganizations = useOrganizations as unknown as Mock;
 describe('Admin Organizations panel', () => {
   it('creates organization', async () => {
     const create = vi.fn().mockResolvedValue({ data: { ok: true } });
-    mockedUseOrganizations.mockReturnValue({ data: [], isLoading: false, error: null, create });
+    mockedUseOrganizations.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      create,
+    });
 
     const push = vi.fn();
     renderWithProviders(<OrgPanel push={push} />);
@@ -31,7 +42,10 @@ describe('Admin Organizations panel', () => {
     });
 
     await waitFor(() => {
-      expect(push).toHaveBeenCalledWith({ type: 'success', message: 'Organization created' });
+      expect(push).toHaveBeenCalledWith({
+        type: 'success',
+        message: 'Organization created',
+      });
     });
   });
 });

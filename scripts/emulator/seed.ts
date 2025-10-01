@@ -1,6 +1,10 @@
 const DEFAULT_PROJECT_ID = 'interdomestik-dev';
-const FUNCTIONS_HOST = process.env.FUNCTIONS_EMULATOR_ORIGIN || 'http://127.0.0.1:5001';
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || DEFAULT_PROJECT_ID;
+const FUNCTIONS_HOST =
+  process.env.FUNCTIONS_EMULATOR_ORIGIN || 'http://127.0.0.1:5001';
+const PROJECT_ID =
+  process.env.FIREBASE_PROJECT_ID ||
+  process.env.GCLOUD_PROJECT ||
+  DEFAULT_PROJECT_ID;
 
 async function main() {
   const base = FUNCTIONS_HOST.replace(/\/$/, '');

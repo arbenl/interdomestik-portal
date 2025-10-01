@@ -3,4 +3,3 @@ declare module 'stripe' {
   export = Stripe;
   export default Stripe;
 }
-

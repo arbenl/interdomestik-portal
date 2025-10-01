@@ -3,8 +3,14 @@ import type { Organization } from '@/types';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 
-const listOrganizations = httpsCallable<void, { items: Organization[] }>(functions, 'listOrganizations');
-const createOrganization = httpsCallable<{ name: string; billingEmail?: string; seats?: number }, { ok: boolean; id: string }>(functions, 'createOrganization');
+const listOrganizations = httpsCallable<void, { items: Organization[] }>(
+  functions,
+  'listOrganizations'
+);
+const createOrganization = httpsCallable<
+  { name: string; billingEmail?: string; seats?: number },
+  { ok: boolean; id: string }
+>(functions, 'createOrganization');
 
 export function useOrganizations() {
   const queryClient = useQueryClient();
@@ -24,7 +30,15 @@ export function useOrganizations() {
   });
 
   const { mutateAsync: create } = useMutation({
-    mutationFn: async ({ name, email, seats }: { name: string; email: string; seats: number }) => {
+    mutationFn: async ({
+      name,
+      email,
+      seats,
+    }: {
+      name: string;
+      email: string;
+      seats: number;
+    }) => {
       await createOrganization({ name, billingEmail: email, seats });
     },
     onSuccess: () => {

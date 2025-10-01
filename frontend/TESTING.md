@@ -18,6 +18,7 @@ The frontend has a comprehensive testing strategy covering unit, integration, an
 ### Mocks
 
 - **Firebase Auth:** For component tests requiring auth state, import `mockUseAuth` from `@/tests/mocks/auth`.
+
   ```tsx
   import { mockUseAuth, makeMockUser } from '@/tests/mocks/auth';
   // Before render:
@@ -25,6 +26,7 @@ The frontend has a comprehensive testing strategy covering unit, integration, an
   ```
 
 - **Firebase `httpsCallable`:** The `firebase/functions` module is mocked globally in `src/setupTests.ts`. To control the behavior of a specific function in a test, use the `mockCallable` helper.
+
   ```tsx
   import { mockCallable, getCalls } from '@/tests/mocks/firebaseFunctions';
   // Before interaction:
@@ -57,4 +59,4 @@ For a realistic development and testing environment, we use the Firebase Emulato
    ```bash
    pnpm -F frontend dev
    ```
-The app will automatically connect to the local emulators.
+   The app will automatically connect to the local emulators.

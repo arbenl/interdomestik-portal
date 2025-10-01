@@ -1,13 +1,22 @@
-import * as functions from "firebase-functions/v1";
+import * as functions from 'firebase-functions/v1';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
-import { admin, db } from "./firebaseAdmin";
-import { upsertProfileLogic } from "./lib/upsertProfile";
-import { setUserRoleLogic, searchUserByEmailLogic, getUserClaimsLogic } from "./lib/user";
+import { admin, db } from './firebaseAdmin';
+import { upsertProfileLogic } from './lib/upsertProfile';
+import {
+  setUserRoleLogic,
+  searchUserByEmailLogic,
+  getUserClaimsLogic,
+} from './lib/user';
 import { importMembersCsvLogic } from './lib/importCsv';
 import { backfillNameLowerLogic } from './lib/backfill';
-import { startMembershipLogic } from "./lib/startMembership";
-import { agentCreateMemberLogic } from "./lib/agent";
-import { sendRenewalReminder, membershipCardHtml, queueEmail, sendPaymentReceipt } from "./lib/membership";
+import { startMembershipLogic } from './lib/startMembership';
+import { agentCreateMemberLogic } from './lib/agent';
+import {
+  sendRenewalReminder,
+  membershipCardHtml,
+  queueEmail,
+  sendPaymentReceipt,
+} from './lib/membership';
 import { signCardToken, getCardKeyStatus } from './lib/tokens';
 import { activateMembership } from './lib/startMembership';
 import { cleanupOldAuditLogs, cleanupOldMetrics } from './lib/cleanup';
@@ -18,14 +27,18 @@ import { monthlyReportCsv } from './lib/reports';
 import { generateMembersCsv, saveCsvToStorage } from './lib/exports';
 import { normalizeColumns, streamMembersCsv } from './lib/exportsV2';
 import { log } from './lib/logger';
-import { getPortalDashboardLogic, getPortalLayoutLogic, upsertPortalLayoutLogic } from './lib/dashboard';
+import {
+  getPortalDashboardLogic,
+  getPortalLayoutLogic,
+  upsertPortalLayoutLogic,
+} from './lib/dashboard';
 import { startAssistantSuggestionLogic } from './lib/assistant';
 import { updateMfaPreferenceLogic } from './lib/security';
 import { shareDocumentLogic } from './lib/documents';
 import { runRenewalHooks } from './lib/automation';
 
 // Region constant for consistency
-const REGION = "europe-west1" as const;
+const REGION = 'europe-west1' as const;
 
 // Callable functions ---------------------------------------------------------
 export const upsertProfile = functions
@@ -62,7 +75,9 @@ export const backfillNameLower = functions
 
 export const createPaymentIntent = functions
   .region(REGION)
-  .https.onCall((data, context) => createPaymentIntentLogic(data as any, context));
+  .https.onCall((data, context) =>
+    createPaymentIntentLogic(data as any, context)
+  );
 
 export const getPortalDashboard = functions
   .region(REGION)
@@ -110,7 +125,9 @@ export const startAssistantSuggestion = functions
 
 export const updateMfaPreference = functions
   .region(REGION)
-  .https.onCall(async (data, context) => updateMfaPreferenceLogic(data, context));
+  .https.onCall(async (data, context) =>
+    updateMfaPreferenceLogic(data, context)
+  );
 
 export const shareDocument = functions
   .region(REGION)
@@ -132,19 +149,34 @@ export const processRenewalAutomations = functions
 export const getCardToken = functions
   .region(REGION)
   .https.onCall(async (data, context) => {
-    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+    if (!context.auth)
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Sign in required'
+      );
     const isAdmin = (context.auth.token as any)?.role === 'admin';
     const requestedUid = data?.uid ? String(data.uid) : context.auth.uid;
     const uid = isAdmin ? requestedUid : context.auth.uid;
     const m = await db.collection('members').doc(uid).get();
-    if (!m.exists) throw new functions.https.HttpsError('not-found', 'Member not found');
+    if (!m.exists)
+      throw new functions.https.HttpsError('not-found', 'Member not found');
     const memberNo = m.get('memberNo') as string | undefined;
-    if (!memberNo) throw new functions.https.HttpsError('failed-precondition', 'MemberNo missing');
+    if (!memberNo)
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'MemberNo missing'
+      );
 
     // Use membership expiration if active; else 30d from now
     let expSec: number | undefined;
-    const activeSnap = await db.collection('members').doc(uid).collection('memberships')
-      .where('status', '==', 'active').orderBy('year', 'desc').limit(1).get();
+    const activeSnap = await db
+      .collection('members')
+      .doc(uid)
+      .collection('memberships')
+      .where('status', '==', 'active')
+      .orderBy('year', 'desc')
+      .limit(1)
+      .get();
     if (!activeSnap.empty) {
       const expiresAt = activeSnap.docs[0].get('expiresAt');
       if (expiresAt?.toMillis) expSec = Math.floor(expiresAt.toMillis() / 1000);
@@ -159,11 +191,20 @@ export const getCardToken = functions
 export const setAutoRenew = functions
   .region(REGION)
   .https.onCall(async (data, context) => {
-    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+    if (!context.auth)
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Sign in required'
+      );
     const autoRenew = !!data?.autoRenew;
     const requestedUid = data?.uid ? String(data.uid) : undefined;
     const isAdmin = (context.auth.token as any)?.role === 'admin';
-    return setAutoRenewLogic(context.auth.uid, requestedUid, autoRenew, isAdmin);
+    return setAutoRenewLogic(
+      context.auth.uid,
+      requestedUid,
+      autoRenew,
+      isAdmin
+    );
   });
 
 // Simple organization management (admin only)
@@ -176,8 +217,15 @@ export const createOrganization = functions
     const name = String(data?.name || '').trim();
     const billingEmail = String(data?.billingEmail || '').trim();
     const seats = Math.max(0, Number(data?.seats || 0));
-    if (!name) throw new functions.https.HttpsError('invalid-argument', 'name required');
-    const ref = await db.collection('orgs').add({ name, billingEmail, seats, activeSeats: 0, createdAt: FieldValue.serverTimestamp() });
+    if (!name)
+      throw new functions.https.HttpsError('invalid-argument', 'name required');
+    const ref = await db.collection('orgs').add({
+      name,
+      billingEmail,
+      seats,
+      activeSeats: 0,
+      createdAt: FieldValue.serverTimestamp(),
+    });
     return { ok: true, id: ref.id };
   });
 
@@ -187,8 +235,14 @@ export const listOrganizations = functions
     if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
       throw new functions.https.HttpsError('permission-denied', 'Admin only');
     }
-    const snap = await db.collection('orgs').orderBy('createdAt', 'desc').limit(20).get();
-    return { items: snap.docs.map(d => ({ id: d.id, ...(d.data() as any) })) };
+    const snap = await db
+      .collection('orgs')
+      .orderBy('createdAt', 'desc')
+      .limit(20)
+      .get();
+    return {
+      items: snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })),
+    };
   });
 
 // Coupon management (admin only)
@@ -198,12 +252,23 @@ export const createCoupon = functions
     if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
       throw new functions.https.HttpsError('permission-denied', 'Admin only');
     }
-    const code = String(data?.code || '').trim().toLowerCase();
-    if (!code) throw new functions.https.HttpsError('invalid-argument', 'code required');
+    const code = String(data?.code || '')
+      .trim()
+      .toLowerCase();
+    if (!code)
+      throw new functions.https.HttpsError('invalid-argument', 'code required');
     const percentOff = Math.max(0, Number(data?.percentOff || 0));
     const amountOff = Math.max(0, Number(data?.amountOff || 0));
     const active = data?.active === false ? false : true;
-    await db.collection('coupons').doc(code).set({ percentOff, amountOff, active, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    await db.collection('coupons').doc(code).set(
+      {
+        percentOff,
+        amountOff,
+        active,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
     return { ok: true };
   });
 
@@ -214,39 +279,72 @@ export const listCoupons = functions
       throw new functions.https.HttpsError('permission-denied', 'Admin only');
     }
     const snap = await db.collection('coupons').limit(50).get();
-    return { items: snap.docs.map(d => ({ id: d.id, ...(d.data() as any) })) };
+    return {
+      items: snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })),
+    };
   });
 // Resend digital membership card email to the authenticated user (or admin-specified uid)
 export const resendMembershipCard = functions
   .region(REGION)
   .https.onCall(async (data, context) => {
-    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+    if (!context.auth)
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Sign in required'
+      );
     const requestedUid = String((data?.uid ?? '').toString().trim());
     const actorUid = context.auth.uid;
     const isAdmin = (context.auth.token as any)?.role === 'admin';
     const uid = requestedUid && isAdmin ? requestedUid : actorUid;
 
     const memberDoc = await db.collection('members').doc(uid).get();
-    if (!memberDoc.exists) throw new functions.https.HttpsError('not-found', 'Member not found');
+    if (!memberDoc.exists)
+      throw new functions.https.HttpsError('not-found', 'Member not found');
     const memberNo = memberDoc.get('memberNo') as string | undefined;
     const name = (memberDoc.get('name') as string | undefined) || 'Member';
     const region = (memberDoc.get('region') as string | undefined) || '—';
     const email = (memberDoc.get('email') as string | undefined) || undefined;
-    if (!email || !memberNo) throw new functions.https.HttpsError('failed-precondition', 'Member profile missing email or memberNo');
+    if (!email || !memberNo)
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Member profile missing email or memberNo'
+      );
 
     // Determine active year (prefer explicit year from input, else latest active doc)
-    const explicitYear = Number.isFinite(Number(data?.year)) ? Number(data?.year) : undefined;
+    const explicitYear = Number.isFinite(Number(data?.year))
+      ? Number(data?.year)
+      : undefined;
     let yearToUse: number | undefined = explicitYear;
     if (!yearToUse) {
-      const act = await db.collection('members').doc(uid).collection('memberships')
-        .where('status', '==', 'active').orderBy('year', 'desc').limit(1).get();
+      const act = await db
+        .collection('members')
+        .doc(uid)
+        .collection('memberships')
+        .where('status', '==', 'active')
+        .orderBy('year', 'desc')
+        .limit(1)
+        .get();
       if (!act.empty) yearToUse = Number(act.docs[0].get('year'));
     }
-    if (!yearToUse) throw new functions.https.HttpsError('failed-precondition', 'No active membership to resend');
+    if (!yearToUse)
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'No active membership to resend'
+      );
 
     const verifyUrl = `https://interdomestik.app/verify?memberNo=${encodeURIComponent(memberNo)}`;
-    const html = membershipCardHtml({ memberNo, name, region, validity: String(yearToUse), verifyUrl });
-    await queueEmail({ to: [email], subject: `Interdomestik Membership ${yearToUse}`, html });
+    const html = membershipCardHtml({
+      memberNo,
+      name,
+      region,
+      validity: String(yearToUse),
+      verifyUrl,
+    });
+    await queueEmail({
+      to: [email],
+      subject: `Interdomestik Membership ${yearToUse}`,
+      html,
+    });
 
     try {
       await db.collection('audit_logs').add({
@@ -282,7 +380,17 @@ export const revokeCardToken = functions
     if (!/^[-_A-Za-z0-9]{6,}$/.test(jti)) {
       throw new functions.https.HttpsError('invalid-argument', 'Invalid jti');
     }
-    await db.collection('card_revocations').doc(jti).set({ reason: reason || 'manual', by: context.auth.uid, createdAt: FieldValue.serverTimestamp() }, { merge: true });
+    await db
+      .collection('card_revocations')
+      .doc(jti)
+      .set(
+        {
+          reason: reason || 'manual',
+          by: context.auth.uid,
+          createdAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
     return { ok: true };
   });
 
@@ -292,10 +400,13 @@ export const clearDatabase = functions
   .https.onRequest(async (req, res): Promise<void> => {
     try {
       // CORS for local tools
-      res.set("Access-Control-Allow-Origin", "*");
-      res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-      res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-      if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      if (req.method === 'OPTIONS') {
+        res.status(204).end();
+        return;
+      }
 
       // Guard: allow only on emulator and only for admin users
       const isEmulator = !!process.env.FUNCTIONS_EMULATOR;
@@ -303,8 +414,13 @@ export const clearDatabase = functions
         res.status(403).json({ ok: false, error: 'forbidden' });
         return;
       }
-      const authHeader = (req.headers['authorization'] || req.headers['Authorization']) as string | undefined;
-      const emuBypass = String((req.headers['x-emulator-admin'] || req.headers['X-Emulator-Admin'] || '') as string).toLowerCase();
+      const authHeader = (req.headers['authorization'] ||
+        req.headers['Authorization']) as string | undefined;
+      const emuBypass = String(
+        (req.headers['x-emulator-admin'] ||
+          req.headers['X-Emulator-Admin'] ||
+          '') as string
+      ).toLowerCase();
       const emuBypassOk = emuBypass === 'true' || emuBypass === '1';
       let isAdmin = false;
       if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
@@ -323,7 +439,9 @@ export const clearDatabase = functions
 
       const auth = admin.auth();
       const listUsersResult = await auth.listUsers();
-      await Promise.all(listUsersResult.users.map((user) => auth.deleteUser(user.uid)));
+      await Promise.all(
+        listUsersResult.users.map((user) => auth.deleteUser(user.uid))
+      );
 
       const membersSnapshot = await db.collection('members').get();
       await Promise.all(membersSnapshot.docs.map((d) => d.ref.delete()));
@@ -331,181 +449,254 @@ export const clearDatabase = functions
       res.status(200).send('Database cleared successfully.');
     } catch (error: unknown) {
       log('clear_db_error', { error: String(error) });
-      if (error instanceof Error) res.status(500).send(`Error clearing database: ${error.message}`);
-      else res.status(500).send('An unknown error occurred during database clearing.');
+      if (error instanceof Error)
+        res.status(500).send(`Error clearing database: ${error.message}`);
+      else
+        res
+          .status(500)
+          .send('An unknown error occurred during database clearing.');
     }
   });
 
 export const verifyMembership = functions
   .runWith({ memory: '256MB', timeoutSeconds: 30 })
   .region(REGION)
-  .https.onRequest(async (req: functions.https.Request, res: functions.Response): Promise<void> => {
-    // Basic CORS for GET
-    res.set("Access-Control-Allow-Origin", "*");
-    res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type");
-    if (req.method === "OPTIONS") {
-      res.status(200).send("ok");
-      return;
-    }
-    if (req.method !== "GET") {
-      res.status(405).json({ ok: false, error: "Method not allowed" });
-      return;
-    }
-
-    try {
-      // API key auth: if present and valid for 'verify', bypass rate limit and respond minimally
-      const apiKey = (req.headers?.['x-api-key'] as string | undefined)?.trim();
-      let apiKeyValid = false;
-      if (apiKey) {
-        try {
-          const crypto = await import('crypto');
-          const hash = crypto.createHash('sha256').update(apiKey).digest('hex');
-          const q = await db.collection('api_keys').where('hash', '==', hash).where('active', '==', true).limit(1).get();
-          if (!q.empty) {
-            const scopes = (q.docs[0].get('scopes') as string[]) || [];
-            apiKeyValid = scopes.includes('verify');
-          }
-        } catch {}
+  .https.onRequest(
+    async (
+      req: functions.https.Request,
+      res: functions.Response
+    ): Promise<void> => {
+      // Basic CORS for GET
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      if (req.method === 'OPTIONS') {
+        res.status(200).send('ok');
+        return;
+      }
+      if (req.method !== 'GET') {
+        res.status(405).json({ ok: false, error: 'Method not allowed' });
+        return;
       }
 
-      // Optional captcha (prod only if configured)
-      const isEmu = !!(process.env.FUNCTIONS_EMULATOR || process.env.FIREBASE_EMULATOR_HUB || process.env.FIRESTORE_EMULATOR_HOST);
-      const recaptchaSecret = process.env.RECAPTCHA_SECRET as string | undefined;
-      if (!isEmu && recaptchaSecret) {
-        const token = String((req.headers['x-recaptcha-token'] || '')).trim();
-        if (!token) { res.status(400).json({ ok: false, error: 'captcha-required' }); return; }
-        try {
-          const params = new URLSearchParams({ secret: recaptchaSecret, response: token });
-          const r = await fetch('https://www.google.com/recaptcha/api/siteverify', { method: 'POST', body: params as any });
-          const json: any = await r.json();
-          if (!json?.success) { res.status(400).json({ ok: false, error: 'captcha-invalid' }); return; }
-        } catch (e) {
-          log('verify_captcha_error', { error: String(e) });
-          res.status(400).json({ ok: false, error: 'captcha-error' });
-          return;
+      try {
+        // API key auth: if present and valid for 'verify', bypass rate limit and respond minimally
+        const apiKey = (
+          req.headers?.['x-api-key'] as string | undefined
+        )?.trim();
+        let apiKeyValid = false;
+        if (apiKey) {
+          try {
+            const crypto = await import('crypto');
+            const hash = crypto
+              .createHash('sha256')
+              .update(apiKey)
+              .digest('hex');
+            const q = await db
+              .collection('api_keys')
+              .where('hash', '==', hash)
+              .where('active', '==', true)
+              .limit(1)
+              .get();
+            if (!q.empty) {
+              const scopes = (q.docs[0].get('scopes') as string[]) || [];
+              apiKeyValid = scopes.includes('verify');
+            }
+          } catch {}
         }
-      }
 
-      // Simple IP-based rate limiting (skips emulator/tests or valid API key). Limits: 60/minute or 1000/day
-      if (!isEmu && !apiKeyValid) {
-        const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-        const ip = fwd || (req as any).ip || (req.socket && (req.socket as any).remoteAddress) || 'unknown';
-        const crypto = await import('node:crypto');
-        const hash = crypto.createHash('sha256').update(String(ip)).digest('hex').slice(0, 12);
-        const now = new Date();
-        const dayKey = `${now.getUTCFullYear()}${String(now.getUTCMonth()+1).padStart(2,'0')}${String(now.getUTCDate()).padStart(2,'0')}`;
-        const minuteKey = Math.floor(now.getTime() / 60000); // epoch minute
-        const ref = db.collection('ratelimit_verify').doc(`${dayKey}-${hash}`);
-        let limited = false;
-        await db.runTransaction(async (tx) => {
-          const snap = await tx.get(ref);
-          const data = snap.exists ? snap.data() as any : {};
-          const prevMinuteKey = Number(data.minuteKey || 0);
-          const prevMinuteCount = Number(data.minuteCount || 0);
-          const prevDayCount = Number(data.dayCount || 0);
-          const minuteCount = (prevMinuteKey === minuteKey) ? (prevMinuteCount + 1) : 1;
-          const dayCount = prevDayCount + 1;
-          if (minuteCount > 60 || dayCount > 1000) {
-            limited = true;
+        // Optional captcha (prod only if configured)
+        const isEmu = !!(
+          process.env.FUNCTIONS_EMULATOR ||
+          process.env.FIREBASE_EMULATOR_HUB ||
+          process.env.FIRESTORE_EMULATOR_HOST
+        );
+        const recaptchaSecret = process.env.RECAPTCHA_SECRET as
+          | string
+          | undefined;
+        if (!isEmu && recaptchaSecret) {
+          const token = String(req.headers['x-recaptcha-token'] || '').trim();
+          if (!token) {
+            res.status(400).json({ ok: false, error: 'captcha-required' });
+            return;
           }
-          tx.set(ref, {
-            minuteKey,
-            minuteCount,
-            dayCount,
-            updatedAt: FieldValue.serverTimestamp(),
-          }, { merge: true });
-        });
-        if (limited) {
-          log('verify_rate_limited', { ipHash: hash });
-          res.status(429).json({ ok: false, error: 'Too many requests' });
-          return;
+          try {
+            const params = new URLSearchParams({
+              secret: recaptchaSecret,
+              response: token,
+            });
+            const r = await fetch(
+              'https://www.google.com/recaptcha/api/siteverify',
+              { method: 'POST', body: params as any }
+            );
+            const json: any = await r.json();
+            if (!json?.success) {
+              res.status(400).json({ ok: false, error: 'captcha-invalid' });
+              return;
+            }
+          } catch (e) {
+            log('verify_captcha_error', { error: String(e) });
+            res.status(400).json({ ok: false, error: 'captcha-error' });
+            return;
+          }
         }
-      }
 
-      const token = String((req.query.token ?? '')).trim();
-      let memberNo: string = String((req.query.memberNo ?? '')).trim();
-      if (token && !memberNo) {
-        try {
-          const { verifyCardToken } = await import('./lib/tokens');
-          const claims = verifyCardToken(token);
-          if (claims && typeof (claims as any).mno === 'string') {
-            memberNo = String((claims as any).mno);
-            // Optional: check revocation list
-            const jti = (claims as any).jti as string | undefined;
-            if (jti) {
-              const revoked = await db.collection('card_revocations').doc(jti).get();
-              if (revoked.exists) {
-                res.json({ ok: true, valid: false, memberNo, reason: 'revoked' });
-                return;
+        // Simple IP-based rate limiting (skips emulator/tests or valid API key). Limits: 60/minute or 1000/day
+        if (!isEmu && !apiKeyValid) {
+          const fwd = String(req.headers['x-forwarded-for'] || '')
+            .split(',')[0]
+            .trim();
+          const ip =
+            fwd ||
+            (req as any).ip ||
+            (req.socket && (req.socket as any).remoteAddress) ||
+            'unknown';
+          const crypto = await import('node:crypto');
+          const hash = crypto
+            .createHash('sha256')
+            .update(String(ip))
+            .digest('hex')
+            .slice(0, 12);
+          const now = new Date();
+          const dayKey = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}${String(now.getUTCDate()).padStart(2, '0')}`;
+          const minuteKey = Math.floor(now.getTime() / 60000); // epoch minute
+          const ref = db
+            .collection('ratelimit_verify')
+            .doc(`${dayKey}-${hash}`);
+          let limited = false;
+          await db.runTransaction(async (tx) => {
+            const snap = await tx.get(ref);
+            const data = snap.exists ? (snap.data() as any) : {};
+            const prevMinuteKey = Number(data.minuteKey || 0);
+            const prevMinuteCount = Number(data.minuteCount || 0);
+            const prevDayCount = Number(data.dayCount || 0);
+            const minuteCount =
+              prevMinuteKey === minuteKey ? prevMinuteCount + 1 : 1;
+            const dayCount = prevDayCount + 1;
+            if (minuteCount > 60 || dayCount > 1000) {
+              limited = true;
+            }
+            tx.set(
+              ref,
+              {
+                minuteKey,
+                minuteCount,
+                dayCount,
+                updatedAt: FieldValue.serverTimestamp(),
+              },
+              { merge: true }
+            );
+          });
+          if (limited) {
+            log('verify_rate_limited', { ipHash: hash });
+            res.status(429).json({ ok: false, error: 'Too many requests' });
+            return;
+          }
+        }
+
+        const token = String(req.query.token ?? '').trim();
+        let memberNo: string = String(req.query.memberNo ?? '').trim();
+        if (token && !memberNo) {
+          try {
+            const { verifyCardToken } = await import('./lib/tokens');
+            const claims = verifyCardToken(token);
+            if (claims && typeof (claims as any).mno === 'string') {
+              memberNo = String((claims as any).mno);
+              // Optional: check revocation list
+              const jti = (claims as any).jti as string | undefined;
+              if (jti) {
+                const revoked = await db
+                  .collection('card_revocations')
+                  .doc(jti)
+                  .get();
+                if (revoked.exists) {
+                  res.json({
+                    ok: true,
+                    valid: false,
+                    memberNo,
+                    reason: 'revoked',
+                  });
+                  return;
+                }
               }
             }
-          }
-        } catch {}
-      }
-
-      if (!memberNo) {
-        res.status(400).json({ ok: false, error: "memberNo required" });
-        return;
-      }
-
-      if (!/^INT-\d{4}-\d{6}$/.test(memberNo)) {
-        res.json({ ok: true, valid: false, memberNo });
-        return;
-      }
-
-      const q = await db
-        .collection("members")
-        .where("memberNo", "==", memberNo)
-        .limit(1)
-        .get();
-
-      if (q.empty) {
-        res.json({ ok: true, valid: false, memberNo });
-        return;
-      }
-
-      const doc = q.docs[0];
-      let isValid = false;
-      try {
-        // Fetch active memberships and filter by expiry in code to avoid composite index needs
-        const snapAct = await db
-          .collection('members')
-          .doc(doc.id)
-          .collection('memberships')
-          .where('status', '==', 'active')
-          .limit(5)
-          .get();
-        const nowMs = Date.now();
-        for (const d of snapAct.docs) {
-          const exp: any = d.get('expiresAt');
-          if (!exp) { isValid = true; break; }
-          const ms = typeof exp?.toMillis === 'function' ? exp.toMillis() : (typeof exp?.seconds === 'number' ? exp.seconds * 1000 : 0);
-          if (ms > nowMs) { isValid = true; break; }
+          } catch {}
         }
-      } catch {
-        // Defensive: avoid 500 in tests/emulator
-        isValid = false;
-      }
 
-      if (apiKeyValid) {
-        res.json({ ok: true, valid: isValid, memberNo });
-      } else {
-        res.json({
-          ok: true,
-          valid: isValid,
-          memberNo,
-          name: (doc.get('name') as string) || 'Member',
-          region: (doc.get('region') as string) || '—',
-        });
+        if (!memberNo) {
+          res.status(400).json({ ok: false, error: 'memberNo required' });
+          return;
+        }
+
+        if (!/^INT-\d{4}-\d{6}$/.test(memberNo)) {
+          res.json({ ok: true, valid: false, memberNo });
+          return;
+        }
+
+        const q = await db
+          .collection('members')
+          .where('memberNo', '==', memberNo)
+          .limit(1)
+          .get();
+
+        if (q.empty) {
+          res.json({ ok: true, valid: false, memberNo });
+          return;
+        }
+
+        const doc = q.docs[0];
+        let isValid = false;
+        try {
+          // Fetch active memberships and filter by expiry in code to avoid composite index needs
+          const snapAct = await db
+            .collection('members')
+            .doc(doc.id)
+            .collection('memberships')
+            .where('status', '==', 'active')
+            .limit(5)
+            .get();
+          const nowMs = Date.now();
+          for (const d of snapAct.docs) {
+            const exp: any = d.get('expiresAt');
+            if (!exp) {
+              isValid = true;
+              break;
+            }
+            const ms =
+              typeof exp?.toMillis === 'function'
+                ? exp.toMillis()
+                : typeof exp?.seconds === 'number'
+                  ? exp.seconds * 1000
+                  : 0;
+            if (ms > nowMs) {
+              isValid = true;
+              break;
+            }
+          }
+        } catch {
+          // Defensive: avoid 500 in tests/emulator
+          isValid = false;
+        }
+
+        if (apiKeyValid) {
+          res.json({ ok: true, valid: isValid, memberNo });
+        } else {
+          res.json({
+            ok: true,
+            valid: isValid,
+            memberNo,
+            name: (doc.get('name') as string) || 'Member',
+            region: (doc.get('region') as string) || '—',
+          });
+        }
+        return;
+      } catch (e) {
+        log('verify_error', { error: String(e) });
+        res.status(500).json({ ok: false, error: String(e) });
+        return;
       }
-      return;
-    } catch (e) {
-      log('verify_error', { error: String(e) });
-      res.status(500).json({ ok: false, error: String(e) });
-      return;
     }
-  });
+  );
 
 // Stripe webhook (emulator-friendly placeholder). In production, add signature verification.
 export const stripeWebhook = functions
@@ -515,21 +706,37 @@ export const stripeWebhook = functions
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.set('Access-Control-Allow-Headers', 'Content-Type, Stripe-Signature');
-    if (req.method === 'OPTIONS') { res.status(204).end(); return; }
-    if (req.method !== 'POST') { res.status(405).send('Method not allowed'); return; }
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
+    if (req.method !== 'POST') {
+      res.status(405).send('Method not allowed');
+      return;
+    }
     try {
       const signingSecret = process.env.STRIPE_SIGNING_SECRET;
-      const sig = (req as any)?.headers ? ((req as any).headers['stripe-signature'] as string | undefined) : undefined;
+      const sig = (req as any)?.headers
+        ? ((req as any).headers['stripe-signature'] as string | undefined)
+        : undefined;
       const isStripeMode = !!(signingSecret && sig);
 
       if (isStripeMode) {
         // Verify signature and construct event
         // Indirect dynamic import to avoid hard dependency in test/emulator without package
-        const Stripe = (await (Function('m', 'return import(m)') as any)('stripe')).default;
-        const stripe = new Stripe(process.env.STRIPE_API_KEY || '', { apiVersion: '2024-06-20' as any });
+        const Stripe = (
+          await (Function('m', 'return import(m)') as any)('stripe')
+        ).default;
+        const stripe = new Stripe(process.env.STRIPE_API_KEY || '', {
+          apiVersion: '2024-06-20' as any,
+        });
         let event: any;
         try {
-          event = stripe.webhooks.constructEvent(req.rawBody, sig!, signingSecret!);
+          event = stripe.webhooks.constructEvent(
+            req.rawBody,
+            sig!,
+            signingSecret!
+          );
         } catch (err) {
           log('stripe_webhook_signature_failed', { error: String(err) });
           res.status(400).send(`Webhook Error: ${(err as Error).message}`);
@@ -547,36 +754,88 @@ export const stripeWebhook = functions
         if (event.type === 'invoice.payment_succeeded') {
           const inv = event.data.object as any;
           const uid: string | undefined = inv.metadata?.uid;
-          if (!uid) { res.status(400).send('metadata.uid missing'); return; }
+          if (!uid) {
+            res.status(400).send('metadata.uid missing');
+            return;
+          }
           const invoiceId: string = inv.id || `inv_${Date.now()}`;
           const amount: number = Number(inv.amount_paid || inv.amount_due || 0);
           const currency: string = (inv.currency || 'eur').toUpperCase();
-          const created: Timestamp = Timestamp.fromMillis((inv.created || Math.floor(Date.now()/1000)) * 1000);
+          const created: Timestamp = Timestamp.fromMillis(
+            (inv.created || Math.floor(Date.now() / 1000)) * 1000
+          );
           await db.runTransaction(async (tx) => {
-            const invRef = db.collection('billing').doc(uid).collection('invoices').doc(invoiceId);
-            tx.set(invRef, { invoiceId, amount, currency, created, status: 'paid' }, { merge: true });
-            tx.set(eventDoc, { processed: true, type: event.type, at: FieldValue.serverTimestamp() }, { merge: true });
+            const invRef = db
+              .collection('billing')
+              .doc(uid)
+              .collection('invoices')
+              .doc(invoiceId);
+            tx.set(
+              invRef,
+              { invoiceId, amount, currency, created, status: 'paid' },
+              { merge: true }
+            );
+            tx.set(
+              eventDoc,
+              {
+                processed: true,
+                type: event.type,
+                at: FieldValue.serverTimestamp(),
+              },
+              { merge: true }
+            );
           });
           // Activate membership for current (or configured) year
           const envYear = Number(process.env.MEMBER_YEAR);
-          const year = (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100)
-            ? envYear
-            : new Date().getUTCFullYear();
+          const year =
+            !Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100
+              ? envYear
+              : new Date().getUTCFullYear();
           try {
-            await activateMembership(uid, year, amount / 100, currency, 'card', invoiceId);
+            await activateMembership(
+              uid,
+              year,
+              amount / 100,
+              currency,
+              'card',
+              invoiceId
+            );
             // Send card + receipt emails
             try {
               const m = await db.collection('members').doc(uid).get();
-              const email = (m.get('email') as string | undefined);
+              const email = m.get('email') as string | undefined;
               const name = (m.get('name') as string | undefined) || 'Member';
               const memberNo = m.get('memberNo') as string | undefined;
               const region = (m.get('region') as string | undefined) || '—';
               if (email && memberNo) {
-                const token = signCardToken({ mno: memberNo, exp: Math.floor(new Date(year, 11, 31, 23, 59, 59).getTime()/1000) });
+                const token = signCardToken({
+                  mno: memberNo,
+                  exp: Math.floor(
+                    new Date(year, 11, 31, 23, 59, 59).getTime() / 1000
+                  ),
+                });
                 const verifyUrl = `https://interdomestik.app/verify?token=${token}`;
-                const html = membershipCardHtml({ memberNo, name, region, validity: String(year), verifyUrl });
-                await queueEmail({ to: [email], subject: `Interdomestik Membership ${year}`, html });
-                await sendPaymentReceipt({ email, name, memberNo, amount: amount / 100, currency, method: 'card', reference: invoiceId });
+                const html = membershipCardHtml({
+                  memberNo,
+                  name,
+                  region,
+                  validity: String(year),
+                  verifyUrl,
+                });
+                await queueEmail({
+                  to: [email],
+                  subject: `Interdomestik Membership ${year}`,
+                  html,
+                });
+                await sendPaymentReceipt({
+                  email,
+                  name,
+                  memberNo,
+                  amount: amount / 100,
+                  currency,
+                  method: 'card',
+                  reference: invoiceId,
+                });
               }
             } catch (e) {
               log('stripe_email_error', { error: String(e), uid });
@@ -600,7 +859,14 @@ export const stripeWebhook = functions
         }
 
         // Unhandled event types acknowledged
-        await eventDoc.set({ processed: true, type: event.type, at: FieldValue.serverTimestamp() }, { merge: true });
+        await eventDoc.set(
+          {
+            processed: true,
+            type: event.type,
+            at: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
         res.json({ ok: true, ignored: true, type: event.type });
         return;
       }
@@ -608,35 +874,82 @@ export const stripeWebhook = functions
       // Emulator-friendly JSON fallback
       const body = req.body || {};
       const uid = String(body.uid || '');
-      if (!uid) { res.status(400).send('uid required'); return; }
+      if (!uid) {
+        res.status(400).send('uid required');
+        return;
+      }
       const invoiceId = String(body.invoiceId || `inv_${Date.now()}`);
       const amount = Number(body.amount || 0);
       const currency = String(body.currency || 'EUR');
-      const created = body.created ? Timestamp.fromDate(new Date(body.created)) : Timestamp.now();
-      await db.collection('billing').doc(uid).collection('invoices').doc(invoiceId).set({
-        invoiceId, amount, currency, created,
-        status: 'paid',
-      }, { merge: true });
+      const created = body.created
+        ? Timestamp.fromDate(new Date(body.created))
+        : Timestamp.now();
+      await db
+        .collection('billing')
+        .doc(uid)
+        .collection('invoices')
+        .doc(invoiceId)
+        .set(
+          {
+            invoiceId,
+            amount,
+            currency,
+            created,
+            status: 'paid',
+          },
+          { merge: true }
+        );
       // Emulator path: also activate membership directly
       try {
         const envYear = Number(process.env.MEMBER_YEAR);
-        const year = (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100)
-          ? envYear
-          : new Date().getUTCFullYear();
-        await activateMembership(uid, year, amount / 100, currency, 'card', invoiceId);
+        const year =
+          !Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100
+            ? envYear
+            : new Date().getUTCFullYear();
+        await activateMembership(
+          uid,
+          year,
+          amount / 100,
+          currency,
+          'card',
+          invoiceId
+        );
         // Also send the membership card email in emulator mode for end-to-end UX
         try {
           const m = await db.collection('members').doc(uid).get();
-          const email = (m.get('email') as string | undefined);
+          const email = m.get('email') as string | undefined;
           const name = (m.get('name') as string | undefined) || 'Member';
           const memberNo = m.get('memberNo') as string | undefined;
           const region = (m.get('region') as string | undefined) || '—';
           if (email && memberNo) {
-            const token = signCardToken({ mno: memberNo, exp: Math.floor(new Date(year, 11, 31, 23, 59, 59).getTime()/1000) });
+            const token = signCardToken({
+              mno: memberNo,
+              exp: Math.floor(
+                new Date(year, 11, 31, 23, 59, 59).getTime() / 1000
+              ),
+            });
             const verifyUrl = `https://interdomestik.app/verify?token=${token}`;
-            const html = membershipCardHtml({ memberNo, name, region, validity: String(year), verifyUrl });
-            await queueEmail({ to: [email], subject: `Interdomestik Membership ${year}`, html });
-            await sendPaymentReceipt({ email, name, memberNo, amount: amount / 100, currency, method: 'card', reference: invoiceId });
+            const html = membershipCardHtml({
+              memberNo,
+              name,
+              region,
+              validity: String(year),
+              verifyUrl,
+            });
+            await queueEmail({
+              to: [email],
+              subject: `Interdomestik Membership ${year}`,
+              html,
+            });
+            await sendPaymentReceipt({
+              email,
+              name,
+              memberNo,
+              amount: amount / 100,
+              currency,
+              method: 'card',
+              reference: invoiceId,
+            });
           }
         } catch (e) {
           log('stripe_emulator_email_error', { error: String(e), uid });
@@ -653,199 +966,292 @@ export const stripeWebhook = functions
 
 if (process.env.FUNCTIONS_EMULATOR) {
   // Export a seed function only in emulator mode
-  exports.seedDatabase = functions.region(REGION).https.onRequest(async (req, res) => {
-    try {
-      // CORS for local tools
-      res.set("Access-Control-Allow-Origin", "*");
-      res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-      res.set("Access-Control-Allow-Headers", "Content-Type");
-      if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+  exports.seedDatabase = functions
+    .region(REGION)
+    .https.onRequest(async (req, res) => {
+      try {
+        // CORS for local tools
+        res.set('Access-Control-Allow-Origin', '*');
+        res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type');
+        if (req.method === 'OPTIONS') {
+          res.status(204).end();
+          return;
+        }
 
-      const ensureUser = async (createRequest: admin.auth.CreateRequest) => {
-        const { email } = createRequest;
-        if (!email) throw new Error('User email is required for seeding');
-        try {
-          return await admin.auth().createUser(createRequest);
-        } catch (err: any) {
-          if (err.code === 'auth/email-already-exists') {
-            const existing = await admin.auth().getUserByEmail(email);
-            const updates: admin.auth.UpdateRequest = {};
-            if (createRequest.displayName && existing.displayName !== createRequest.displayName) {
-              updates.displayName = createRequest.displayName;
+        const ensureUser = async (createRequest: admin.auth.CreateRequest) => {
+          const { email } = createRequest;
+          if (!email) throw new Error('User email is required for seeding');
+          try {
+            return await admin.auth().createUser(createRequest);
+          } catch (err: any) {
+            if (err.code === 'auth/email-already-exists') {
+              const existing = await admin.auth().getUserByEmail(email);
+              const updates: admin.auth.UpdateRequest = {};
+              if (
+                createRequest.displayName &&
+                existing.displayName !== createRequest.displayName
+              ) {
+                updates.displayName = createRequest.displayName;
+              }
+              if (createRequest.emailVerified && !existing.emailVerified) {
+                updates.emailVerified = true;
+              }
+              if (Object.keys(updates).length > 0) {
+                await admin.auth().updateUser(existing.uid, updates);
+              }
+              return existing;
             }
-            if (createRequest.emailVerified && !existing.emailVerified) {
-              updates.emailVerified = true;
-            }
-            if (Object.keys(updates).length > 0) {
-              await admin.auth().updateUser(existing.uid, updates);
-            }
-            return existing;
+            throw err;
           }
-          throw err;
+        };
+
+        const upsertMember = async (
+          uid: string,
+          data: Record<string, unknown>
+        ) => {
+          const ref = db.collection('members').doc(uid);
+          const snapshot = await ref.get();
+          const createdAt =
+            snapshot.exists && snapshot.get('createdAt')
+              ? snapshot.get('createdAt')
+              : Timestamp.now();
+          await ref.set(
+            {
+              createdAt,
+              updatedAt: Timestamp.now(),
+              ...data,
+            },
+            { merge: true }
+          );
+        };
+
+        // Create two member accounts
+        const member1 = await ensureUser({
+          email: 'member1@example.com',
+          password: 'password123',
+          displayName: 'Member One',
+          emailVerified: true,
+        });
+        await upsertMember(member1.uid, {
+          name: 'Member One',
+          email: 'member1@example.com',
+          memberNo: 'INT-2025-000001',
+          region: 'PRISHTINA',
+          role: 'member',
+        });
+        await db
+          .collection('members')
+          .doc(member1.uid)
+          .collection('memberships')
+          .doc('2025')
+          .set({
+            year: 2025,
+            status: 'active',
+            startedAt: Timestamp.fromDate(new Date('2025-01-01')),
+            expiresAt: Timestamp.fromDate(new Date('2025-12-31')),
+            price: 100,
+            currency: 'EUR',
+            paymentMethod: 'cash',
+            externalRef: null,
+            updatedAt: Timestamp.now(),
+          });
+
+        const member2 = await ensureUser({
+          email: 'member2@example.com',
+          password: 'password123',
+          displayName: 'Member Two',
+          emailVerified: true,
+        });
+        await upsertMember(member2.uid, {
+          name: 'Member Two',
+          email: 'member2@example.com',
+          memberNo: 'INT-2025-000002',
+          region: 'PEJA',
+          role: 'member',
+        });
+
+        // Create an admin for admin-screen testing
+        const adminUser = await ensureUser({
+          email: 'admin@example.com',
+          password: 'password123',
+          displayName: 'Admin User',
+          emailVerified: true,
+        });
+        await admin.auth().setCustomUserClaims(adminUser.uid, {
+          ...(adminUser.customClaims || {}),
+          role: 'admin',
+          allowedRegions: ['PRISHTINA', 'PEJA'],
+        });
+        await upsertMember(adminUser.uid, {
+          name: 'Admin User',
+          email: 'admin@example.com',
+          memberNo: 'INT-2025-999999',
+          region: 'PRISHTINA',
+          role: 'admin',
+        });
+
+        // Create several agents for testing agent ownership flows
+        const agentDefs = [
+          {
+            email: 'agent1@example.com',
+            regions: ['PRISHTINA', 'FERIZAJ'],
+            name: 'Agent One',
+          },
+          {
+            email: 'agent2@example.com',
+            regions: ['PEJA', 'PRIZREN'],
+            name: 'Agent Two',
+          },
+          {
+            email: 'agent3@example.com',
+            regions: ['GJAKOVA', 'GJILAN', 'MITROVICA'],
+            name: 'Agent Three',
+          },
+        ] as const;
+        const agents: Array<{ uid: string; email: string; regions: string[] }> =
+          [];
+        for (const a of agentDefs) {
+          const u = await ensureUser({
+            email: a.email,
+            password: 'password123',
+            displayName: a.name,
+            emailVerified: true,
+          });
+          await admin.auth().setCustomUserClaims(u.uid, {
+            ...(u.customClaims || {}),
+            role: 'agent',
+            allowedRegions: a.regions,
+          });
+          await upsertMember(u.uid, {
+            name: a.name,
+            email: a.email,
+            memberNo: `INT-2025-A${Math.floor(Math.random() * 900 + 100)}`,
+            region: a.regions[0],
+            role: 'agent',
+          });
+          agents.push({
+            uid: u.uid,
+            email: a.email,
+            regions: a.regions as unknown as string[],
+          });
         }
-      };
 
-      const upsertMember = async (uid: string, data: Record<string, unknown>) => {
-        const ref = db.collection('members').doc(uid);
-        const snapshot = await ref.get();
-        const createdAt = snapshot.exists && snapshot.get('createdAt') ? snapshot.get('createdAt') : Timestamp.now();
-        await ref.set({
-          createdAt,
-          updatedAt: Timestamp.now(),
-          ...data,
-        }, { merge: true });
-      };
-
-      // Create two member accounts
-      const member1 = await ensureUser({
-        email: 'member1@example.com',
-        password: 'password123',
-        displayName: 'Member One',
-        emailVerified: true,
-      });
-      await upsertMember(member1.uid, {
-        name: 'Member One',
-        email: 'member1@example.com',
-        memberNo: 'INT-2025-000001',
-        region: 'PRISHTINA',
-        role: 'member',
-      });
-      await db.collection('members').doc(member1.uid).collection('memberships').doc('2025').set({
-        year: 2025,
-        status: 'active',
-        startedAt: Timestamp.fromDate(new Date('2025-01-01')),
-        expiresAt: Timestamp.fromDate(new Date('2025-12-31')),
-        price: 100,
-        currency: 'EUR',
-        paymentMethod: 'cash',
-        externalRef: null,
-        updatedAt: Timestamp.now(),
-      });
-
-      const member2 = await ensureUser({
-        email: 'member2@example.com',
-        password: 'password123',
-        displayName: 'Member Two',
-        emailVerified: true,
-      });
-      await upsertMember(member2.uid, {
-        name: 'Member Two',
-        email: 'member2@example.com',
-        memberNo: 'INT-2025-000002',
-        region: 'PEJA',
-        role: 'member',
-      });
-
-      // Create an admin for admin-screen testing
-      const adminUser = await ensureUser({
-        email: 'admin@example.com',
-        password: 'password123',
-        displayName: 'Admin User',
-        emailVerified: true,
-      });
-      await admin.auth().setCustomUserClaims(adminUser.uid, {
-        ...(adminUser.customClaims || {}),
-        role: 'admin',
-        allowedRegions: ['PRISHTINA', 'PEJA'],
-      });
-      await upsertMember(adminUser.uid, {
-        name: 'Admin User',
-        email: 'admin@example.com',
-        memberNo: 'INT-2025-999999',
-        region: 'PRISHTINA',
-        role: 'admin',
-      });
-
-      // Create several agents for testing agent ownership flows
-      const agentDefs = [
-        { email: 'agent1@example.com', regions: ['PRISHTINA', 'FERIZAJ'], name: 'Agent One' },
-        { email: 'agent2@example.com', regions: ['PEJA', 'PRIZREN'], name: 'Agent Two' },
-        { email: 'agent3@example.com', regions: ['GJAKOVA', 'GJILAN', 'MITROVICA'], name: 'Agent Three' },
-      ] as const;
-      const agents: Array<{ uid: string; email: string; regions: string[] }> = [];
-      for (const a of agentDefs) {
-        const u = await ensureUser({ email: a.email, password: 'password123', displayName: a.name, emailVerified: true });
-        await admin.auth().setCustomUserClaims(u.uid, {
-          ...(u.customClaims || {}),
-          role: 'agent',
-          allowedRegions: a.regions,
+        // Seed a couple of events
+        await db.collection('events').add({
+          title: 'Welcome meetup — PRISHTINA',
+          startAt: Timestamp.fromDate(new Date(Date.now() + 7 * 86400000)),
+          location: 'PRISHTINA',
+          createdAt: Timestamp.now(),
         });
-        await upsertMember(u.uid, {
-          name: a.name,
-          email: a.email,
-          memberNo: `INT-2025-A${Math.floor(Math.random()*900+100)}`,
-          region: a.regions[0],
-          role: 'agent',
+        await db.collection('events').add({
+          title: 'Volunteer day',
+          startAt: Timestamp.fromDate(new Date(Date.now() + 21 * 86400000)),
+          location: 'PEJA',
+          createdAt: Timestamp.now(),
         });
-        agents.push({ uid: u.uid, email: a.email, regions: a.regions as unknown as string[] });
-      }
 
-      // Seed a couple of events
-      await db.collection('events').add({
-        title: 'Welcome meetup — PRISHTINA',
-        startAt: Timestamp.fromDate(new Date(Date.now() + 7 * 86400000)),
-        location: 'PRISHTINA',
-        createdAt: Timestamp.now(),
-      });
-      await db.collection('events').add({
-        title: 'Volunteer day',
-        startAt: Timestamp.fromDate(new Date(Date.now() + 21 * 86400000)),
-        location: 'PEJA',
-        createdAt: Timestamp.now(),
-      });
+        // Bulk-create seed members distributed across regions and agents
+        const regions = [
+          'PRISHTINA',
+          'PRIZREN',
+          'GJAKOVA',
+          'PEJA',
+          'FERIZAJ',
+          'GJILAN',
+          'MITROVICA',
+        ] as const;
+        const regionToAgentUid = new Map<string, string>();
+        for (const a of agents) {
+          for (const r of a.regions) regionToAgentUid.set(r, a.uid);
+        }
+        const yearNow = new Date().getUTCFullYear();
+        const total = 60;
+        for (let i = 1; i <= total; i++) {
+          const seq = String(100 + i).padStart(6, '0');
+          const name = `Seed Member ${String(i).padStart(2, '0')}`;
+          const email = `seed${String(i).padStart(3, '0')}@example.com`;
+          const region = regions[(i - 1) % regions.length];
+          const agentUid = regionToAgentUid.get(region);
+          const user = await ensureUser({
+            email,
+            password: 'password123',
+            displayName: name,
+            emailVerified: true,
+          });
+          const memberNo = `INT-${yearNow}-${seq}`;
+          const createdAt = Timestamp.fromDate(
+            new Date(Date.now() - i * 864000)
+          );
+          await db
+            .collection('members')
+            .doc(user.uid)
+            .set(
+              {
+                name,
+                nameLower: name.toLowerCase(),
+                email,
+                region,
+                phone: `+38349${String(100000 + i).slice(0, 6)}`,
+                memberNo,
+                agentId: agentUid || null,
+                status: 'none',
+                year: null,
+                expiresAt: null,
+                createdAt,
+                updatedAt: createdAt,
+              },
+              { merge: true }
+            );
+          // Activate current or previous year randomly (roughly 70% current)
+          const activeThisYear = i % 10 !== 0 && i % 3 !== 0; // skip for some variety
+          if (activeThisYear) {
+            await activateMembership(
+              user.uid,
+              yearNow,
+              25,
+              'EUR',
+              'cash',
+              null
+            );
+          } else {
+            await activateMembership(
+              user.uid,
+              yearNow - 1,
+              25,
+              'EUR',
+              'cash',
+              null
+            );
+            // Mark root doc as expired for clarity in UI
+            await db
+              .collection('members')
+              .doc(user.uid)
+              .set({ status: 'expired' }, { merge: true });
+          }
+        }
 
-      // Bulk-create seed members distributed across regions and agents
-      const regions = ['PRISHTINA', 'PRIZREN', 'GJAKOVA', 'PEJA', 'FERIZAJ', 'GJILAN', 'MITROVICA'] as const;
-      const regionToAgentUid = new Map<string, string>();
-      for (const a of agents) {
-        for (const r of a.regions) regionToAgentUid.set(r, a.uid);
-      }
-      const yearNow = new Date().getUTCFullYear();
-      const total = 60;
-      for (let i = 1; i <= total; i++) {
-        const seq = String(100 + i).padStart(6, '0');
-        const name = `Seed Member ${String(i).padStart(2, '0')}`;
-        const email = `seed${String(i).padStart(3, '0')}@example.com`;
-        const region = regions[(i - 1) % regions.length];
-        const agentUid = regionToAgentUid.get(region);
-        const user = await ensureUser({ email, password: 'password123', displayName: name, emailVerified: true });
-        const memberNo = `INT-${yearNow}-${seq}`;
-        const createdAt = Timestamp.fromDate(new Date(Date.now() - i * 864000));
-        await db.collection('members').doc(user.uid).set({
-          name,
-          nameLower: name.toLowerCase(),
-          email,
-          region,
-          phone: `+38349${String(100000 + i).slice(0,6)}`,
-          memberNo,
-          agentId: agentUid || null,
-          status: 'none',
-          year: null,
-          expiresAt: null,
-          createdAt,
-          updatedAt: createdAt,
-        }, { merge: true });
-        // Activate current or previous year randomly (roughly 70% current)
-        const activeThisYear = i % 10 !== 0 && i % 3 !== 0; // skip for some variety
-        if (activeThisYear) {
-          await activateMembership(user.uid, yearNow, 25, 'EUR', 'cash', null);
+        res.status(200).json({
+          ok: true,
+          seeded: [
+            'member1@example.com',
+            'member2@example.com',
+            'admin@example.com',
+          ],
+          agents: agents.map((a) => a.email),
+          members: total,
+        });
+      } catch (error: unknown) {
+        log('seed_error', { error: String(error) });
+        if (error instanceof Error) {
+          res.status(500).send(`Error seeding database: ${error.message}`);
         } else {
-          await activateMembership(user.uid, yearNow - 1, 25, 'EUR', 'cash', null);
-          // Mark root doc as expired for clarity in UI
-          await db.collection('members').doc(user.uid).set({ status: 'expired' }, { merge: true });
+          res
+            .status(500)
+            .send('An unknown error occurred during database seeding.');
         }
       }
-
-      res.status(200).json({ ok: true, seeded: ['member1@example.com', 'member2@example.com', 'admin@example.com'], agents: agents.map(a=>a.email), members: total });
-    } catch (error: unknown) {
-      log('seed_error', { error: String(error) });
-      if (error instanceof Error) {
-        res.status(500).send(`Error seeding database: ${error.message}`);
-      } else {
-        res.status(500).send('An unknown error occurred during database seeding.');
-      }
-    }
-  });
+    });
 }
 
 // Scheduled renewal reminders at ~03:00 UTC daily
@@ -858,13 +1264,38 @@ export const dailyRenewalReminders = functions
     const today = now.toDate();
 
     async function runForOffset(days: number) {
-      const target = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + days));
-      const start = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate(), 0, 0, 0));
-      const end = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate(), 23, 59, 59));
+      const target = new Date(
+        Date.UTC(
+          today.getUTCFullYear(),
+          today.getUTCMonth(),
+          today.getUTCDate() + days
+        )
+      );
+      const start = new Date(
+        Date.UTC(
+          target.getUTCFullYear(),
+          target.getUTCMonth(),
+          target.getUTCDate(),
+          0,
+          0,
+          0
+        )
+      );
+      const end = new Date(
+        Date.UTC(
+          target.getUTCFullYear(),
+          target.getUTCMonth(),
+          target.getUTCDate(),
+          23,
+          59,
+          59
+        )
+      );
       const startTs = admin.firestore.Timestamp.fromDate(start);
       const endTs = admin.firestore.Timestamp.fromDate(end);
 
-      const q = await db.collection('members')
+      const q = await db
+        .collection('members')
         .where('expiresAt', '>=', startTs)
         .where('expiresAt', '<=', endTs)
         .get();
@@ -892,7 +1323,10 @@ export const cleanupExpiredData = functions
       cleanupOldAuditLogs(180, 2000),
       cleanupOldMetrics(400, 2000),
     ]);
-    log('cleanup_stats', { audit_deleted: aud.deleted, metrics_deleted: met.deleted });
+    log('cleanup_stats', {
+      audit_deleted: aud.deleted,
+      metrics_deleted: met.deleted,
+    });
   });
 
 // Monthly membership report aggregation for previous month
@@ -904,7 +1338,9 @@ export const monthlyMembershipReport = functions
     const now = new Date();
     const y = now.getUTCFullYear();
     const m = now.getUTCMonth();
-    const prev = new Date(Date.UTC(m === 0 ? y - 1 : y, m === 0 ? 11 : m - 1, 1));
+    const prev = new Date(
+      Date.UTC(m === 0 ? y - 1 : y, m === 0 ? 11 : m - 1, 1)
+    );
     const year = prev.getUTCFullYear();
     const month = prev.getUTCMonth() + 1;
     const monthKey = `${year}-${String(month).padStart(2, '0')}`;
@@ -913,7 +1349,8 @@ export const monthlyMembershipReport = functions
     const startTs = admin.firestore.Timestamp.fromDate(start);
     const endTs = admin.firestore.Timestamp.fromDate(end);
 
-    const q = await db.collection('audit_logs')
+    const q = await db
+      .collection('audit_logs')
       .where('action', '==', 'startMembership')
       .where('ts', '>=', startTs)
       .where('ts', '<=', endTs)
@@ -932,14 +1369,22 @@ export const monthlyMembershipReport = functions
       byMethod[meth] = (byMethod[meth] || 0) + 1;
     });
 
-    await db.collection('reports').doc(`monthly-${monthKey}`).set({
-      type: 'monthly',
-      month: monthKey,
-      range: { start: startTs, end: endTs },
-      total, revenue,
-      byRegion, byMethod,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
+    await db
+      .collection('reports')
+      .doc(`monthly-${monthKey}`)
+      .set(
+        {
+          type: 'monthly',
+          month: monthKey,
+          range: { start: startTs, end: endTs },
+          total,
+          revenue,
+          byRegion,
+          byMethod,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
   });
 
 // CSV export for monthly report (admin only)
@@ -950,12 +1395,24 @@ export const exportMonthlyReport = functions
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.set('Access-Control-Allow-Headers', 'Content-Type');
-    if (req.method === 'OPTIONS') { res.status(204).end(); return; }
-    if (req.method !== 'GET') { res.status(405).send('Method not allowed'); return; }
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
+    if (req.method !== 'GET') {
+      res.status(405).send('Method not allowed');
+      return;
+    }
     const month = String(req.query.month || '').trim();
-    if (!/^\d{4}-\d{2}$/.test(month)) { res.status(400).send('month=YYYY-MM required'); return; }
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      res.status(400).send('month=YYYY-MM required');
+      return;
+    }
     const doc = await db.collection('reports').doc(`monthly-${month}`).get();
-    if (!doc.exists) { res.status(404).send('Report not found'); return; }
+    if (!doc.exists) {
+      res.status(404).send('Report not found');
+      return;
+    }
     const data = doc.data() as any;
     const rows: string[] = [];
     rows.push('metric,value');
@@ -990,7 +1447,9 @@ export const generateMonthlyReportNow = functions
       const now = new Date();
       const y = now.getUTCFullYear();
       const m = now.getUTCMonth();
-      const prev = new Date(Date.UTC(m === 0 ? y - 1 : y, m === 0 ? 11 : m - 1, 1));
+      const prev = new Date(
+        Date.UTC(m === 0 ? y - 1 : y, m === 0 ? 11 : m - 1, 1)
+      );
       target = `${prev.getUTCFullYear()}-${String(prev.getUTCMonth() + 1).padStart(2, '0')}`;
     }
     const [year, monthNum] = target.split('-').map((x) => Number(x));
@@ -998,23 +1457,41 @@ export const generateMonthlyReportNow = functions
     const end = new Date(Date.UTC(year, monthNum, 0, 23, 59, 59));
     const startTs = admin.firestore.Timestamp.fromDate(start);
     const endTs = admin.firestore.Timestamp.fromDate(end);
-    const q = await db.collection('audit_logs')
+    const q = await db
+      .collection('audit_logs')
       .where('action', '==', 'startMembership')
       .where('ts', '>=', startTs)
       .where('ts', '<=', endTs)
       .get();
-    let total = 0; let revenue = 0;
-    const byRegion: Record<string, number> = {}; const byMethod: Record<string, number> = {};
+    let total = 0;
+    let revenue = 0;
+    const byRegion: Record<string, number> = {};
+    const byMethod: Record<string, number> = {};
     q.forEach((d) => {
       total += 1;
-      const amt = Number(d.get('amount') || 0); revenue += isFinite(amt) ? amt : 0;
-      const reg = String(d.get('region') || 'UNKNOWN'); byRegion[reg] = (byRegion[reg] || 0) + 1;
-      const meth = String(d.get('method') || 'unknown'); byMethod[meth] = (byMethod[meth] || 0) + 1;
+      const amt = Number(d.get('amount') || 0);
+      revenue += isFinite(amt) ? amt : 0;
+      const reg = String(d.get('region') || 'UNKNOWN');
+      byRegion[reg] = (byRegion[reg] || 0) + 1;
+      const meth = String(d.get('method') || 'unknown');
+      byMethod[meth] = (byMethod[meth] || 0) + 1;
     });
-    await db.collection('reports').doc(`monthly-${target}`).set({
-      type: 'monthly', month: target, range: { start: startTs, end: endTs }, total, revenue, byRegion, byMethod,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
+    await db
+      .collection('reports')
+      .doc(`monthly-${target}`)
+      .set(
+        {
+          type: 'monthly',
+          month: target,
+          range: { start: startTs, end: endTs },
+          total,
+          revenue,
+          byRegion,
+          byMethod,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
     return { ok: true, month: target, total, revenue };
   });
 
@@ -1031,21 +1508,33 @@ export const startMembersExportLegacy = functions
     const dateKey = `${ts.getUTCFullYear()}-${String(ts.getUTCMonth() + 1).padStart(2, '0')}-${String(ts.getUTCDate()).padStart(2, '0')}_${String(ts.getUTCHours()).padStart(2, '0')}${String(ts.getUTCMinutes()).padStart(2, '0')}`;
     const path = `exports/members/members_${dateKey}.csv`;
     const exportRef = db.collection('exports').doc();
-    await exportRef.set({
-      type: 'members_csv',
-      status: 'running',
-      path,
-      createdAt: FieldValue.serverTimestamp(),
-      createdBy: actor,
-    }, { merge: true });
+    await exportRef.set(
+      {
+        type: 'members_csv',
+        status: 'running',
+        path,
+        createdAt: FieldValue.serverTimestamp(),
+        createdBy: actor,
+      },
+      { merge: true }
+    );
     try {
       const { csv, count } = await generateMembersCsv();
       const { url, size } = await saveCsvToStorage(csv, path);
-      await exportRef.set({ status: 'done', count, size, url, finishedAt: FieldValue.serverTimestamp() }, { merge: true });
+      await exportRef.set(
+        {
+          status: 'done',
+          count,
+          size,
+          url,
+          finishedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
       // Send email to actor if we can resolve an email address from profile
       try {
         const m = await db.collection('members').doc(actor).get();
-        const email = (m.get('email') as string | undefined);
+        const email = m.get('email') as string | undefined;
         if (email) {
           const subj = `Members CSV export — ${dateKey}`;
           const html = url
@@ -1056,8 +1545,19 @@ export const startMembersExportLegacy = functions
       } catch {}
       return { ok: true, id: exportRef.id, path, url, count };
     } catch (e) {
-      await exportRef.set({ status: 'error', error: String(e), finishedAt: FieldValue.serverTimestamp() }, { merge: true });
-      throw new functions.https.HttpsError('internal', 'Export failed', String(e));
+      await exportRef.set(
+        {
+          status: 'error',
+          error: String(e),
+          finishedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      throw new functions.https.HttpsError(
+        'internal',
+        'Export failed',
+        String(e)
+      );
     }
   });
 
@@ -1071,8 +1571,16 @@ export const startMembersExport = functions
         throw new functions.https.HttpsError('permission-denied', 'Admin only');
       }
       const actor = context.auth.uid;
-      const running = await db.collection('exports').where('createdBy','==',actor).where('status','==','running').get();
-      if (running.size >= 2) throw new functions.https.HttpsError('resource-exhausted', 'Too many concurrent exports');
+      const running = await db
+        .collection('exports')
+        .where('createdBy', '==', actor)
+        .where('status', '==', 'running')
+        .get();
+      if (running.size >= 2)
+        throw new functions.https.HttpsError(
+          'resource-exhausted',
+          'Too many concurrent exports'
+        );
 
       function tsSafe(input: any): admin.firestore.Timestamp | undefined {
         if (!input) return undefined;
@@ -1080,10 +1588,14 @@ export const startMembersExport = functions
           const d = input instanceof Date ? input : new Date(String(input));
           if (isNaN(d.getTime())) return undefined;
           return admin.firestore.Timestamp.fromDate(d);
-        } catch { return undefined; }
+        } catch {
+          return undefined;
+        }
       }
       const filters: any = {
-        regions: Array.isArray(data?.filters?.regions) ? data.filters.regions.map((x:any)=>String(x)).filter(Boolean) : undefined,
+        regions: Array.isArray(data?.filters?.regions)
+          ? data.filters.regions.map((x: any) => String(x)).filter(Boolean)
+          : undefined,
         status: data?.filters?.status ? String(data.filters.status) : undefined,
         orgId: data?.filters?.orgId ? String(data.filters.orgId) : undefined,
         expiringAfter: tsSafe(data?.filters?.expiringAfter),
@@ -1091,24 +1603,36 @@ export const startMembersExport = functions
       };
       const presetRaw = String(data?.preset || 'BASIC').toUpperCase();
       const preset = presetRaw === 'FULL' ? 'FULL' : 'BASIC';
-      const columns = normalizeColumns(Array.isArray(data?.columns) ? data.columns.map((c:any)=>String(c)) : undefined, preset as any);
+      const columns = normalizeColumns(
+        Array.isArray(data?.columns)
+          ? data.columns.map((c: any) => String(c))
+          : undefined,
+        preset as any
+      );
 
       const exportRef = db.collection('exports').doc();
-      await exportRef.set({
-        type: 'members_csv',
-        status: 'pending',
-        createdAt: FieldValue.serverTimestamp(),
-        createdBy: actor,
-        filters,
-        columns,
-        progress: { rows: 0, bytes: 0 },
-      }, { merge: true });
+      await exportRef.set(
+        {
+          type: 'members_csv',
+          status: 'pending',
+          createdAt: FieldValue.serverTimestamp(),
+          createdBy: actor,
+          filters,
+          columns,
+          progress: { rows: 0, bytes: 0 },
+        },
+        { merge: true }
+      );
       return { ok: true, id: exportRef.id };
     } catch (e) {
       // Map unknown errors to HttpsError with details for easier debugging in UI
-      const msg = e instanceof functions.https.HttpsError ? e.message : String(e);
+      const msg =
+        e instanceof functions.https.HttpsError ? e.message : String(e);
       if (e instanceof functions.https.HttpsError) throw e;
-      throw new functions.https.HttpsError('internal', `startMembersExport failed: ${msg}`);
+      throw new functions.https.HttpsError(
+        'internal',
+        `startMembersExport failed: ${msg}`
+      );
     }
   });
 
@@ -1119,27 +1643,55 @@ export const exportsWorkerOnCreate = functions
   .onCreate(async (snap, context) => {
     const id = context.params.exportId as string;
     const data = snap.data() as any;
-    if (!data || data.type !== 'members_csv' || data.status !== 'pending') return;
+    if (!data || data.type !== 'members_csv' || data.status !== 'pending')
+      return;
     const actor = String(data.createdBy || '');
     const ts = new Date();
     const dateKey = `${ts.getUTCFullYear()}-${String(ts.getUTCMonth() + 1).padStart(2, '0')}-${String(ts.getUTCDate()).padStart(2, '0')}_${String(ts.getUTCHours()).padStart(2, '0')}${String(ts.getUTCMinutes()).padStart(2, '0')}`;
     const path = data.path || `exports/members/members_${dateKey}_${id}.csv`;
     const ref = db.collection('exports').doc(id);
-    await ref.set({ status: 'running', path, startedAt: FieldValue.serverTimestamp() }, { merge: true });
+    await ref.set(
+      { status: 'running', path, startedAt: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
     try {
-      const { rows, size, url } = await streamMembersCsv({ exportId: id, filters: data.filters || {}, columns: data.columns || [], actorUid: actor, path });
-      await ref.set({ status: 'success', count: rows, size, url, finishedAt: FieldValue.serverTimestamp() }, { merge: true });
+      const { rows, size, url } = await streamMembersCsv({
+        exportId: id,
+        filters: data.filters || {},
+        columns: data.columns || [],
+        actorUid: actor,
+        path,
+      });
+      await ref.set(
+        {
+          status: 'success',
+          count: rows,
+          size,
+          url,
+          finishedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
       try {
         const m = await db.collection('members').doc(actor).get();
-        const email = (m.get('email') as string | undefined);
+        const email = m.get('email') as string | undefined;
         if (email) {
           const subj = `Members CSV export — ${dateKey}`;
-          const html = url ? `<p>Your export is ready. <a href=\"${url}\">Download CSV</a></p>` : `<p>Your export is ready at: ${path} (no signed URL available)</p>`;
+          const html = url
+            ? `<p>Your export is ready. <a href=\"${url}\">Download CSV</a></p>`
+            : `<p>Your export is ready at: ${path} (no signed URL available)</p>`;
           await queueEmail({ to: [email], subject: subj, html });
         }
       } catch {}
     } catch (e) {
-      await ref.set({ status: 'error', error: String(e), finishedAt: FieldValue.serverTimestamp() }, { merge: true });
+      await ref.set(
+        {
+          status: 'error',
+          error: String(e),
+          finishedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
     }
   });
 

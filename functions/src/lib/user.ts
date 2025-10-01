@@ -1,18 +1,26 @@
-import { admin, db } from "../firebaseAdmin";
+import { admin, db } from '../firebaseAdmin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import * as functions from "firebase-functions/v1";
-import { setUserRoleSchema } from "./validators";
+import * as functions from 'firebase-functions/v1';
+import { setUserRoleSchema } from './validators';
 import { log } from './logger';
-import { requireAdmin } from "./rbac";
+import { requireAdmin } from './rbac';
 
-export async function setUserRoleLogic(data: any, context: functions.https.CallableContext) {
+export async function setUserRoleLogic(
+  data: any,
+  context: functions.https.CallableContext
+) {
   requireAdmin(context);
   const { uid, role, allowedRegions } = setUserRoleSchema.parse(data);
 
   const userRecord = await admin.auth().getUser(uid);
   const existingClaims = userRecord.customClaims ?? {};
-  await admin.auth().setCustomUserClaims(uid, { ...existingClaims, role, allowedRegions });
-  await db.collection('members').doc(uid).set({ role, allowedRegions }, { merge: true });
+  await admin
+    .auth()
+    .setCustomUserClaims(uid, { ...existingClaims, role, allowedRegions });
+  await db
+    .collection('members')
+    .doc(uid)
+    .set({ role, allowedRegions }, { merge: true });
 
   // Audit log
   try {
@@ -23,16 +31,21 @@ export async function setUserRoleLogic(data: any, context: functions.https.Calla
       role,
       allowedRegions: allowedRegions ?? [],
       ts: FieldValue.serverTimestamp(),
-      ttlAt: Timestamp.fromDate(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)),
+      ttlAt: Timestamp.fromDate(
+        new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
+      ),
     });
   } catch (e) {
     log('audit_write_failed', { action: 'setUserRole', uid, error: String(e) });
   }
 
-  return { message: "User role updated successfully" };
+  return { message: 'User role updated successfully' };
 }
 
-export async function searchUserByEmailLogic(data: any, context: functions.https.CallableContext) {
+export async function searchUserByEmailLogic(
+  data: any,
+  context: functions.https.CallableContext
+) {
   requireAdmin(context);
   const { email } = data;
   try {
@@ -43,10 +56,14 @@ export async function searchUserByEmailLogic(data: any, context: functions.https
   }
 }
 
-export async function getUserClaimsLogic(data: any, context: functions.https.CallableContext) {
+export async function getUserClaimsLogic(
+  data: any,
+  context: functions.https.CallableContext
+) {
   requireAdmin(context);
   const uid = String(data?.uid || '').trim();
-  if (!uid) throw new functions.https.HttpsError('invalid-argument', 'uid required');
+  if (!uid)
+    throw new functions.https.HttpsError('invalid-argument', 'uid required');
   const user = await admin.auth().getUser(uid);
   const claims = (user.customClaims || {}) as Record<string, unknown>;
   return { uid, claims };

@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { ReactNode } from 'react';
 import { renderWithProviders, screen, waitFor, userEvent } from '@/test-utils';
@@ -7,14 +6,24 @@ import { useAuth } from '@/hooks/useAuth';
 import { makeUser } from '@/tests/factories/user';
 import { getDefaultPortalLayout } from '@/services/portalDashboard';
 
-declare const __setFunctionsResponse: (_impl: (_name: string, _payload: unknown) => unknown) => void;
+declare const __setFunctionsResponse: (
+  _impl: (_name: string, _payload: unknown) => unknown
+) => void;
 declare const __resetFunctions: () => void;
 
 vi.mock('@/hooks/useAuth');
 vi.mock('@/hooks/useMfaPreference', () => ({
   __esModule: true,
-  default: () => ({ mfaEnabled: true, setMfaPreference: vi.fn(), updating: false }),
-  useMfaPreference: () => ({ mfaEnabled: true, setMfaPreference: vi.fn(), updating: false }),
+  default: () => ({
+    mfaEnabled: true,
+    setMfaPreference: vi.fn(),
+    updating: false,
+  }),
+  useMfaPreference: () => ({
+    mfaEnabled: true,
+    setMfaPreference: vi.fn(),
+    updating: false,
+  }),
 }));
 vi.mock('../components/ui/PanelBoundary', () => ({
   __esModule: true,
@@ -24,7 +33,9 @@ vi.mock('../features/portal/ProfilePanel', () => ({
   ProfilePanel: () => <div data-testid="profile-panel">Profile Panel</div>,
 }));
 vi.mock('../features/portal/MembershipPanel', () => ({
-  MembershipPanel: () => <div data-testid="membership-panel">Membership Panel</div>,
+  MembershipPanel: () => (
+    <div data-testid="membership-panel">Membership Panel</div>
+  ),
 }));
 vi.mock('../features/portal/BillingPanel', () => ({
   BillingPanel: () => <div data-testid="billing-panel">Billing Panel</div>,
@@ -65,7 +76,9 @@ describe('MemberPortal', () => {
       signOutUser: vi.fn(),
     });
     renderWithProviders(<MemberPortal />);
-    await waitFor(() => expect(screen.getByTestId('profile-panel')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId('profile-panel')).toBeInTheDocument()
+    );
     expect(screen.getByTestId('membership-panel')).toBeInTheDocument();
     expect(screen.getByTestId('billing-panel')).toBeInTheDocument();
     expect(screen.queryByTestId('assistant-launcher')).toBeNull();
@@ -85,8 +98,21 @@ describe('MemberPortal', () => {
         return {
           generatedAt: new Date().toISOString(),
           widgets: [
-            { id: 'renewalsDue', title: 'Renewals Due (30d)', value: '4', helper: 'Follow up soon', trend: 'up' },
-            { id: 'paymentsCaptured', title: 'Payments Captured (7d)', value: '€250.00', helper: 'Up 10%', trend: 'up', delta: '+10%' },
+            {
+              id: 'renewalsDue',
+              title: 'Renewals Due (30d)',
+              value: '4',
+              helper: 'Follow up soon',
+              trend: 'up',
+            },
+            {
+              id: 'paymentsCaptured',
+              title: 'Payments Captured (7d)',
+              value: '€250.00',
+              helper: 'Up 10%',
+              trend: 'up',
+              delta: '+10%',
+            },
           ],
         };
       }
@@ -115,12 +141,16 @@ describe('MemberPortal', () => {
 
     renderWithProviders(<MemberPortal />);
 
-    await waitFor(() => expect(screen.getByTestId('dashboard-widget-grid')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId('dashboard-widget-grid')).toBeInTheDocument()
+    );
     expect(screen.getByTestId('assistant-launcher')).toBeInTheDocument();
 
     const user = userEvent.setup();
     await user.click(screen.getByTestId('assistant-launcher'));
-    const promptInput = await screen.findByPlaceholderText(/ask about renewals or billing/i);
+    const promptInput = await screen.findByPlaceholderText(
+      /ask about renewals or billing/i
+    );
     await user.type(promptInput, 'How do I renew my membership?');
     await user.click(screen.getByRole('button', { name: /send/i }));
 

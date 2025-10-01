@@ -2,7 +2,7 @@
 
 **Author:** Manus AI  
 **Date:** December 2024  
-**Version:** 1.0  
+**Version:** 1.0
 
 ## Overview
 
@@ -11,12 +11,15 @@ This document captures the key architectural decisions made for the Interdomesti
 ## ADR-001: Cost-First Architecture Approach
 
 ### Status
+
 Accepted
 
 ### Context
+
 The project has a hard budget constraint of €0.50/member/year at 1-5k members scale, excluding staff time. This requires careful consideration of every architectural choice to minimize operational costs while maintaining functionality.
 
 ### Decision
+
 We will implement a "Lean Mode" architecture with the following cost-optimized choices:
 
 **Authentication Strategy:** Email-link authentication with passkeys as optional enhancement, avoiding SMS costs entirely. This decision eliminates the recurring SMS costs that could quickly exceed budget at scale.
@@ -30,17 +33,21 @@ We will implement a "Lean Mode" architecture with the following cost-optimized c
 **Observability:** Cloud Trace disabled in production by default, enabled via feature flag only when debugging is required. This prevents continuous monitoring costs while maintaining debugging capability.
 
 ### Consequences
+
 **Positive:**
+
 - Predictable cost structure within budget constraints
 - Ability to scale cost-effectively from 1 to 5k members
 - Clear upgrade path when budget allows for enhanced features
 
 **Negative:**
+
 - Limited real-time analytics without Tier 2 activation
 - Reduced observability in production requires more careful monitoring
 - Email-only authentication may have lower conversion than SMS
 
 ### Alternatives Considered
+
 - SMS authentication: Rejected due to per-message costs
 - Always-on BigQuery: Rejected due to query and storage costs
 - Verbose logging: Rejected due to storage and processing costs
@@ -48,12 +55,15 @@ We will implement a "Lean Mode" architecture with the following cost-optimized c
 ## ADR-002: Firebase-Centric Technology Stack
 
 ### Status
+
 Accepted
 
 ### Context
+
 Need for a managed, scalable platform that minimizes operational overhead while providing necessary features for authentication, data storage, and hosting.
 
 ### Decision
+
 Adopt Firebase as the primary platform with the following services:
 
 **Hosting:** Firebase Hosting with CDN for static content delivery
@@ -63,16 +73,20 @@ Adopt Firebase as the primary platform with the following services:
 **Email:** Trigger Email for transactional messaging
 
 ### Rationale
+
 Firebase provides a cohesive ecosystem that reduces integration complexity and operational overhead. The managed nature of these services aligns with the cost-optimization goals by eliminating infrastructure management costs.
 
 ### Consequences
+
 **Positive:**
+
 - Reduced operational complexity
 - Built-in scaling and reliability
 - Integrated security model
 - EU region availability for compliance
 
 **Negative:**
+
 - Vendor lock-in to Google Cloud Platform
 - Limited customization compared to self-hosted solutions
 - Pricing model changes could impact long-term costs
@@ -80,43 +94,54 @@ Firebase provides a cohesive ecosystem that reduces integration complexity and o
 ## ADR-003: Frontend Stack — React + TypeScript (Revised 2025-09)
 
 ### Status
+
 Accepted (revised 2025-09; supersedes the earlier "Vanilla JS" choice)
 
 ### Context
+
 Initial explorations prioritized a vanilla JS approach for minimal bundle size and build complexity. As the product scope evolved (role-gated areas, reusable cards/forms, complex state around auth and Firestore), the need for predictable composition, strong typing, and a familiar testing surface increased.
 
 ### Decision
+
 Adopt React + TypeScript via Vite, styled with Tailwind CSS. Keep a strict focus on cost and simplicity: no heavy state libraries, prefer hooks and Firestore listeners with pagination, and lean on the router for code-splitting.
 
 ### Rationale
+
 - Component model and hooks improve reuse and readability for admin/agent/member surfaces.
 - TypeScript across the stack improves maintainability and refactor safety.
 - Vite provides fast dev and small production bundles.
 - Existing team proficiency and ecosystem support speed delivery.
 
 ### Consequences
+
 **Positive:**
+
 - Clear component boundaries and reusability
 - Strong typing throughout the UI
 - Easy route-level code splitting for performance
 
 **Negative:**
+
 - Slightly larger baseline bundle vs. vanilla JS
 - Familiarity with React/TS required for contributors
 
 ### Migration Notes (from earlier ADR)
+
 - Replace references to `public/js/*` with `frontend/src/*` in docs.
 - Frontend build and tests run under `frontend/` via Vite/Vitest.
 
 ## ADR-004: Security-First Data Model
 
 ### Status
+
 Accepted
 
 ### Context
+
 Need to protect member data while enabling necessary functionality for different user roles (member, agent, admin).
 
 ### Decision
+
 Implement a security-first data model with the following principles:
 
 **Minimal PII Storage:** Store only essential personal information, using HMAC for sensitive ID uniqueness checks
@@ -125,13 +150,16 @@ Implement a security-first data model with the following principles:
 **Data Isolation:** Clear separation between user roles with region-based access controls for agents
 
 ### Consequences
+
 **Positive:**
+
 - Strong security posture
 - GDPR compliance foundation
 - Clear audit trail
 - Principle of least privilege
 
 **Negative:**
+
 - More complex data access patterns
 - Additional development overhead for security checks
 - Potential performance impact from security validations
@@ -139,12 +167,15 @@ Implement a security-first data model with the following principles:
 ## ADR-005: Feature Flag Architecture
 
 ### Status
+
 Accepted
 
 ### Context
+
 Need to control feature rollout and manage costs dynamically without requiring code deployments.
 
 ### Decision
+
 Implement Remote Config-based feature flags for key functionality:
 
 - `TRACE_ENABLED`: Control Cloud Trace in production
@@ -154,16 +185,20 @@ Implement Remote Config-based feature flags for key functionality:
 - `AGENT_CREATE_ENABLED`: Global kill switch for agent registration
 
 ### Rationale
+
 Feature flags provide operational flexibility to manage costs and features dynamically. This is particularly important for cost-sensitive features like Cloud Trace and BigQuery analytics.
 
 ### Consequences
+
 **Positive:**
+
 - Dynamic cost control
 - Safe feature rollout
 - Emergency kill switches
 - A/B testing capability
 
 **Negative:**
+
 - Additional complexity in code paths
 - Potential for configuration drift
 - Need for flag lifecycle management
@@ -171,12 +206,15 @@ Feature flags provide operational flexibility to manage costs and features dynam
 ## ADR-006: Idempotent Function Design
 
 ### Status
+
 Accepted
 
 ### Context
+
 Need to ensure reliable operation in distributed environment while preventing duplicate operations that could impact costs or data integrity.
 
 ### Decision
+
 Design all Cloud Functions to be idempotent with explicit tracking of operation completion:
 
 - `upsertProfile`: Track `welcomeSentAt` to prevent duplicate welcome emails
@@ -184,15 +222,19 @@ Design all Cloud Functions to be idempotent with explicit tracking of operation 
 - `dailyExpireMemberships`: Use reminder ledger to prevent duplicate reminder emails
 
 ### Rationale
+
 Idempotent operations ensure system reliability and prevent cost overruns from duplicate email sends or data operations.
 
 ### Consequences
+
 **Positive:**
+
 - Reliable operation under retry scenarios
 - Cost protection from duplicate operations
 - Simplified error recovery
 
 **Negative:**
+
 - Additional complexity in function logic
 - Need for careful state tracking
 - Potential for state inconsistencies if not properly implemented
@@ -200,17 +242,21 @@ Idempotent operations ensure system reliability and prevent cost overruns from d
 ## Implementation Guidelines
 
 ### Cost Monitoring
+
 All architectural decisions should be validated against the €0.50/member/year budget constraint. Regular cost analysis should be performed to ensure decisions remain valid as the system scales.
 
 ### Security Validation
+
 Security decisions should be regularly reviewed against current best practices and compliance requirements. The security-first approach should be maintained even as features are added.
 
 ### Performance Considerations
+
 While cost optimization is primary, performance should not be sacrificed to the point of poor user experience. The vanilla JavaScript approach should be supplemented with performance monitoring to ensure acceptable loading times.
 
 ### Scalability Planning
+
 Architectural decisions should support scaling from 1 to 5k members without requiring fundamental changes. The two-tier analytics approach exemplifies this principle by providing an upgrade path when needed.
 
 ---
 
-*This document will be updated as new architectural decisions are made or existing decisions are revised.*
+_This document will be updated as new architectural decisions are made or existing decisions are revised._

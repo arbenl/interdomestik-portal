@@ -18,12 +18,16 @@ const PortalEvents = lazy(() => import('@/pages/PortalEvents'));
 const PortalSupport = lazy(() => import('@/pages/PortalSupport'));
 const PortalDocuments = lazy(() => import('@/pages/PortalDocuments'));
 const Verify = lazy(() => import('@/pages/Verify'));
-const PortalLayout = lazy(() => import('@/features/portal/PortalLayout').then(m => ({ default: m.PortalLayout })));
+const PortalLayout = lazy(() =>
+  import('@/features/portal/PortalLayout').then((m) => ({
+    default: m.PortalLayout,
+  }))
+);
 
 export default function App() {
   return (
     <Layout>
-      <Suspense fallback={<div className='p-6 text-gray-600'>Loading…</div>}>
+      <Suspense fallback={<div className="p-6 text-gray-600">Loading…</div>}>
         <Routes>
           <Route index element={<Home />} />
           <Route path="signin" element={<SignIn />} />
@@ -45,10 +49,26 @@ export default function App() {
             <Route path="events" element={<PortalEvents />} />
             <Route path="support" element={<PortalSupport />} />
           </Route>
-          <Route path="profile" element={<Navigate to="/portal/profile" replace />} />
-          <Route path="membership" element={<Navigate to="/portal/membership" replace />} />
-          <Route path="billing" element={<Navigate to="/portal/billing" replace />} />
-          <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>} />
+          <Route
+            path="profile"
+            element={<Navigate to="/portal/profile" replace />}
+          />
+          <Route
+            path="membership"
+            element={<Navigate to="/portal/membership" replace />}
+          />
+          <Route
+            path="billing"
+            element={<Navigate to="/portal/billing" replace />}
+          />
+          <Route
+            path="admin"
+            element={
+              <AdminRoute>
+                <Admin />
+              </AdminRoute>
+            }
+          />
           <Route
             path="agent"
             element={

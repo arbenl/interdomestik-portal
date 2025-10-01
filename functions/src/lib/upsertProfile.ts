@@ -1,24 +1,37 @@
-
-import * as functions from "firebase-functions/v1";
-import { upsertProfileSchema } from "./validators";
-import { requireAuth } from "./rbac";
-import { nextMemberNo, reserveUniqueEmail, reserveUniqueMemberNo } from "./unique";
-import { admin, db } from "../firebaseAdmin";
+import * as functions from 'firebase-functions/v1';
+import { upsertProfileSchema } from './validators';
+import { requireAuth } from './rbac';
+import {
+  nextMemberNo,
+  reserveUniqueEmail,
+  reserveUniqueMemberNo,
+} from './unique';
+import { admin, db } from '../firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { log } from './logger';
 
-export async function upsertProfileLogic(data: any, context: functions.https.CallableContext) {
+export async function upsertProfileLogic(
+  data: any,
+  context: functions.https.CallableContext
+) {
   try {
     const auth = requireAuth(context);
     const validatedData = upsertProfileSchema.parse(data);
-    if (process.env.FUNCTIONS_EMULATOR) { log('upsert_profile_start', { uid: auth.uid }); }
+    if (process.env.FUNCTIONS_EMULATOR) {
+      log('upsert_profile_start', { uid: auth.uid });
+    }
 
     // Resolve email once outside the transaction
-    let emailLower: string | undefined = (auth.token.email as string | undefined)?.toLowerCase();
+    let emailLower: string | undefined = (
+      auth.token.email as string | undefined
+    )?.toLowerCase();
     if (!emailLower) {
       const userRecord = await admin.auth().getUser(auth.uid);
       if (!userRecord.email) {
-        throw new functions.https.HttpsError('failed-precondition', 'Email missing on account');
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          'Email missing on account'
+        );
       }
       emailLower = userRecord.email.toLowerCase();
     }
@@ -27,7 +40,12 @@ export async function upsertProfileLogic(data: any, context: functions.https.Cal
 
     await db.runTransaction(async (tx) => {
       const memberDoc = await tx.get(memberRef);
-      if (process.env.FUNCTIONS_EMULATOR) { log('upsert_profile_member_exists', { uid: auth.uid, exists: memberDoc.exists }); }
+      if (process.env.FUNCTIONS_EMULATOR) {
+        log('upsert_profile_member_exists', {
+          uid: auth.uid,
+          exists: memberDoc.exists,
+        });
+      }
 
       let memberNo = memberDoc.get('memberNo') as string | undefined;
       const nowTs = FieldValue.serverTimestamp();
@@ -35,49 +53,84 @@ export async function upsertProfileLogic(data: any, context: functions.https.Cal
       if (!memberDoc.exists) {
         memberNo = await nextMemberNo(tx);
         await reserveUniqueMemberNo(auth.uid, memberNo, tx);
-        tx.set(memberRef, {
-          createdAt: nowTs,
-          status: 'none',
-          year: null,
-          expiresAt: null,
-        }, { merge: true });
+        tx.set(
+          memberRef,
+          {
+            createdAt: nowTs,
+            status: 'none',
+            year: null,
+            expiresAt: null,
+          },
+          { merge: true }
+        );
       }
 
-      if (process.env.FUNCTIONS_EMULATOR) { log('upsert_profile_reserve_email', { uid: auth.uid, emailLower }); }
+      if (process.env.FUNCTIONS_EMULATOR) {
+        log('upsert_profile_reserve_email', { uid: auth.uid, emailLower });
+      }
       await reserveUniqueEmail(auth.uid, emailLower!, tx);
 
-      tx.set(memberRef, {
-        ...validatedData,
-        nameLower: String(validatedData.name || '').toLowerCase().trim(),
-        email: emailLower,
-        memberNo,
-        updatedAt: nowTs,
-      }, { merge: true });
+      tx.set(
+        memberRef,
+        {
+          ...validatedData,
+          nameLower: String(validatedData.name || '')
+            .toLowerCase()
+            .trim(),
+          email: emailLower,
+          memberNo,
+          updatedAt: nowTs,
+        },
+        { merge: true }
+      );
     });
 
     // Keep Firebase Auth displayName in sync with profile name
     try {
-      await admin.auth().updateUser(auth.uid, { displayName: validatedData.name });
+      await admin
+        .auth()
+        .updateUser(auth.uid, { displayName: validatedData.name });
     } catch (e) {
       // Non-fatal: log and continue
-      log('upsert_profile_auth_displayname_error', { uid: auth.uid, error: String(e) });
+      log('upsert_profile_auth_displayname_error', {
+        uid: auth.uid,
+        error: String(e),
+      });
     }
 
-    if (process.env.FUNCTIONS_EMULATOR) { log('upsert_profile_success', { uid: auth.uid }); }
-    return { message: "Profile updated successfully" };
+    if (process.env.FUNCTIONS_EMULATOR) {
+      log('upsert_profile_success', { uid: auth.uid });
+    }
+    return { message: 'Profile updated successfully' };
   } catch (err: any) {
     const msg = String(err?.message || err);
     if (msg.includes('EMAIL_IN_USE')) {
-      throw new functions.https.HttpsError('already-exists', 'Email is already registered');
+      throw new functions.https.HttpsError(
+        'already-exists',
+        'Email is already registered'
+      );
     }
     if (msg.includes('MEMBERNO_IN_USE')) {
-      throw new functions.https.HttpsError('aborted', 'Member number conflict, retry');
+      throw new functions.https.HttpsError(
+        'aborted',
+        'Member number conflict, retry'
+      );
     }
     // Validation errors from zod
     if (err?.issues) {
-      throw new functions.https.HttpsError('invalid-argument', 'Invalid profile data');
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Invalid profile data'
+      );
     }
-    log('upsert_profile_error', { uid: context?.auth?.uid, error: String(err?.stack || err) });
-    throw new functions.https.HttpsError('internal', 'Profile update failed', msg);
+    log('upsert_profile_error', {
+      uid: context?.auth?.uid,
+      error: String(err?.stack || err),
+    });
+    throw new functions.https.HttpsError(
+      'internal',
+      'Profile update failed',
+      msg
+    );
   }
 }

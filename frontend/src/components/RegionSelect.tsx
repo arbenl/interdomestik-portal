@@ -9,7 +9,14 @@ type Props = {
   ariaLabel?: string;
 };
 
-export default function RegionSelect({ value, onChange, id, className, options, ariaLabel = 'Region' }: Props) {
+export default function RegionSelect({
+  value,
+  onChange,
+  id,
+  className,
+  options,
+  ariaLabel = 'Region',
+}: Props) {
   const opts = Array.isArray(options) && options.length > 0 ? options : REGIONS;
   return (
     <select

@@ -1,5 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, limit, orderBy, query, type DocumentData } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  type DocumentData,
+} from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 
 export type AssistantTelemetryEntry = {
@@ -14,7 +21,10 @@ export type AssistantTelemetryEntry = {
 
 const MAX_ENTRIES = 50;
 
-function normalizeEntry(id: string, data: DocumentData): AssistantTelemetryEntry {
+function normalizeEntry(
+  id: string,
+  data: DocumentData
+): AssistantTelemetryEntry {
   const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : null;
   return {
     id,
@@ -22,7 +32,9 @@ function normalizeEntry(id: string, data: DocumentData): AssistantTelemetryEntry
     role: typeof data.role === 'string' ? data.role : 'member',
     latencyMs: Number.isFinite(data.latencyMs) ? Number(data.latencyMs) : 0,
     fallback: Boolean(data.fallback),
-    promptLength: Number.isFinite(data.promptLength) ? Number(data.promptLength) : 0,
+    promptLength: Number.isFinite(data.promptLength)
+      ? Number(data.promptLength)
+      : 0,
     createdAt,
   };
 }
@@ -37,7 +49,9 @@ export function useAssistantTelemetry() {
         limit(MAX_ENTRIES)
       );
       const snapshot = await getDocs(telemetryQuery);
-      const entries = snapshot.docs.map(doc => normalizeEntry(doc.id, doc.data()));
+      const entries = snapshot.docs.map((doc) =>
+        normalizeEntry(doc.id, doc.data())
+      );
       return { entries };
     },
     staleTime: 30_000,

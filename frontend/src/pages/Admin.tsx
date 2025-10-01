@@ -6,54 +6,130 @@ import PanelBoundary from '@/components/ui/PanelBoundary';
 import { MembersPanel } from '@/features/admin/members/MembersPanel';
 
 import type { ComponentType } from 'react';
-const EmulatorPanel = lazy(() => import('@/features/admin/emulator/EmulatorPanel').then(m => ({ default: m.EmulatorPanel }))) as ComponentType<{ refreshUsers: () => void }>;
-const RoleManagerPanel = lazy(() => import('@/features/admin/role-manager/RoleManagerPanel').then(m => ({ default: m.RoleManagerPanel })));
-const MetricsPanel = lazy(() => import('@/features/admin/metrics/MetricsPanel').then(m => ({ default: m.MetricsPanel })));
-const OrgPanel = lazy(() => import('@/features/admin/organizations/OrgPanel').then(m => ({ default: m.OrgPanel }))) as ComponentType<{ push: (t: { type: 'success' | 'error'; message: string }) => void }>;
-const CouponPanel = lazy(() => import('@/features/admin/coupons/CouponsPanel').then(m => ({ default: m.CouponsPanel }))) as ComponentType<{ push: (t: { type: 'success' | 'error'; message: string }) => void }>;
-const BulkImportPanel = lazy(() => import('@/features/admin/bulk-import/BulkImportPanel').then(m => ({ default: m.BulkImportPanel })));
-const MemberSearchPanel = lazy(() => import('@/features/admin/members/MemberSearchPanel').then(m => ({ default: m.MemberSearchPanel })));
-const ExportsPanel = lazy(() => import('@/features/admin/exports/ExportsPanel').then(m => ({ default: m.ExportsPanel })));
-const CardKeysPanel = lazy(() => import('@/features/admin/card-keys/CardKeysPanel').then(m => ({ default: m.CardKeysPanel })));
-const MaintenancePanel = lazy(() => import('@/features/admin/maintenance/MaintenancePanel').then(m => ({ default: m.MaintenancePanel })));
-const AuditLogsPanel = lazy(() => import('@/features/admin/audit/AuditLogsPanel').then(m => ({ default: m.AuditLogsPanel })));
-const ReportsPanel = lazy(() => import('@/features/admin/reports/ReportsPanel').then(m => ({ default: m.ReportsPanel })));
+const EmulatorPanel = lazy(() =>
+  import('@/features/admin/emulator/EmulatorPanel').then((m) => ({
+    default: m.EmulatorPanel,
+  }))
+) as ComponentType<{ refreshUsers: () => void }>;
+const RoleManagerPanel = lazy(() =>
+  import('@/features/admin/role-manager/RoleManagerPanel').then((m) => ({
+    default: m.RoleManagerPanel,
+  }))
+);
+const MetricsPanel = lazy(() =>
+  import('@/features/admin/metrics/MetricsPanel').then((m) => ({
+    default: m.MetricsPanel,
+  }))
+);
+const OrgPanel = lazy(() =>
+  import('@/features/admin/organizations/OrgPanel').then((m) => ({
+    default: m.OrgPanel,
+  }))
+) as ComponentType<{
+  push: (t: { type: 'success' | 'error'; message: string }) => void;
+}>;
+const CouponPanel = lazy(() =>
+  import('@/features/admin/coupons/CouponsPanel').then((m) => ({
+    default: m.CouponsPanel,
+  }))
+) as ComponentType<{
+  push: (t: { type: 'success' | 'error'; message: string }) => void;
+}>;
+const BulkImportPanel = lazy(() =>
+  import('@/features/admin/bulk-import/BulkImportPanel').then((m) => ({
+    default: m.BulkImportPanel,
+  }))
+);
+const MemberSearchPanel = lazy(() =>
+  import('@/features/admin/members/MemberSearchPanel').then((m) => ({
+    default: m.MemberSearchPanel,
+  }))
+);
+const ExportsPanel = lazy(() =>
+  import('@/features/admin/exports/ExportsPanel').then((m) => ({
+    default: m.ExportsPanel,
+  }))
+);
+const CardKeysPanel = lazy(() =>
+  import('@/features/admin/card-keys/CardKeysPanel').then((m) => ({
+    default: m.CardKeysPanel,
+  }))
+);
+const MaintenancePanel = lazy(() =>
+  import('@/features/admin/maintenance/MaintenancePanel').then((m) => ({
+    default: m.MaintenancePanel,
+  }))
+);
+const AuditLogsPanel = lazy(() =>
+  import('@/features/admin/audit/AuditLogsPanel').then((m) => ({
+    default: m.AuditLogsPanel,
+  }))
+);
+const ReportsPanel = lazy(() =>
+  import('@/features/admin/reports/ReportsPanel').then((m) => ({
+    default: m.ReportsPanel,
+  }))
+);
 
 export default function Admin() {
-  const { isAdmin, canRegister, allowedRegions, loading: roleLoading } = useAgentOrAdmin();
+  const {
+    isAdmin,
+    canRegister,
+    allowedRegions,
+    loading: roleLoading,
+  } = useAgentOrAdmin();
   const { push } = useToast();
 
-  const handleSuccess = useCallback((message: string) => {
-    push({ type: 'success', message });
-  }, [push]);
+  const handleSuccess = useCallback(
+    (message: string) => {
+      push({ type: 'success', message });
+    },
+    [push]
+  );
 
-  const onError = useCallback((message: string) => {
-    push({ type: 'error', message });
-  }, [push]);
+  const onError = useCallback(
+    (message: string) => {
+      push({ type: 'error', message });
+    },
+    [push]
+  );
 
   if (roleLoading) {
-    return <div className="flex justify-center items-center h-screen"><p>Loading...</p></div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p>Loading...</p>
+      </div>
+    );
   }
 
-  const isLocal = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
-  const loadingFallback = <div className='p-4'>Loading…</div>;
+  const isLocal =
+    typeof location !== 'undefined' &&
+    (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  const loadingFallback = <div className="p-4">Loading…</div>;
 
   return (
     <div className="max-w-6xl mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">{isAdmin ? 'Admin Panel' : 'Agent Panel'}</h2>
+        <h2 className="text-2xl font-bold">
+          {isAdmin ? 'Admin Panel' : 'Agent Panel'}
+        </h2>
       </div>
 
       <div className="mb-4 p-3 border rounded bg-white text-sm text-gray-700">
         <div>
           <span className="text-gray-600">Claims:</span>{' '}
-          <span className="font-medium uppercase">{isAdmin ? 'admin' : (canRegister ? 'agent' : 'member/unknown')}</span>
+          <span className="font-medium uppercase">
+            {isAdmin ? 'admin' : canRegister ? 'agent' : 'member/unknown'}
+          </span>
         </div>
         <div className="mt-1">
           <span className="text-gray-600">Allowed regions:</span>{' '}
-          <span className="font-medium">{(allowedRegions && allowedRegions.length > 0)
-            ? allowedRegions.join(', ')
-            : (isAdmin ? '— (full access)' : '—')}
+          <span className="font-medium">
+            {allowedRegions && allowedRegions.length > 0
+              ? allowedRegions.join(', ')
+              : isAdmin
+                ? '— (full access)'
+                : '—'}
           </span>
         </div>
       </div>
@@ -67,7 +143,11 @@ export default function Admin() {
       )}
 
       {canRegister && (
-        <AgentRegistrationCard allowedRegions={allowedRegions} onSuccess={handleSuccess} onError={onError} />
+        <AgentRegistrationCard
+          allowedRegions={allowedRegions}
+          onSuccess={handleSuccess}
+          onError={onError}
+        />
       )}
 
       {isAdmin && (

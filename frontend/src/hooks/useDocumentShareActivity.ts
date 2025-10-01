@@ -1,7 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchDocumentShareActivity, type DocumentShareActivity } from '@/services/documents';
+import {
+  fetchDocumentShareActivity,
+  type DocumentShareActivity,
+} from '@/services/documents';
 
-export function useDocumentShareActivity(shareId: string | null, enabled: boolean) {
+export function useDocumentShareActivity(
+  shareId: string | null,
+  enabled: boolean
+) {
   return useQuery<{ items: DocumentShareActivity[] }, Error>({
     queryKey: ['documentShareActivity', shareId],
     enabled: enabled && Boolean(shareId),

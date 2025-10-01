@@ -40,45 +40,57 @@ export function ExportsPanel() {
   const { mfaEnabled } = useAuth();
   const requiresMfa = !mfaEnabled;
 
-  const loadJobs = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
-    if (pausedRef.current && !force) return;
-    try {
-      const ref = collection(firestore, 'exports');
-      const snapshot = await getDocs(ref);
-      const next = snapshot.docs.map((doc) => {
-        const data = doc.data() as ExportJob;
-        return { ...data, id: data.id ?? doc.id };
-      });
-      setJobs(next);
-      errorShownRef.current = false;
-      pausedRef.current = false;
-    } catch (error) {
-      console.error('[exports] Failed to load exports', error);
-      if (!errorShownRef.current) {
-        push({ type: 'error', message: 'Failed to load exports' });
-        errorShownRef.current = true;
+  const loadJobs = useCallback(
+    async ({ force = false }: { force?: boolean } = {}) => {
+      if (pausedRef.current && !force) return;
+      try {
+        const ref = collection(firestore, 'exports');
+        const snapshot = await getDocs(ref);
+        const next = snapshot.docs.map((doc) => {
+          const data = doc.data() as ExportJob;
+          return { ...data, id: data.id ?? doc.id };
+        });
+        setJobs(next);
+        errorShownRef.current = false;
+        pausedRef.current = false;
+      } catch (error) {
+        console.error('[exports] Failed to load exports', error);
+        if (!errorShownRef.current) {
+          push({ type: 'error', message: 'Failed to load exports' });
+          errorShownRef.current = true;
+        }
+        pausedRef.current = true;
       }
-      pausedRef.current = true;
-    }
-  }, [push]);
+    },
+    [push]
+  );
 
   useEffect(() => {
     void loadJobs({ force: true });
-    const interval = window.setInterval(() => { void loadJobs(); }, 6000);
+    const interval = window.setInterval(() => {
+      void loadJobs();
+    }, 6000);
     return () => window.clearInterval(interval);
   }, [loadJobs]);
 
   const hasRunning = useMemo(
     () => jobs.some((job) => ['running', 'pending'].includes(job.status)),
-    [jobs],
+    [jobs]
   );
 
   const sortedJobs = useMemo(
-    () => [...jobs].sort((a, b) => (toMillis(b.startedAt ?? b.createdAt) ?? 0) - (toMillis(a.startedAt ?? a.createdAt) ?? 0)),
-    [jobs],
+    () =>
+      [...jobs].sort(
+        (a, b) =>
+          (toMillis(b.startedAt ?? b.createdAt) ?? 0) -
+          (toMillis(a.startedAt ?? a.createdAt) ?? 0)
+      ),
+    [jobs]
   );
 
-  const visibleJobs = expanded ? sortedJobs : sortedJobs.slice(0, MAX_COLLAPSED_ROWS);
+  const visibleJobs = expanded
+    ? sortedJobs
+    : sortedJobs.slice(0, MAX_COLLAPSED_ROWS);
   const hasMore = sortedJobs.length > MAX_COLLAPSED_ROWS;
 
   const handleStart = async () => {
@@ -88,8 +100,16 @@ export function ExportsPanel() {
     }
     setIsStarting(true);
     try {
-      const result = await callFunction<{ preset?: 'BASIC' | 'FULL' }, { ok?: boolean; id?: string }>('startMembersExport', { preset: 'BASIC' });
-      if (result && typeof result === 'object' && 'ok' in result && result.ok === false) {
+      const result = await callFunction<
+        { preset?: 'BASIC' | 'FULL' },
+        { ok?: boolean; id?: string }
+      >('startMembersExport', { preset: 'BASIC' });
+      if (
+        result &&
+        typeof result === 'object' &&
+        'ok' in result &&
+        result.ok === false
+      ) {
         throw new Error('Export request failed');
       }
       push({ type: 'success', message: 'Members CSV export started' });
@@ -97,11 +117,20 @@ export function ExportsPanel() {
     } catch (error) {
       console.error('[exports] Failed to start export', error);
       let message = 'Failed to start export';
-      if (typeof error === 'object' && error && 'code' in error && typeof (error as { code: unknown }).code === 'string') {
+      if (
+        typeof error === 'object' &&
+        error &&
+        'code' in error &&
+        typeof (error as { code: unknown }).code === 'string'
+      ) {
         const code = (error as { code: string }).code;
-        if (code.endsWith('permission-denied')) message = 'You need admin access to start exports.';
-        else if (code.endsWith('resource-exhausted')) message = 'Another export is already running. Please wait.';
-        else if (code.endsWith('unavailable')) message = 'Export service temporarily unreachable. Try again shortly.';
+        if (code.endsWith('permission-denied'))
+          message = 'You need admin access to start exports.';
+        else if (code.endsWith('resource-exhausted'))
+          message = 'Another export is already running. Please wait.';
+        else if (code.endsWith('unavailable'))
+          message =
+            'Export service temporarily unreachable. Try again shortly.';
       } else if (error instanceof Error && error.message) {
         message = error.message;
       }
@@ -112,22 +141,32 @@ export function ExportsPanel() {
   };
 
   return (
-    <section data-testid="exports-panel" aria-label="Exports" className="mb-6 p-4 border rounded bg-white">
+    <section
+      data-testid="exports-panel"
+      aria-label="Exports"
+      className="mb-6 p-4 border rounded bg-white"
+    >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
         <div>
           <h3 className="text-lg font-semibold">Exports</h3>
-          <p className="text-sm text-gray-600">Download data extracts for offline processing.</p>
+          <p className="text-sm text-gray-600">
+            Download data extracts for offline processing.
+          </p>
         </div>
         <div className="flex gap-3">
           <Button
-            onClick={() => { void handleStart(); }}
+            onClick={() => {
+              void handleStart();
+            }}
             disabled={hasRunning || isStarting || requiresMfa}
           >
             Start Members CSV Export
           </Button>
           <Button
             variant="ghost"
-            onClick={() => { void loadJobs({ force: true }); }}
+            onClick={() => {
+              void loadJobs({ force: true });
+            }}
             disabled={isStarting}
           >
             Refresh
@@ -162,7 +201,9 @@ export function ExportsPanel() {
             ))}
             {visibleJobs.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-3 py-6 text-center text-gray-500">No exports found.</td>
+                <td colSpan={4} className="px-3 py-6 text-center text-gray-500">
+                  No exports found.
+                </td>
               </tr>
             )}
           </tbody>

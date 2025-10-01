@@ -16,10 +16,10 @@ For route protection, we will use a dedicated `RoleProtectedRoute` component tha
 
 ## Consequences
 
--   **Pros**:
-    -   **Single Source of Truth**: All authentication logic is centralized, making it easier to manage and debug.
-    -   **Decoupled Components**: Components don't need to know how authentication works; they just consume the `useAuth` hook.
-    -   **Secure**: Route protection is based on server-verified custom claims from the Firebase ID token, which cannot be spoofed on the client.
-    -   **Declarative**: Route protection is declarative and easy to reason about in the routing configuration.
--   **Cons**:
-    -   Components that need auth state will have a dependency on the `AuthProvider` being present in the component tree.
+- **Pros**:
+  - **Single Source of Truth**: All authentication logic is centralized, making it easier to manage and debug.
+  - **Decoupled Components**: Components don't need to know how authentication works; they just consume the `useAuth` hook.
+  - **Secure**: Route protection is based on server-verified custom claims from the Firebase ID token, which cannot be spoofed on the client.
+  - **Declarative**: Route protection is declarative and easy to reason about in the routing configuration.
+- **Cons**:
+  - Components that need auth state will have a dependency on the `AuthProvider` being present in the component tree.

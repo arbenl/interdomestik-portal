@@ -12,16 +12,38 @@ describe('startMembership idempotency', () => {
 
   it('processes once and returns idempotent on repeat', async () => {
     const uid = 'u_idem_' + Date.now();
-    await admin.auth().createUser({ uid, email: `idem_${Date.now()}@example.com` }).catch(()=>{});
-    await db.collection('members').doc(uid).set({ email: `idem_${Date.now()}@example.com`, name: 'X', region: 'PRISHTINA', memberNo: 'INT-2025-999001' });
+    await admin
+      .auth()
+      .createUser({ uid, email: `idem_${Date.now()}@example.com` })
+      .catch(() => {});
+    await db
+      .collection('members')
+      .doc(uid)
+      .set({
+        email: `idem_${Date.now()}@example.com`,
+        name: 'X',
+        region: 'PRISHTINA',
+        memberNo: 'INT-2025-999001',
+      });
 
     const wrap = testEnv.wrap(startMembership as any);
-    const r1 = await wrap({ uid, year, price: 25, currency: 'EUR', paymentMethod: 'cash' }, adminCtx);
+    const r1 = await wrap(
+      { uid, year, price: 25, currency: 'EUR', paymentMethod: 'cash' },
+      adminCtx
+    );
     expect(r1).to.have.property('refPath');
-    const r2 = await wrap({ uid, year, price: 25, currency: 'EUR', paymentMethod: 'cash' }, adminCtx);
+    const r2 = await wrap(
+      { uid, year, price: 25, currency: 'EUR', paymentMethod: 'cash' },
+      adminCtx
+    );
     expect(r2).to.have.property('idempotent', true);
     // Only one audit log for this target/year by our admin
-    const q = await db.collection('audit_logs').where('action','==','startMembership').where('target','==',uid).where('year','==',year).get();
+    const q = await db
+      .collection('audit_logs')
+      .where('action', '==', 'startMembership')
+      .where('target', '==', uid)
+      .where('year', '==', year)
+      .get();
     expect(q.size).to.equal(1);
   });
 });

@@ -1,1 +1,3 @@
-export function CardKeysPanel() { return null; }
+export function CardKeysPanel() {
+  return null;
+}

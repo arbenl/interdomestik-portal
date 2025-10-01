@@ -25,14 +25,25 @@ describe('Cloud Functions Logic', () => {
     it('should create a new profile', async () => {
       // Stub admin.auth().getUser and updateUser to resolve
       const authInstance = admin.auth();
-      sinon.stub(authInstance, 'getUser').resolves({ uid: 'test-uid', email: 'test@example.com' } as any);
+      sinon
+        .stub(authInstance, 'getUser')
+        .resolves({ uid: 'test-uid', email: 'test@example.com' } as any);
       sinon.stub(authInstance, 'updateUser').resolves({} as any);
       // Seed member doc to bypass memberNo generation (which mixes reads and writes)
       await db.collection('members').doc('test-uid').set({
-        email: 'test@example.com', name: 'Test User', region: 'PRISHTINA', memberNo: 'INT-2025-000123'
+        email: 'test@example.com',
+        name: 'Test User',
+        region: 'PRISHTINA',
+        memberNo: 'INT-2025-000123',
       });
-      const data = { name: 'Test User', phone: '+1234567890', region: 'PRISHTINA' };
-      const context = { auth: { uid: 'test-uid', token: { email: 'test@example.com' } } };
+      const data = {
+        name: 'Test User',
+        phone: '+1234567890',
+        region: 'PRISHTINA',
+      };
+      const context = {
+        auth: { uid: 'test-uid', token: { email: 'test@example.com' } },
+      };
       const result = await upsertProfileLogic(data, context as any);
       expect(result).to.deep.equal({ message: 'Profile updated successfully' });
     });
@@ -52,12 +63,20 @@ describe('Cloud Functions Logic', () => {
   describe('setUserRoleLogic', () => {
     it('should set a user role', async () => {
       const authInstance = admin.auth();
-      sinon.stub(authInstance, 'getUser').resolves({ customClaims: { mfaEnabled: true } } as any);
+      sinon
+        .stub(authInstance, 'getUser')
+        .resolves({ customClaims: { mfaEnabled: true } } as any);
       sinon.stub(authInstance, 'setCustomUserClaims').resolves();
-      const data = { uid: 'test-uid', role: 'admin', allowedRegions: ['PRISHTINA'] };
+      const data = {
+        uid: 'test-uid',
+        role: 'admin',
+        allowedRegions: ['PRISHTINA'],
+      };
       const context = { auth: { uid: 'admin-uid', token: { role: 'admin' } } };
       const result = await setUserRoleLogic(data, context as any);
-      expect(result).to.deep.equal({ message: 'User role updated successfully' });
+      expect(result).to.deep.equal({
+        message: 'User role updated successfully',
+      });
     });
   });
 
@@ -70,9 +89,19 @@ describe('Cloud Functions Logic', () => {
         region: 'PRISHTINA',
         memberNo: 'INT-2025-009999',
       });
-      const data = { uid: 'test-uid', year: 2025, price: 10, currency: 'EUR', paymentMethod: 'cash', externalRef: null };
+      const data = {
+        uid: 'test-uid',
+        year: 2025,
+        price: 10,
+        currency: 'EUR',
+        paymentMethod: 'cash',
+        externalRef: null,
+      };
       const context = { auth: { uid: 'admin-uid', token: { role: 'admin' } } };
-      const result = await startMembership.startMembershipLogic(data, context as any);
+      const result = await startMembership.startMembershipLogic(
+        data,
+        context as any
+      );
       expect(result.message).to.equal('Membership started successfully');
     });
   });

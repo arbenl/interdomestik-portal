@@ -16,12 +16,26 @@ export const firestore = db;
 export const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
 export const emulatorProjectId = 'demo-interdomestik';
 
-const useEmulators = ['1', 'true', 'TRUE'].includes(String(import.meta.env.VITE_USE_EMULATORS ?? '').trim());
+const useEmulators = ['1', 'true', 'TRUE'].includes(
+  String(import.meta.env.VITE_USE_EMULATORS ?? '').trim()
+);
 
 if (useEmulators) {
-  connectAuthEmulator(auth, `http://localhost:${import.meta.env.VITE_EMU_AUTH_PORT ?? 9099}`, { disableWarnings: true });
-  connectFirestoreEmulator(db, 'localhost', Number(import.meta.env.VITE_EMU_FS_PORT ?? 8080));
-  connectFunctionsEmulator(functions, 'localhost', Number(import.meta.env.VITE_EMU_FN_PORT ?? 5001));
+  connectAuthEmulator(
+    auth,
+    `http://localhost:${import.meta.env.VITE_EMU_AUTH_PORT ?? 9099}`,
+    { disableWarnings: true }
+  );
+  connectFirestoreEmulator(
+    db,
+    'localhost',
+    Number(import.meta.env.VITE_EMU_FS_PORT ?? 8080)
+  );
+  connectFunctionsEmulator(
+    functions,
+    'localhost',
+    Number(import.meta.env.VITE_EMU_FN_PORT ?? 5001)
+  );
   // Optional: prove in E2E that we are connected
   interface CustomWindow extends Window {
     __emu?: boolean;

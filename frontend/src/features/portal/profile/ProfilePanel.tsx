@@ -5,7 +5,12 @@ import type { Profile } from '@/types';
 import { Button } from '@/components/ui';
 
 export function ProfilePanel() {
-  const { data: profile, isLoading, mutate: update, isPending: isUpdating } = useProfile();
+  const {
+    data: profile,
+    isLoading,
+    mutate: update,
+    isPending: isUpdating,
+  } = useProfile();
   const { register, handleSubmit, reset } = useForm<Profile>();
 
   useEffect(() => {

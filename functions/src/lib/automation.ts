@@ -48,9 +48,16 @@ function isSuccessfulStatus(status: string): boolean {
   return numeric >= 200 && numeric < 300;
 }
 
-async function recordAutomationAlert(params: AutomationAlertParams): Promise<void> {
-  const severity = params.status === 'error' || (parseStatus(params.status) ?? 0) >= 500 ? 'critical' : 'warning';
-  const message = params.error ?? `Renewal webhook dispatch responded with status ${params.status}`;
+async function recordAutomationAlert(
+  params: AutomationAlertParams
+): Promise<void> {
+  const severity =
+    params.status === 'error' || (parseStatus(params.status) ?? 0) >= 500
+      ? 'critical'
+      : 'warning';
+  const message =
+    params.error ??
+    `Renewal webhook dispatch responded with status ${params.status}`;
   await db.collection('automationAlerts').add({
     url: params.url,
     windowDays: params.windowDays,
@@ -69,39 +76,65 @@ async function recordAutomationAlert(params: AutomationAlertParams): Promise<voi
   });
 }
 
-export async function runRenewalHooks(context: functions.https.CallableContext | null) {
-  if (context && (!context.auth || (context.auth.token as any)?.role !== 'admin')) {
-    throw new functions.https.HttpsError('permission-denied', 'Admin privileges required');
+export async function runRenewalHooks(
+  context: functions.https.CallableContext | null
+) {
+  if (
+    context &&
+    (!context.auth || (context.auth.token as any)?.role !== 'admin')
+  ) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Admin privileges required'
+    );
   }
 
-  const configSnap = await db.collection('automationHooks').doc('renewals').get();
+  const configSnap = await db
+    .collection('automationHooks')
+    .doc('renewals')
+    .get();
   if (!configSnap.exists) {
     log('automation_renewals_missing_config', {});
     return { ok: true, dispatched: [] };
   }
 
   const data = configSnap.data() as RenewalConfig;
-  if (!data.enabled || !Array.isArray(data.targets) || data.targets.length === 0) {
+  if (
+    !data.enabled ||
+    !Array.isArray(data.targets) ||
+    data.targets.length === 0
+  ) {
     log('automation_renewals_disabled', {});
     return { ok: true, dispatched: [] };
   }
 
   const now = new Date();
-  const dispatchedResults: Array<{ url: string; windowDays: number; count: number; status: string }> = [];
+  const dispatchedResults: Array<{
+    url: string;
+    windowDays: number;
+    count: number;
+    status: string;
+  }> = [];
   const logEntries: DispatchLogEntry[] = [];
 
   for (const target of data.targets) {
-    const windowDays = Math.max(1, Math.min(90, Number(target.windowDays ?? 30)));
-    const windowDate = Timestamp.fromDate(new Date(Date.now() + windowDays * 24 * 60 * 60 * 1000));
+    const windowDays = Math.max(
+      1,
+      Math.min(90, Number(target.windowDays ?? 30))
+    );
+    const windowDate = Timestamp.fromDate(
+      new Date(Date.now() + windowDays * 24 * 60 * 60 * 1000)
+    );
 
-    let query = db.collection('members')
+    let query = db
+      .collection('members')
       .where('status', '==', 'active')
       .where('expiresAt', '>=', Timestamp.now())
       .where('expiresAt', '<=', windowDate)
       .limit(200);
 
     const snapshot = await query.get();
-    const members = snapshot.docs.map(doc => ({
+    const members = snapshot.docs.map((doc) => ({
       uid: doc.id,
       memberNo: doc.get('memberNo') ?? null,
       name: doc.get('name') ?? null,
@@ -110,7 +143,12 @@ export async function runRenewalHooks(context: functions.https.CallableContext |
     }));
 
     if (members.length === 0) {
-      dispatchedResults.push({ url: target.url, windowDays, count: 0, status: 'skipped' });
+      dispatchedResults.push({
+        url: target.url,
+        windowDays,
+        count: 0,
+        status: 'skipped',
+      });
       logEntries.push({
         url: target.url,
         windowDays,
@@ -127,7 +165,9 @@ export async function runRenewalHooks(context: functions.https.CallableContext |
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(target.secret ? { Authorization: `Bearer ${target.secret}` } : {}),
+          ...(target.secret
+            ? { Authorization: `Bearer ${target.secret}` }
+            : {}),
         },
         body: JSON.stringify({
           type: 'renewals.due',
@@ -139,7 +179,12 @@ export async function runRenewalHooks(context: functions.https.CallableContext |
       });
 
       const statusText = `${response.status}`;
-      dispatchedResults.push({ url: target.url, windowDays, count: members.length, status: statusText });
+      dispatchedResults.push({
+        url: target.url,
+        windowDays,
+        count: members.length,
+        status: statusText,
+      });
       logEntries.push({
         url: target.url,
         windowDays,
@@ -148,7 +193,12 @@ export async function runRenewalHooks(context: functions.https.CallableContext |
         dispatchedAt: FieldValue.serverTimestamp(),
         actor: context?.auth?.uid ?? 'automation',
       });
-      log('automation_renewals_dispatch', { url: target.url, windowDays, count: members.length, status: statusText });
+      log('automation_renewals_dispatch', {
+        url: target.url,
+        windowDays,
+        count: members.length,
+        status: statusText,
+      });
       if (!isSuccessfulStatus(statusText)) {
         await recordAutomationAlert({
           url: target.url,
@@ -159,7 +209,12 @@ export async function runRenewalHooks(context: functions.https.CallableContext |
         });
       }
     } catch (error) {
-      dispatchedResults.push({ url: target.url, windowDays, count: members.length, status: 'error' });
+      dispatchedResults.push({
+        url: target.url,
+        windowDays,
+        count: members.length,
+        status: 'error',
+      });
       logEntries.push({
         url: target.url,
         windowDays,
@@ -168,7 +223,10 @@ export async function runRenewalHooks(context: functions.https.CallableContext |
         dispatchedAt: FieldValue.serverTimestamp(),
         actor: context?.auth?.uid ?? 'automation',
       });
-      log('automation_renewals_error', { url: target.url, error: String(error) });
+      log('automation_renewals_error', {
+        url: target.url,
+        error: String(error),
+      });
       await recordAutomationAlert({
         url: target.url,
         windowDays,
@@ -180,7 +238,10 @@ export async function runRenewalHooks(context: functions.https.CallableContext |
     }
   }
 
-  await configSnap.ref.set({ lastRunAt: FieldValue.serverTimestamp() }, { merge: true });
+  await configSnap.ref.set(
+    { lastRunAt: FieldValue.serverTimestamp() },
+    { merge: true }
+  );
 
   if (logEntries.length > 0) {
     const batch = db.batch();

@@ -30,8 +30,12 @@ export function useHttpsCallable<RequestData = unknown, ResponseData = unknown>(
       setData(null);
 
       try {
-        const callable = httpsCallable<RequestData, ResponseData>(functions, functionName);
-        const result: HttpsCallableResult<ResponseData> = await callable(requestData);
+        const callable = httpsCallable<RequestData, ResponseData>(
+          functions,
+          functionName
+        );
+        const result: HttpsCallableResult<ResponseData> =
+          await callable(requestData);
         setData(result.data);
       } catch (err: unknown) {
         const error = err as HttpsError;

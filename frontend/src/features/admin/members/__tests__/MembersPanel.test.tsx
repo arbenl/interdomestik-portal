@@ -29,7 +29,8 @@ vi.mock('@/hooks/useUsers', () => ({
 }));
 
 vi.mock('@/utils/urlState', () => ({
-  useUrlState: (initialState: Record<string, unknown>) => useState(initialState),
+  useUrlState: (initialState: Record<string, unknown>) =>
+    useState(initialState),
 }));
 
 vi.mock('@/components/ActivateMembershipModal', () => ({
@@ -45,7 +46,10 @@ vi.mock('../MembersList', () => ({
     return (
       <div data-testid="members-list">
         <div data-testid="users-count">{props.users.length} users</div>
-        <button type="button" onClick={() => props.onActivateClick(props.users[0])}>
+        <button
+          type="button"
+          onClick={() => props.onActivateClick(props.users[0])}
+        >
           Activate
         </button>
         <button type="button" onClick={() => props.setExpiringSoon(true)}>
@@ -78,7 +82,9 @@ describe('MembersPanel', () => {
   });
 
   it('passes members to MembersList and opens modal on activation', () => {
-    const users: Profile[] = [{ id: 'u1', email: 'user@example.com' } as Profile];
+    const users: Profile[] = [
+      { id: 'u1', email: 'user@example.com' } as Profile,
+    ];
     useUsersMock.mockReturnValue({
       ...baseResult,
       data: { pages: [{ users }] },

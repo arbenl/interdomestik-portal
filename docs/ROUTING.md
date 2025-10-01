@@ -8,9 +8,9 @@ The `RoleProtectedRoute` component, located in `src/components/RoleProtectedRout
 
 ### Props
 
--   `roles`: An array of strings representing the roles that are allowed to access the route (e.g., `['admin']`, `['agent', 'admin']`).
--   `children`: The component to render if the user has the required role.
--   `redirectTo`: The path to redirect to if the user is not authorized (defaults to `/portal`).
+- `roles`: An array of strings representing the roles that are allowed to access the route (e.g., `['admin']`, `['agent', 'admin']`).
+- `children`: The component to render if the user has the required role.
+- `redirectTo`: The path to redirect to if the user is not authorized (defaults to `/portal`).
 
 ### Example
 

@@ -1,10 +1,9 @@
-
 name: Firebase CI/CD
 
 on:
   push:
-    branches: [ main ]
-    tags: [ 'v*' ]
+    branches: [main]
+    tags: ['v*']
 
 env:
   PROJECT_ID: interdomestik-portal # Replace with your Firebase Project ID

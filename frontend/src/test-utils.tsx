@@ -15,8 +15,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from './tests/helpers';
 
 export function TestProviders({
-  children, initialEntries, queryClient,
-}: { children: ReactNode; initialEntries?: MemoryRouterProps['initialEntries']; queryClient?: QueryClient; }) {
+  children,
+  initialEntries,
+  queryClient,
+}: {
+  children: ReactNode;
+  initialEntries?: MemoryRouterProps['initialEntries'];
+  queryClient?: QueryClient;
+}) {
   const client = queryClient ?? createTestQueryClient();
   return (
     <MemoryRouter initialEntries={initialEntries}>
@@ -27,7 +33,10 @@ export function TestProviders({
 
 export function renderWithProviders(
   ui: ReactElement,
-  options?: { initialEntries?: MemoryRouterProps['initialEntries']; queryClient?: QueryClient }
+  options?: {
+    initialEntries?: MemoryRouterProps['initialEntries'];
+    queryClient?: QueryClient;
+  }
 ) {
   const { initialEntries, queryClient } = options ?? {};
   return rtlRender(ui, {
@@ -41,7 +50,10 @@ export function renderWithProviders(
 
 export function renderHookWithProviders<Result, Props>(
   hook: (props: Props) => Result,
-  options?: RenderHookOptions<Props> & { initialEntries?: MemoryRouterProps['initialEntries']; queryClient?: QueryClient }
+  options?: RenderHookOptions<Props> & {
+    initialEntries?: MemoryRouterProps['initialEntries'];
+    queryClient?: QueryClient;
+  }
 ) {
   const { initialEntries, queryClient, ...rtlOptions } = options ?? {};
   const client = queryClient ?? createTestQueryClient();

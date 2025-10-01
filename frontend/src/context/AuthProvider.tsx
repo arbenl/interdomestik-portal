@@ -5,11 +5,13 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  User
+  User,
 } from 'firebase/auth';
 import { AuthContext, AuthContextType } from './AuthContext';
 
-export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+export const AuthProvider: React.FC<React.PropsWithChildren> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -26,7 +28,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const claims = tokenResult.claims;
         setIsAdmin(claims.role === 'admin');
         setIsAgent(claims.role === 'agent');
-        setAllowedRegions(Array.isArray(claims.allowedRegions) ? claims.allowedRegions : []);
+        setAllowedRegions(
+          Array.isArray(claims.allowedRegions) ? claims.allowedRegions : []
+        );
         setMfaEnabled(Boolean(claims.mfaEnabled));
       } else {
         setUser(null);
@@ -40,23 +44,26 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     return () => unsub();
   }, []);
 
-  const value = useMemo<AuthContextType>(() => ({
-    user,
-    loading,
-    isAdmin,
-    isAgent,
-    allowedRegions,
-    mfaEnabled,
-    async signIn(email, password) {
-      await signInWithEmailAndPassword(authRef.current, email, password);
-    },
-    async signUp(email, password) {
-      await createUserWithEmailAndPassword(authRef.current, email, password);
-    },
-    async signOutUser() {
-      await signOut(authRef.current);
-    }
-  }), [user, loading, isAdmin, isAgent, allowedRegions, mfaEnabled]);
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      loading,
+      isAdmin,
+      isAgent,
+      allowedRegions,
+      mfaEnabled,
+      async signIn(email, password) {
+        await signInWithEmailAndPassword(authRef.current, email, password);
+      },
+      async signUp(email, password) {
+        await createUserWithEmailAndPassword(authRef.current, email, password);
+      },
+      async signOutUser() {
+        await signOut(authRef.current);
+      },
+    }),
+    [user, loading, isAdmin, isAgent, allowedRegions, mfaEnabled]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -8,7 +8,12 @@ vi.mock('@/hooks/admin/useCoupons');
 describe('Admin Coupons panel', () => {
   it('renders and saves coupon', async () => {
     const create = vi.fn().mockResolvedValue({ ok: true });
-    (useCoupons as Mock).mockReturnValue({ data: [], isLoading: false, error: null, create });
+    (useCoupons as Mock).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      create,
+    });
 
     const push = vi.fn();
     renderWithProviders(<CouponsPanel push={push} />);
@@ -20,10 +25,18 @@ describe('Admin Coupons panel', () => {
     fireEvent.click(screen.getByRole('button', { name: /Save Coupon/i }));
 
     await waitFor(() => {
-      expect(create).toHaveBeenCalledWith({ code: 'WELCOME2025', percentOff: 0, amountOff: 500, active: true });
+      expect(create).toHaveBeenCalledWith({
+        code: 'WELCOME2025',
+        percentOff: 0,
+        amountOff: 500,
+        active: true,
+      });
     });
     await waitFor(() => {
-      expect(push).toHaveBeenCalledWith({ type: 'success', message: 'Coupon saved' });
+      expect(push).toHaveBeenCalledWith({
+        type: 'success',
+        message: 'Coupon saved',
+      });
     });
   });
 });

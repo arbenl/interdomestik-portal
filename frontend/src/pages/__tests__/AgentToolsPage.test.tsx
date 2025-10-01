@@ -28,7 +28,23 @@ describe('AgentTools page', () => {
       signOutUser: vi.fn(),
     });
     vi.mocked(useUsers).mockReturnValue({
-      data: { pages: [{ users: [{ id: 'u1', name: 'John', email: 'john@example.com', phone: '123', orgId: 'ORG', memberNo: '001', region: 'PRISHTINA' }] }] },
+      data: {
+        pages: [
+          {
+            users: [
+              {
+                id: 'u1',
+                name: 'John',
+                email: 'john@example.com',
+                phone: '123',
+                orgId: 'ORG',
+                memberNo: '001',
+                region: 'PRISHTINA',
+              },
+            ],
+          },
+        ],
+      },
       isLoading: false,
       error: null,
       fetchNextPage: vi.fn(),
@@ -50,7 +66,11 @@ describe('AgentTools page', () => {
       signUp: vi.fn(),
       signOutUser: vi.fn(),
     } as any);
-    vi.mocked(useUsers).mockReturnValue({ isLoading: false, error: null, data: { pages: [] } } as any);
+    vi.mocked(useUsers).mockReturnValue({
+      isLoading: false,
+      error: null,
+      data: { pages: [] },
+    } as any);
 
     renderWithProviders(<AgentTools />);
     expect(screen.getByText(/You are not authorized/i)).toBeInTheDocument();
@@ -69,18 +89,27 @@ describe('AgentTools page', () => {
     renderWithProviders(<AgentTools />);
 
     fireEvent.click(screen.getByText('Edit'));
-    fireEvent.change(screen.getByDisplayValue('John'), { target: { value: 'Updated' } });
-    fireEvent.change(screen.getByDisplayValue('123'), { target: { value: '999' } });
-    fireEvent.change(screen.getByDisplayValue('ORG'), { target: { value: 'NEWORG' } });
+    fireEvent.change(screen.getByDisplayValue('John'), {
+      target: { value: 'Updated' },
+    });
+    fireEvent.change(screen.getByDisplayValue('123'), {
+      target: { value: '999' },
+    });
+    fireEvent.change(screen.getByDisplayValue('ORG'), {
+      target: { value: 'NEWORG' },
+    });
 
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(updateDoc).toHaveBeenCalledWith(expect.objectContaining({ __path: 'members/u1' }), {
-        name: 'Updated',
-        phone: '999',
-        orgId: 'NEWORG',
-      });
+      expect(updateDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ __path: 'members/u1' }),
+        {
+          name: 'Updated',
+          phone: '999',
+          orgId: 'NEWORG',
+        }
+      );
     });
     expect(refetchMock).toHaveBeenCalled();
     expect(await screen.findByText('Member updated')).toBeInTheDocument();

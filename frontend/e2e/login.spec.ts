@@ -7,5 +7,7 @@ test('logs in and lands on profile', async ({ page }) => {
   await page.getByRole('button', { name: /Sign in/i }).click();
 
   // Wait for something unique on /profile
-  await expect(page.getByRole('heading', { name: /My Profile/i })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /My Profile/i })
+  ).toBeVisible();
 });

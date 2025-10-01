@@ -8,8 +8,10 @@ describe('SignIn page', () => {
     renderWithProviders(
       <ToastProvider>
         <SignIn />
-      </ToastProvider>,
+      </ToastProvider>
     );
-    expect(screen.getByRole('heading', { name: /Sign In/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Sign In/i })
+    ).toBeInTheDocument();
   });
 });

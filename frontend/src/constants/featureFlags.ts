@@ -38,7 +38,9 @@ function parseFlag(value: unknown, fallback: boolean): boolean {
   return fallback;
 }
 
-const isDevRuntime = Boolean(import.meta.env.DEV && import.meta.env.MODE !== 'test');
+const isDevRuntime = Boolean(
+  import.meta.env.DEV && import.meta.env.MODE !== 'test'
+);
 
 const defaults: Record<FeatureFlagName, boolean> = {
   assistant: isDevRuntime,
@@ -46,12 +48,15 @@ const defaults: Record<FeatureFlagName, boolean> = {
 };
 
 export function isFeatureEnabled(flag: FeatureFlagName): boolean {
-  const runtimeOverride = typeof window !== 'undefined' ? window.__portalFlags?.[flag] : undefined;
+  const runtimeOverride =
+    typeof window !== 'undefined' ? window.__portalFlags?.[flag] : undefined;
   if (typeof runtimeOverride === 'boolean') {
     return runtimeOverride;
   }
 
-  const envValue = (import.meta.env as Record<string, unknown>)[`VITE_FLAG_${flag.toUpperCase()}`];
+  const envValue = (import.meta.env as Record<string, unknown>)[
+    `VITE_FLAG_${flag.toUpperCase()}`
+  ];
   return parseFlag(envValue, defaults[flag]);
 }
 

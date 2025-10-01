@@ -24,7 +24,15 @@ describe('useUsers', () => {
   });
 
   it('should return loading state initially', () => {
-    const { result } = renderHookWithProviders(() => useUsers({ allowedRegions: ['PRISHTINA'], region: 'all', status: 'all', expiringDays: null, limit: 10 }));
+    const { result } = renderHookWithProviders(() =>
+      useUsers({
+        allowedRegions: ['PRISHTINA'],
+        region: 'all',
+        status: 'all',
+        expiringDays: null,
+        limit: 10,
+      })
+    );
     expect(result.current.isLoading).toBe(true);
   });
 
@@ -33,10 +41,21 @@ describe('useUsers', () => {
       { id: '1', name: 'User A' },
       { id: '2', name: 'User B' },
     ];
-    const mockDocs = mockUsers.map(user => ({ id: user.id, data: () => user }));
+    const mockDocs = mockUsers.map((user) => ({
+      id: user.id,
+      data: () => user,
+    }));
     (getDocs as Mock).mockResolvedValue({ docs: mockDocs });
 
-    const { result } = renderHookWithProviders(() => useUsers({ allowedRegions: ['PRISHTINA'], region: 'all', status: 'all', expiringDays: null, limit: 10 }));
+    const { result } = renderHookWithProviders(() =>
+      useUsers({
+        allowedRegions: ['PRISHTINA'],
+        region: 'all',
+        status: 'all',
+        expiringDays: null,
+        limit: 10,
+      })
+    );
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -49,7 +68,15 @@ describe('useUsers', () => {
     const mockError = new Error('Failed to fetch');
     (getDocs as Mock).mockRejectedValue(mockError);
 
-    const { result } = renderHookWithProviders(() => useUsers({ allowedRegions: ['PRISHTINA'], region: 'all', status: 'all', expiringDays: null, limit: 10 }));
+    const { result } = renderHookWithProviders(() =>
+      useUsers({
+        allowedRegions: ['PRISHTINA'],
+        region: 'all',
+        status: 'all',
+        expiringDays: null,
+        limit: 10,
+      })
+    );
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);

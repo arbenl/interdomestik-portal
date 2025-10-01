@@ -7,10 +7,20 @@ import { promises as fs } from 'node:fs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const API_KEY = process.env.VITE_FIREBASE_API_KEY || 'demo-key';
-const PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || 'interdomestik-dev';
-const useEmulators = ['1', 'true', 'TRUE'].includes(String(process.env.VITE_USE_EMULATORS ?? '').trim());
+const PROJECT_ID =
+  process.env.VITE_FIREBASE_PROJECT_ID ||
+  process.env.FIREBASE_PROJECT_ID ||
+  process.env.GCLOUD_PROJECT ||
+  'interdomestik-dev';
+const useEmulators = ['1', 'true', 'TRUE'].includes(
+  String(process.env.VITE_USE_EMULATORS ?? '').trim()
+);
 const authHostFromEnv = process.env.FIREBASE_AUTH_EMULATOR_HOST;
-const authHost = authHostFromEnv || (useEmulators ? `${process.env.VITE_EMU_AUTH_HOST ?? '127.0.0.1'}:${process.env.VITE_EMU_AUTH_PORT ?? '9099'}` : '');
+const authHost =
+  authHostFromEnv ||
+  (useEmulators
+    ? `${process.env.VITE_EMU_AUTH_HOST ?? '127.0.0.1'}:${process.env.VITE_EMU_AUTH_PORT ?? '9099'}`
+    : '');
 
 const BASE = authHost
   ? `http://${authHost}/identitytoolkit.googleapis.com/v1`
@@ -18,12 +28,18 @@ const BASE = authHost
 
 // --- tiny REST helpers -------------------------------------------------------
 async function jsonFetch<T>(url: string, init: RequestInit): Promise<T> {
-  const res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init.headers||{}) } });
+  const res = await fetch(url, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...(init.headers || {}) },
+  });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     // Useful console for CI
     console.error('REST error', res.status, body);
-    throw Object.assign(new Error(body?.error?.message || `HTTP ${res.status}`), { status: res.status, body });
+    throw Object.assign(
+      new Error(body?.error?.message || `HTTP ${res.status}`),
+      { status: res.status, body }
+    );
   }
   return body as T;
 }
@@ -35,13 +51,23 @@ async function signUpOrIn(email: string, password: string): Promise<AuthReply> {
   try {
     return await jsonFetch<AuthReply>(
       `${BASE}/accounts:signUp?key=${API_KEY}`,
-      { method: 'POST', body: JSON.stringify({ email, password, returnSecureToken: true }) },
+      {
+        method: 'POST',
+        body: JSON.stringify({ email, password, returnSecureToken: true }),
+      }
     );
   } catch (e: unknown) {
-    if (e instanceof Error && ((e as { body?: { error?: { message?: string } } }).body?.error?.message === 'EMAIL_EXISTS')) {
+    if (
+      e instanceof Error &&
+      (e as { body?: { error?: { message?: string } } }).body?.error
+        ?.message === 'EMAIL_EXISTS'
+    ) {
       return await jsonFetch<AuthReply>(
         `${BASE}/accounts:signInWithPassword?key=${API_KEY}`,
-        { method: 'POST', body: JSON.stringify({ email, password, returnSecureToken: true }) },
+        {
+          method: 'POST',
+          body: JSON.stringify({ email, password, returnSecureToken: true }),
+        }
       );
     }
     throw e;
@@ -52,21 +78,18 @@ async function setClaims(localId: string, claims: Record<string, unknown>) {
   const payload = { localId, customAttributes: JSON.stringify(claims) };
 
   if (authHost) {
-    await jsonFetch(
-      `${BASE}/projects/${PROJECT_ID}/accounts:update`,
-      {
-        method: 'POST',
-        body: JSON.stringify(payload),
-        headers: { Authorization: 'Bearer owner' },
-      },
-    );
+    await jsonFetch(`${BASE}/projects/${PROJECT_ID}/accounts:update`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { Authorization: 'Bearer owner' },
+    });
     return;
   }
 
-  await jsonFetch(
-    `${BASE}/accounts:update?key=${API_KEY}`,
-    { method: 'POST', body: JSON.stringify({ ...payload, targetProjectId: PROJECT_ID }) },
-  );
+  await jsonFetch(`${BASE}/accounts:update?key=${API_KEY}`, {
+    method: 'POST',
+    body: JSON.stringify({ ...payload, targetProjectId: PROJECT_ID }),
+  });
 }
 
 // --- Playwright global setup -------------------------------------------------

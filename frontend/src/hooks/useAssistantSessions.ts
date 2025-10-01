@@ -1,5 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, limit, orderBy, query, type DocumentData } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  type DocumentData,
+} from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 
 export type AssistantSession = {
@@ -31,7 +38,9 @@ export function useAssistantSessions() {
         limit(MAX_SESSIONS)
       );
       const snapshot = await getDocs(sessionsQuery);
-      const sessions = snapshot.docs.map(doc => normalizeSession(doc.id, doc.data()));
+      const sessions = snapshot.docs.map((doc) =>
+        normalizeSession(doc.id, doc.data())
+      );
       return { sessions };
     },
     staleTime: 60_000,

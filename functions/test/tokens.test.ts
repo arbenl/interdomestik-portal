@@ -17,4 +17,3 @@ describe('tokens: sign/verify card token', () => {
     expect(c.exp).to.equal(exp);
   });
 });
-

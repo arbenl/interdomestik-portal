@@ -19,7 +19,6 @@
     "typecheck": "pnpm --filter frontend typecheck && pnpm --filter functions typecheck",
     "test:ci": "pnpm --filter frontend test:run && pnpm --filter functions test",
     "test:rules": "vitest -c vitest.config.rules.ts",
-    
     "check": "node scripts/check-errors.js",
     "verify:frontend": "pnpm --filter frontend typecheck && pnpm --filter frontend lint --no-fix && pnpm --filter frontend build && pnpm --filter frontend test:ci",
     "specify": "uvx --from git+https://github.com/github/spec-kit.git specify"
@@ -75,7 +74,7 @@
     ]
   },
   "packageManager": "pnpm@10.16.1+sha521.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706",
-"pnpm": {
+  "pnpm": {
     "overrides": {
       "zod": "^4.1.11"
     }

@@ -6,17 +6,17 @@ Authentication is handled by Firebase Authentication and a custom `AuthProvider`
 
 The `AuthProvider` component, located in `src/context/AuthProvider.tsx`, is the core of the authentication system. It wraps the entire application and performs the following tasks:
 
--   It listens for changes in the Firebase auth state using `onAuthStateChanged`.
--   When a user signs in, it calls `getIdTokenResult()` to get the user's ID token and custom claims.
--   It stores the user object, role information (`isAdmin`, `isAgent`), allowed regions, and a loading state in a React context.
--   It provides this context to all its children.
+- It listens for changes in the Firebase auth state using `onAuthStateChanged`.
+- When a user signs in, it calls `getIdTokenResult()` to get the user's ID token and custom claims.
+- It stores the user object, role information (`isAdmin`, `isAgent`), allowed regions, and a loading state in a React context.
+- It provides this context to all its children.
 
 ## Custom Claims
 
 User roles are managed using Firebase custom claims. The following claims are used:
 
--   `role`: A string that can be `'admin'` or `'agent'`.
--   `allowedRegions`: An array of strings representing the regions a user is allowed to manage.
+- `role`: A string that can be `'admin'` or `'agent'`.
+- `allowedRegions`: An array of strings representing the regions a user is allowed to manage.
 
 These claims are set on the user object on the backend (e.g., in a Firebase Function) and are securely propagated to the client via the ID token.
 
@@ -26,11 +26,11 @@ The `useAuth` hook, located in `src/context/auth.ts`, provides a simple and clea
 
 ### API
 
--   `user`: The Firebase `User` object, or `null` if the user is not signed in.
--   `isAdmin`: A boolean that is `true` if the user has the `admin` role.
--   `isAgent`: A boolean that is `true` if the user has the `agent` role.
--   `allowedRegions`: An array of strings representing the regions the user is allowed to manage.
--   `loading`: A boolean that is `true` while the authentication state is being resolved.
+- `user`: The Firebase `User` object, or `null` if the user is not signed in.
+- `isAdmin`: A boolean that is `true` if the user has the `admin` role.
+- `isAgent`: A boolean that is `true` if the user has the `agent` role.
+- `allowedRegions`: An array of strings representing the regions the user is allowed to manage.
+- `loading`: A boolean that is `true` while the authentication state is being resolved.
 
 ### Example
 

@@ -2,14 +2,19 @@ import { expect } from 'chai';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const functionsTest = require('firebase-functions-test');
 import { admin, db } from '../src/firebaseAdmin';
-import { createCoupon, listCoupons, resendMembershipCard, startAssistantSuggestion } from '../src/index';
+import {
+  createCoupon,
+  listCoupons,
+  resendMembershipCard,
+  startAssistantSuggestion,
+} from '../src/index';
 import { activateMembership } from '../src/lib/startMembership';
 
 const testEnv = functionsTest({ projectId: 'interdomestik-dev' });
 
 async function clearCollection(path: string) {
   const docs = await db.collection(path).listDocuments();
-  await Promise.all(docs.map(docRef => docRef.delete()));
+  await Promise.all(docs.map((docRef) => docRef.delete()));
 }
 
 describe('admin callables', () => {
@@ -35,10 +40,19 @@ describe('admin callables', () => {
   it('resendMembershipCard works for self and admin, and fails without active membership', async () => {
     // Seed user with active membership
     const uid = 'u_rc_' + Date.now();
-    await admin.auth().createUser({ uid, email: `rc_${Date.now()}@example.com` }).catch(() => {});
-    await db.collection('members').doc(uid).set({
-      email: `rc_${Date.now()}@example.com`, name: 'RC', memberNo: 'INT-2025-777777', region: 'PRISHTINA'
-    });
+    await admin
+      .auth()
+      .createUser({ uid, email: `rc_${Date.now()}@example.com` })
+      .catch(() => {});
+    await db
+      .collection('members')
+      .doc(uid)
+      .set({
+        email: `rc_${Date.now()}@example.com`,
+        name: 'RC',
+        memberNo: 'INT-2025-777777',
+        region: 'PRISHTINA',
+      });
     const year = new Date().getUTCFullYear();
     await activateMembership(uid, year, 25, 'EUR', 'cash', null);
 
@@ -53,10 +67,23 @@ describe('admin callables', () => {
 
     // Failure when no active membership
     const uid2 = 'u_rc_fail_' + Date.now();
-    await admin.auth().createUser({ uid: uid2, email: `rcf_${Date.now()}@example.com` }).catch(() => {});
-    await db.collection('members').doc(uid2).set({ email: `rcf_${Date.now()}@example.com`, name: 'NoActive', memberNo: 'INT-2025-888888', region: 'PRISHTINA' });
+    await admin
+      .auth()
+      .createUser({ uid: uid2, email: `rcf_${Date.now()}@example.com` })
+      .catch(() => {});
+    await db
+      .collection('members')
+      .doc(uid2)
+      .set({
+        email: `rcf_${Date.now()}@example.com`,
+        name: 'NoActive',
+        memberNo: 'INT-2025-888888',
+        region: 'PRISHTINA',
+      });
     try {
-      await wrapResend({}, { auth: { uid: uid2, token: { role: 'member' } } } as any);
+      await wrapResend({}, {
+        auth: { uid: uid2, token: { role: 'member' } },
+      } as any);
       throw new Error('should have thrown');
     } catch (e: any) {
       expect(e.code).to.equal('failed-precondition');
@@ -65,8 +92,12 @@ describe('admin callables', () => {
 });
 
 describe('assistant callables', () => {
-  const memberCtx = { auth: { uid: 'assistant-member', token: { role: 'member' } } } as any;
-  const adminCtx = { auth: { uid: 'assistant-admin', token: { role: 'admin' } } } as any;
+  const memberCtx = {
+    auth: { uid: 'assistant-member', token: { role: 'member' } },
+  } as any;
+  const adminCtx = {
+    auth: { uid: 'assistant-admin', token: { role: 'admin' } },
+  } as any;
 
   beforeEach(async () => {
     await clearCollection('assistantTelemetry');
@@ -84,24 +115,41 @@ describe('assistant callables', () => {
 
   it('stores conversation and returns contextual guidance', async () => {
     const wrap = testEnv.wrap(startAssistantSuggestion as any);
-    const result = await wrap({ prompt: 'How do I renew a membership?' }, adminCtx) as any;
+    const result = (await wrap(
+      { prompt: 'How do I renew a membership?' },
+      adminCtx
+    )) as any;
     expect(result.reply).to.match(/renew/i);
-    const log = await db.collection('assistantSessions').doc('assistant-admin').collection('messages').limit(2).get();
+    const log = await db
+      .collection('assistantSessions')
+      .doc('assistant-admin')
+      .collection('messages')
+      .limit(2)
+      .get();
     expect(log.docs.length).to.be.greaterThan(0);
     expect(result.latencyMs).to.be.greaterThan(0);
 
-    const sessionDoc = await db.collection('assistantSessions').doc('assistant-admin').get();
+    const sessionDoc = await db
+      .collection('assistantSessions')
+      .doc('assistant-admin')
+      .get();
     expect(sessionDoc.get('metrics.lastLatencyMs')).to.be.greaterThan(0);
     expect(sessionDoc.get('metrics.requestCount')).to.equal(1);
 
-    const telemetrySnap = await db.collection('assistantTelemetry').where('uid', '==', 'assistant-admin').get();
+    const telemetrySnap = await db
+      .collection('assistantTelemetry')
+      .where('uid', '==', 'assistant-admin')
+      .get();
     expect(telemetrySnap.empty).to.equal(false);
     expect(telemetrySnap.docs[0].get('latencyMs')).to.be.greaterThan(0);
   });
 
   it('provides member-friendly fallback messaging', async () => {
     const wrap = testEnv.wrap(startAssistantSuggestion as any);
-    const result = await wrap({ prompt: 'hello assistant' }, memberCtx) as any;
+    const result = (await wrap(
+      { prompt: 'hello assistant' },
+      memberCtx
+    )) as any;
     expect(result.reply).to.match(/membership|billing/i);
   });
 });

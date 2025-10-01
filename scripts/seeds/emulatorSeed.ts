@@ -1,6 +1,15 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, doc, setDoc, connectFirestoreEmulator } from 'firebase/firestore';
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  connectAuthEmulator,
+} from 'firebase/auth';
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  connectFirestoreEmulator,
+} from 'firebase/firestore';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
@@ -25,7 +34,11 @@ async function seed() {
   const users = [
     { email: 'admin@example.com', password: 'S3cureP@ssw0rd!', role: 'admin' },
     { email: 'agent@example.com', password: 'S3cureP@ssw0rd!', role: 'agent' },
-    { email: 'member@example.com', password: 'S3cureP@ssw0rd!', role: 'member' },
+    {
+      email: 'member@example.com',
+      password: 'S3cureP@ssw0rd!',
+      role: 'member',
+    },
   ];
 
   // Create 27 additional members
@@ -39,8 +52,15 @@ async function seed() {
 
   for (const userData of users) {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
-      await setDoc(doc(firestore, 'members', userCredential.user.uid), { role: userData.role, email: userData.email });
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        userData.email,
+        userData.password
+      );
+      await setDoc(doc(firestore, 'members', userCredential.user.uid), {
+        role: userData.role,
+        email: userData.email,
+      });
       console.log(`Created user: ${userData.email}`);
     } catch (error) {
       console.error(`Failed to create user ${userData.email}:`, error);

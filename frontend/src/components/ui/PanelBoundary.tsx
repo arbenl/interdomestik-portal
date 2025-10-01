@@ -15,7 +15,7 @@ class PanelBoundary extends Component<Props, State> {
     hasError: false,
   };
 
-static getDerivedStateFromError() {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 

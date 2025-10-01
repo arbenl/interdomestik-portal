@@ -1,6 +1,6 @@
-import { globalIgnores } from 'eslint/config'
-import tsParser from '@typescript-eslint/parser'
-import baseConfig from 'eslint-config-custom'
+import { globalIgnores } from 'eslint/config';
+import tsParser from '@typescript-eslint/parser';
+import baseConfig from 'eslint-config-custom';
 
 export default [
   ...baseConfig,
@@ -19,4 +19,4 @@ export default [
       'prefer-const': 'off',
     },
   },
-]
+];

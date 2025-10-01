@@ -40,7 +40,11 @@ type Props = {
  *   <AdminPage />
  * </RoleProtectedRoute>
  */
-export default function RoleProtectedRoute({ children, roles, redirectTo = "/portal" }: Props) {
+export default function RoleProtectedRoute({
+  children,
+  roles,
+  redirectTo = '/portal',
+}: Props) {
   const { user, isAdmin, isAgent, loading } = useAuth();
 
   if (loading) {
@@ -51,8 +55,12 @@ export default function RoleProtectedRoute({ children, roles, redirectTo = "/por
     return <Navigate to="/signin" />;
   }
 
-const userRoles: Record<Role, boolean> = { admin: isAdmin, agent: isAgent, member: !isAdmin && !isAgent };
-  const hasRequiredRole = roles.some(role => userRoles[role]);
+  const userRoles: Record<Role, boolean> = {
+    admin: isAdmin,
+    agent: isAgent,
+    member: !isAdmin && !isAgent,
+  };
+  const hasRequiredRole = roles.some((role) => userRoles[role]);
 
   if (!hasRequiredRole) {
     return <Navigate to={redirectTo} />;

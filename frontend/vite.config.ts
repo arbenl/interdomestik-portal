@@ -8,8 +8,8 @@ export default defineConfig({
   envDir: '..',
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src')
-    }
+      '@': path.resolve(__dirname, 'src'),
+    },
   },
   plugins: [
     react(),
@@ -23,7 +23,12 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/functions'],
+          firebase: [
+            'firebase/app',
+            'firebase/auth',
+            'firebase/firestore',
+            'firebase/functions',
+          ],
           react: ['react', 'react-dom', 'react-router-dom'],
         },
       },

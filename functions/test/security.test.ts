@@ -10,9 +10,19 @@ describe('security logic', () => {
     const ctx = { auth: { uid: 'user-1', token: { role: 'agent' } } } as any;
 
     const authInstance = admin.auth();
-    sinon.stub(authInstance, 'getUser').resolves({ customClaims: { role: 'agent', allowedRegions: ['PRISHTINA'], mfaEnabled: false } } as any);
-    const setCustomClaims = sinon.stub(authInstance, 'setCustomUserClaims').resolves();
-    const revokeTokens = sinon.stub(authInstance, 'revokeRefreshTokens').resolves();
+    sinon.stub(authInstance, 'getUser').resolves({
+      customClaims: {
+        role: 'agent',
+        allowedRegions: ['PRISHTINA'],
+        mfaEnabled: false,
+      },
+    } as any);
+    const setCustomClaims = sinon
+      .stub(authInstance, 'setCustomUserClaims')
+      .resolves();
+    const revokeTokens = sinon
+      .stub(authInstance, 'revokeRefreshTokens')
+      .resolves();
 
     const membersSet = sinon.stub().resolves();
     const auditAdd = sinon.stub().resolves();

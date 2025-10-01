@@ -1,10 +1,21 @@
 import { vi } from 'vitest';
-import type { DocumentReference, Query, QuerySnapshot, DocumentSnapshot } from 'firebase/firestore';
+import type {
+  DocumentReference,
+  Query,
+  QuerySnapshot,
+  DocumentSnapshot,
+} from 'firebase/firestore';
 
-type SnapshotEmitter = (next: (snap: Partial<QuerySnapshot>) => void, error: (err: Error) => void) => void;
+type SnapshotEmitter = (
+  next: (snap: Partial<QuerySnapshot>) => void,
+  error: (err: Error) => void
+) => void;
 const emitters = new Map<string, SnapshotEmitter>();
 
-export function setFirestoreSnapshotEmitter(key: string, emitter: SnapshotEmitter) {
+export function setFirestoreSnapshotEmitter(
+  key: string,
+  emitter: SnapshotEmitter
+) {
   emitters.set(key, emitter);
 }
 interface _HasKey {
@@ -17,7 +28,10 @@ export function keyFor(refOrQuery: DocumentReference | Query): string {
 }
 
 vi.mock('firebase/firestore', async () => {
-  const actual = await vi.importActual<typeof import('firebase/firestore')>('firebase/firestore');
+  const actual =
+    await vi.importActual<typeof import('firebase/firestore')>(
+      'firebase/firestore'
+    );
 
   function collection(_db: unknown, ...segments: string[]): Query {
     const path = segments.join('/');
@@ -29,22 +43,31 @@ vi.mock('firebase/firestore', async () => {
   }
   function query(ref: Query): Query {
     const k = keyFor(ref);
-    return { __type: 'query', path: `q:${k}`, __key: `q:${k}` } as unknown as Query;
+    return {
+      __type: 'query',
+      path: `q:${k}`,
+      __key: `q:${k}`,
+    } as unknown as Query;
   }
   function onSnapshot(
     refOrQuery: DocumentReference | Query,
     onNext: (snap: QuerySnapshot | DocumentSnapshot) => void,
-    onError: (err: Error) => void,
+    onError: (err: Error) => void
   ): () => void {
     queueMicrotask(() => {
       const k = keyFor(refOrQuery);
       const emit = emitters.get(k);
       if (emit) {
-        const emitterCallback = (snap: Partial<QuerySnapshot>) => onNext?.(snap as QuerySnapshot);
+        const emitterCallback = (snap: Partial<QuerySnapshot>) =>
+          onNext?.(snap as QuerySnapshot);
         const errorCallback = (err: Error) => onError?.(err);
         emit(emitterCallback, errorCallback);
       } else {
-        onNext?.({ docs: [], size: 0, empty: true } as unknown as QuerySnapshot);
+        onNext?.({
+          docs: [],
+          size: 0,
+          empty: true,
+        } as unknown as QuerySnapshot);
       }
     });
     return () => {};
@@ -57,11 +80,15 @@ vi.mock('firebase/firestore', async () => {
       let snapshot: Partial<QuerySnapshot> = {};
       emit(
         (snap) => (snapshot = snap),
-        () => {},
+        () => {}
       );
       return Promise.resolve(snapshot as QuerySnapshot);
     }
-    return Promise.resolve({ docs: [], size: 0, empty: true } as unknown as QuerySnapshot);
+    return Promise.resolve({
+      docs: [],
+      size: 0,
+      empty: true,
+    } as unknown as QuerySnapshot);
   }
 
   return {

@@ -21,23 +21,23 @@ VITE_FIREBASE_APP_ID=...
 
 From the **root** of the monorepo:
 
--   `pnpm -F frontend dev`: Starts the Vite development server.
--   `pnpm -F frontend build`: Builds the application for production.
--   `pnpm -F frontend preview`: Serves the production build locally for previewing.
--   `pnpm -F frontend lint`: Runs ESLint to check for code quality issues.
+- `pnpm -F frontend dev`: Starts the Vite development server.
+- `pnpm -F frontend build`: Builds the application for production.
+- `pnpm -F frontend preview`: Serves the production build locally for previewing.
+- `pnpm -F frontend lint`: Runs ESLint to check for code quality issues.
 
 ### Testing
 
--   `pnpm -F frontend test`: Runs the unit and integration tests with Vitest in watch mode.
--   `pnpm -F frontend test:ci`: Runs the unit and integration tests once with coverage.
--   `pnpm -F frontend e2e`: Runs the end-to-end tests with Playwright.
--   `pnpm -F frontend e2e:ui`: Runs the end-to-end tests with the Playwright UI.
--   `pnpm -F frontend e2e:report`: Shows the Playwright test report.
+- `pnpm -F frontend test`: Runs the unit and integration tests with Vitest in watch mode.
+- `pnpm -F frontend test:ci`: Runs the unit and integration tests once with coverage.
+- `pnpm -F frontend e2e`: Runs the end-to-end tests with Playwright.
+- `pnpm -F frontend e2e:ui`: Runs the end-to-end tests with the Playwright UI.
+- `pnpm -F frontend e2e:report`: Shows the Playwright test report.
 
 ## Documentation
 
 For detailed information on architecture, coding standards, and more, please refer to the central `/docs` directory at the root of the repository.
 
--   [Architecture Overview](../docs/architecture.md)
--   [Authentication & Roles](../docs/auth-and-roles.md)
--   [UI and Theming](../docs/ui-and-theming.md)
+- [Architecture Overview](../docs/architecture.md)
+- [Authentication & Roles](../docs/auth-and-roles.md)
+- [UI and Theming](../docs/ui-and-theming.md)

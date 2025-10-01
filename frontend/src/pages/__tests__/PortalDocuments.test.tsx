@@ -11,12 +11,22 @@ vi.mock('@/hooks/useDocumentShares');
 vi.mock('@/hooks/useDocumentShareActivity');
 vi.mock('@/hooks/useMfaPreference', () => ({
   __esModule: true,
-  default: () => ({ mfaEnabled: true, setMfaPreference: vi.fn(), updating: false }),
-  useMfaPreference: () => ({ mfaEnabled: true, setMfaPreference: vi.fn(), updating: false }),
+  default: () => ({
+    mfaEnabled: true,
+    setMfaPreference: vi.fn(),
+    updating: false,
+  }),
+  useMfaPreference: () => ({
+    mfaEnabled: true,
+    setMfaPreference: vi.fn(),
+    updating: false,
+  }),
 }));
 vi.mock('@/services/documents');
 const pushMock = vi.fn();
-vi.mock('@/components/ui/useToast', () => ({ useToast: () => ({ push: pushMock }) }));
+vi.mock('@/components/ui/useToast', () => ({
+  useToast: () => ({ push: pushMock }),
+}));
 
 const refetchMock = vi.fn();
 
@@ -52,7 +62,9 @@ describe('PortalDocuments page', () => {
           fileName: 'statement.pdf',
           storagePath: 'documents/statement.pdf',
           allowedUids: ['admin-1', 'member-1'],
-          recipients: [{ uid: 'member-1', name: 'Member One', region: 'PRISHTINA' }],
+          recipients: [
+            { uid: 'member-1', name: 'Member One', region: 'PRISHTINA' },
+          ],
           createdAt: new Date('2025-09-24T12:00:00Z'),
           updatedAt: new Date('2025-09-25T09:00:00Z'),
           ownerRole: 'admin',
@@ -71,7 +83,9 @@ describe('PortalDocuments page', () => {
     expect(screen.getByLabelText(/File name/i)).toBeInTheDocument();
     expect(screen.getByText('statement.pdf')).toBeInTheDocument();
     expect(screen.getByText(/member-1/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /View history/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /View history/i })
+    ).toBeInTheDocument();
   });
 
   it('submits share requests and shows success toast', async () => {
@@ -99,14 +113,28 @@ describe('PortalDocuments page', () => {
       isLoading: false,
       isError: false,
     } as any);
-    vi.mocked(shareDocument).mockResolvedValue({ ok: true, id: 'share-123', recipients: ['member-1'] });
+    vi.mocked(shareDocument).mockResolvedValue({
+      ok: true,
+      id: 'share-123',
+      recipients: ['member-1'],
+    });
 
     renderWithProviders(<PortalDocuments />);
 
-    fireEvent.change(screen.getByLabelText(/File name/i), { target: { value: 'policy.pdf' } });
-    fireEvent.change(screen.getByLabelText(/Storage path/i), { target: { value: 'documents/policy.pdf' } });
-    fireEvent.change(screen.getByLabelText(/Recipient UIDs/i), { target: { value: 'member-1 member-2' } });
-    fireEvent.submit(screen.getByRole('button', { name: /Share document/i }).closest('form') as HTMLFormElement);
+    fireEvent.change(screen.getByLabelText(/File name/i), {
+      target: { value: 'policy.pdf' },
+    });
+    fireEvent.change(screen.getByLabelText(/Storage path/i), {
+      target: { value: 'documents/policy.pdf' },
+    });
+    fireEvent.change(screen.getByLabelText(/Recipient UIDs/i), {
+      target: { value: 'member-1 member-2' },
+    });
+    fireEvent.submit(
+      screen
+        .getByRole('button', { name: /Share document/i })
+        .closest('form') as HTMLFormElement
+    );
 
     await waitFor(() => {
       expect(shareDocument).toHaveBeenCalledWith({
@@ -115,7 +143,10 @@ describe('PortalDocuments page', () => {
         note: undefined,
         recipients: ['member-1', 'member-2'],
       });
-      expect(pushMock).toHaveBeenCalledWith({ type: 'success', message: 'Document shared successfully.' });
+      expect(pushMock).toHaveBeenCalledWith({
+        type: 'success',
+        message: 'Document shared successfully.',
+      });
       expect(refetchMock).toHaveBeenCalled();
     });
   });
@@ -170,7 +201,9 @@ describe('PortalDocuments page', () => {
           fileName: 'policy.pdf',
           storagePath: 'documents/policy.pdf',
           allowedUids: ['admin-1', 'member-1'],
-          recipients: [{ uid: 'member-1', name: 'Member One', region: 'PRISHTINA' }],
+          recipients: [
+            { uid: 'member-1', name: 'Member One', region: 'PRISHTINA' },
+          ],
           createdAt: new Date(),
           updatedAt: new Date(),
           ownerRole: 'admin',
@@ -184,9 +217,18 @@ describe('PortalDocuments page', () => {
       isLoading: false,
     } as any);
     vi.mocked(useDocumentShareActivity).mockReturnValue({
-      data: { items: [
-        { id: 'act-1', action: 'created', actorUid: 'admin-1', recipients: ['member-1'], note: 'Initial share', createdAt: new Date('2025-09-25T10:00:00Z') },
-      ] },
+      data: {
+        items: [
+          {
+            id: 'act-1',
+            action: 'created',
+            actorUid: 'admin-1',
+            recipients: ['member-1'],
+            note: 'Initial share',
+            createdAt: new Date('2025-09-25T10:00:00Z'),
+          },
+        ],
+      },
       isLoading: false,
       isError: false,
     } as any);

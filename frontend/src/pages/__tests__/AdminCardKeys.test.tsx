@@ -9,21 +9,52 @@ function PanelBoundaryPassthrough({ children }: { children: ReactNode }) {
 }
 
 vi.mock('@/hooks/useAuth');
-vi.mock('@/components/ui/PanelBoundary', () => ({ __esModule: true, default: PanelBoundaryPassthrough }));
-vi.mock('@/components/AgentRegistrationCard', () => ({ default: () => <div data-testid="agent-card" /> }));
-vi.mock('@/components/ui/useToast', () => ({ useToast: () => ({ push: vi.fn() }) }));
-vi.mock('@/features/admin/emulator/EmulatorPanel', () => ({ EmulatorPanel: () => <div data-testid="emulator-panel" /> }));
-vi.mock('@/features/admin/role-manager/RoleManagerPanel', () => ({ RoleManagerPanel: () => <div data-testid="role-manager" /> }));
-vi.mock('@/features/admin/metrics/MetricsPanel', () => ({ MetricsPanel: () => <div data-testid="metrics" /> }));
-vi.mock('@/features/admin/organizations/OrgPanel', () => ({ OrgPanel: () => <div data-testid="org-panel" /> }));
-vi.mock('@/features/admin/coupons/CouponsPanel', () => ({ CouponsPanel: () => <div data-testid="coupons-panel" /> }));
-vi.mock('@/features/admin/bulk-import/BulkImportPanel', () => ({ BulkImportPanel: () => <div data-testid="bulk-import" /> }));
-vi.mock('@/features/admin/members/MemberSearchPanel', () => ({ MemberSearchPanel: () => <div data-testid="member-search" /> }));
-vi.mock('@/features/admin/exports/ExportsPanel', () => ({ ExportsPanel: () => <div data-testid="exports-panel" /> }));
-vi.mock('@/features/admin/maintenance/MaintenancePanel', () => ({ MaintenancePanel: () => <div data-testid="maintenance-panel" /> }));
-vi.mock('@/features/admin/audit/AuditLogsPanel', () => ({ AuditLogsPanel: () => <div data-testid="audit-panel" /> }));
-vi.mock('@/features/admin/members/MembersPanel', () => ({ MembersPanel: () => <div data-testid="members-panel" /> }));
-vi.mock('@/features/admin/reports/ReportsPanel', () => ({ ReportsPanel: () => <div data-testid="reports-panel" /> }));
+vi.mock('@/components/ui/PanelBoundary', () => ({
+  __esModule: true,
+  default: PanelBoundaryPassthrough,
+}));
+vi.mock('@/components/AgentRegistrationCard', () => ({
+  default: () => <div data-testid="agent-card" />,
+}));
+vi.mock('@/components/ui/useToast', () => ({
+  useToast: () => ({ push: vi.fn() }),
+}));
+vi.mock('@/features/admin/emulator/EmulatorPanel', () => ({
+  EmulatorPanel: () => <div data-testid="emulator-panel" />,
+}));
+vi.mock('@/features/admin/role-manager/RoleManagerPanel', () => ({
+  RoleManagerPanel: () => <div data-testid="role-manager" />,
+}));
+vi.mock('@/features/admin/metrics/MetricsPanel', () => ({
+  MetricsPanel: () => <div data-testid="metrics" />,
+}));
+vi.mock('@/features/admin/organizations/OrgPanel', () => ({
+  OrgPanel: () => <div data-testid="org-panel" />,
+}));
+vi.mock('@/features/admin/coupons/CouponsPanel', () => ({
+  CouponsPanel: () => <div data-testid="coupons-panel" />,
+}));
+vi.mock('@/features/admin/bulk-import/BulkImportPanel', () => ({
+  BulkImportPanel: () => <div data-testid="bulk-import" />,
+}));
+vi.mock('@/features/admin/members/MemberSearchPanel', () => ({
+  MemberSearchPanel: () => <div data-testid="member-search" />,
+}));
+vi.mock('@/features/admin/exports/ExportsPanel', () => ({
+  ExportsPanel: () => <div data-testid="exports-panel" />,
+}));
+vi.mock('@/features/admin/maintenance/MaintenancePanel', () => ({
+  MaintenancePanel: () => <div data-testid="maintenance-panel" />,
+}));
+vi.mock('@/features/admin/audit/AuditLogsPanel', () => ({
+  AuditLogsPanel: () => <div data-testid="audit-panel" />,
+}));
+vi.mock('@/features/admin/members/MembersPanel', () => ({
+  MembersPanel: () => <div data-testid="members-panel" />,
+}));
+vi.mock('@/features/admin/reports/ReportsPanel', () => ({
+  ReportsPanel: () => <div data-testid="reports-panel" />,
+}));
 vi.mock('@/features/admin/card-keys/CardKeysPanel', () => ({
   CardKeysPanel: () => (
     <section>
@@ -68,7 +99,9 @@ describe('Admin Card Keys panel', () => {
 
     const jtiInput = within(panel).getByLabelText(/jti/i) as HTMLInputElement;
     fireEvent.change(jtiInput, { target: { value: 'abc123' } });
-    const reasonInput = within(panel).getByLabelText(/reason/i) as HTMLInputElement;
+    const reasonInput = within(panel).getByLabelText(
+      /reason/i
+    ) as HTMLInputElement;
     fireEvent.change(reasonInput, { target: { value: 'lost' } });
     const revokeBtn = within(panel).getByRole('button', { name: /Revoke/i });
     fireEvent.click(revokeBtn);

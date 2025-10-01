@@ -6,6 +6,6 @@ export default defineConfig({
     include: ['rules/__tests__/**/*.test.ts'],
     reporters: ['default'],
     pool: 'threads',
-    poolOptions: { threads: { singleThread: true } } // emulator-friendly
-  }
+    poolOptions: { threads: { singleThread: true } }, // emulator-friendly
+  },
 });

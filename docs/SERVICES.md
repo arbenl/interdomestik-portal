@@ -23,7 +23,9 @@ interface ResponseData {
   uid: string;
 }
 
-const searchUserByEmail = callFn<RequestData, ResponseData>('searchUserByEmail');
+const searchUserByEmail = callFn<RequestData, ResponseData>(
+  'searchUserByEmail'
+);
 
 async function findUser(email: string) {
   const result = await searchUserByEmail({ email });

@@ -55,26 +55,41 @@ export type ShareDocumentResponse = {
   recipients: string[];
 };
 
-export async function shareDocument(payload: ShareDocumentPayload): Promise<ShareDocumentResponse> {
-  const trimmedRecipients = Array.from(new Set(payload.recipients.map(uid => uid.trim()).filter(Boolean)));
+export async function shareDocument(
+  payload: ShareDocumentPayload
+): Promise<ShareDocumentResponse> {
+  const trimmedRecipients = Array.from(
+    new Set(payload.recipients.map((uid) => uid.trim()).filter(Boolean))
+  );
   if (trimmedRecipients.length === 0) {
     throw new Error('At least one recipient uid is required');
   }
-  const result = await callFn<ShareDocumentPayload, ShareDocumentResponse>('shareDocument', {
-    documentId: payload.documentId,
-    fileName: payload.fileName,
-    storagePath: payload.storagePath,
-    mimeType: payload.mimeType,
-    note: payload.note,
-    recipients: trimmedRecipients,
-  });
+  const result = await callFn<ShareDocumentPayload, ShareDocumentResponse>(
+    'shareDocument',
+    {
+      documentId: payload.documentId,
+      fileName: payload.fileName,
+      storagePath: payload.storagePath,
+      mimeType: payload.mimeType,
+      note: payload.note,
+      recipients: trimmedRecipients,
+    }
+  );
   return result;
 }
 
-export async function fetchDocumentSharesForUser(uid: string): Promise<DocumentShare[]> {
+export async function fetchDocumentSharesForUser(
+  uid: string
+): Promise<DocumentShare[]> {
   const constraints: QueryConstraint[] = [where('ownerUid', '==', uid)];
-  const ownerQuery = query(collection(firestore, 'documentShares'), ...constraints);
-  const sharedWithQuery = query(collection(firestore, 'documentShares'), where('allowedUids', 'array-contains', uid));
+  const ownerQuery = query(
+    collection(firestore, 'documentShares'),
+    ...constraints
+  );
+  const sharedWithQuery = query(
+    collection(firestore, 'documentShares'),
+    where('allowedUids', 'array-contains', uid)
+  );
 
   const [ownerSnap, sharedSnap] = await Promise.all([
     getDocs(ownerQuery),
@@ -100,17 +115,24 @@ function normalizeShare(id: string, data: DocumentData): DocumentShare {
   const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : null;
   const updatedAt = data.updatedAt?.toDate ? data.updatedAt.toDate() : null;
   const recipientsArray = Array.isArray(data.recipients) ? data.recipients : [];
-  const allowedUids = Array.isArray(data.allowedUids) ? data.allowedUids.filter((value: unknown): value is string => typeof value === 'string') : [];
+  const allowedUids = Array.isArray(data.allowedUids)
+    ? data.allowedUids.filter(
+        (value: unknown): value is string => typeof value === 'string'
+      )
+    : [];
 
   const recipients: DocumentShareRecipient[] = recipientsArray
-    .filter((value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null)
-    .map(item => ({
+    .filter(
+      (value: unknown): value is Record<string, unknown> =>
+        typeof value === 'object' && value !== null
+    )
+    .map((item) => ({
       uid: typeof item.uid === 'string' ? item.uid : '',
       name: typeof item.name === 'string' ? item.name : null,
       email: typeof item.email === 'string' ? item.email : null,
       region: typeof item.region === 'string' ? item.region : null,
     }))
-    .filter(recipient => recipient.uid);
+    .filter((recipient) => recipient.uid);
 
   return {
     id,
@@ -127,13 +149,15 @@ function normalizeShare(id: string, data: DocumentData): DocumentShare {
   };
 }
 
-export async function fetchDocumentShareActivity(shareId: string): Promise<DocumentShareActivity[]> {
+export async function fetchDocumentShareActivity(
+  shareId: string
+): Promise<DocumentShareActivity[]> {
   const activityQuery = query(
     collection(firestore, 'documentShares', shareId, 'activity'),
-    orderBy('createdAt', 'desc'),
+    orderBy('createdAt', 'desc')
   );
   const snapshot = await getDocs(activityQuery);
-  const items: DocumentShareActivity[] = snapshot.docs.map(doc => {
+  const items: DocumentShareActivity[] = snapshot.docs.map((doc) => {
     const data = doc.data();
     const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : null;
     return {
@@ -141,7 +165,9 @@ export async function fetchDocumentShareActivity(shareId: string): Promise<Docum
       action: typeof data.action === 'string' ? data.action : 'updated',
       actorUid: typeof data.actorUid === 'string' ? data.actorUid : 'unknown',
       recipients: Array.isArray(data.recipients)
-        ? data.recipients.filter((value: unknown): value is string => typeof value === 'string')
+        ? data.recipients.filter(
+            (value: unknown): value is string => typeof value === 'string'
+          )
         : [],
       note: typeof data.note === 'string' ? data.note : null,
       createdAt,

@@ -9,7 +9,12 @@ export default defineConfig({
     globals: true,
     setupFiles: ['src/setupTests.ts'],
     include: ['src/**/*.{test,spec}.?(c|m)[tj]s?(x)'],
-    exclude: ['node_modules/**', 'dist/**', 'e2e/**', 'src/**/__legacy_tests__/**'],
+    exclude: [
+      'node_modules/**',
+      'dist/**',
+      'e2e/**',
+      'src/**/__legacy_tests__/**',
+    ],
     clearMocks: true,
     restoreMocks: true,
     mockReset: true,
@@ -21,7 +26,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
-      thresholds: { lines: 0.3, functions: 0.3, branches: 0.3, statements: 0.3 }
-    }
-  }
+      thresholds: {
+        lines: 0.3,
+        functions: 0.3,
+        branches: 0.3,
+        statements: 0.3,
+      },
+    },
+  },
 });

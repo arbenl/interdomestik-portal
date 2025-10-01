@@ -3,12 +3,17 @@ import { db } from '../firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 function requireAdmin(ctx: functions.https.CallableContext) {
-  if (!ctx.auth) throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+  if (!ctx.auth)
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
   const role = (ctx.auth.token as any).role;
-  if (role !== 'admin') throw new functions.https.HttpsError('permission-denied', 'Admins only');
+  if (role !== 'admin')
+    throw new functions.https.HttpsError('permission-denied', 'Admins only');
 }
 
-export async function backfillNameLowerLogic(data: any, context: functions.https.CallableContext) {
+export async function backfillNameLowerLogic(
+  data: any,
+  context: functions.https.CallableContext
+) {
   requireAdmin(context);
   const pageSize = Math.min(Number(data?.pageSize ?? 500), 1000);
   const startAfter = data?.startAfter ? String(data.startAfter) : undefined;
@@ -31,7 +36,10 @@ export async function backfillNameLowerLogic(data: any, context: functions.https
     await batch.commit();
   }
 
-  const nextStartAfter = snap.size === pageSize ? (snap.docs[snap.docs.length - 1].get('name') as string) : null;
+  const nextStartAfter =
+    snap.size === pageSize
+      ? (snap.docs[snap.docs.length - 1].get('name') as string)
+      : null;
 
   // Write a lightweight job log for traceability
   try {

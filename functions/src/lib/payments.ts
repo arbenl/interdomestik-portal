@@ -10,7 +10,10 @@ type CreatePaymentIntentInput = {
   donateCents?: number; // optional donation, cents
 };
 
-export async function createPaymentIntentLogic(data: CreatePaymentIntentInput, context: functions.https.CallableContext) {
+export async function createPaymentIntentLogic(
+  data: CreatePaymentIntentInput,
+  context: functions.https.CallableContext
+) {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
   }
@@ -22,14 +25,21 @@ export async function createPaymentIntentLogic(data: CreatePaymentIntentInput, c
   const code = (data?.couponCode || '').toString().trim();
 
   if (!Number.isFinite(baseAmount) || baseAmount <= 0) {
-    throw new functions.https.HttpsError('invalid-argument', 'amount must be a positive number (cents)');
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'amount must be a positive number (cents)'
+    );
   }
 
   // Apply coupon if present
   let discount = 0;
   if (code) {
-    const snap = await admin.firestore().collection('coupons').doc(code.toLowerCase()).get();
-    if (snap.exists && (snap.get('active') !== false)) {
+    const snap = await admin
+      .firestore()
+      .collection('coupons')
+      .doc(code.toLowerCase())
+      .get();
+    if (snap.exists && snap.get('active') !== false) {
       const percent = Number(snap.get('percentOff') || 0);
       const amountOff = Number(snap.get('amountOff') || 0);
       if (percent > 0) discount = Math.floor((baseAmount * percent) / 100);
@@ -54,8 +64,11 @@ export async function createPaymentIntentLogic(data: CreatePaymentIntentInput, c
   }
 
   // Lazy import to avoid emulator hard dependency
-  const Stripe = (await (Function('m', 'return import(m)') as any)('stripe')).default;
-  const stripe = new Stripe(process.env.STRIPE_API_KEY as string, { apiVersion: '2024-06-20' as any });
+  const Stripe = (await (Function('m', 'return import(m)') as any)('stripe'))
+    .default;
+  const stripe = new Stripe(process.env.STRIPE_API_KEY as string, {
+    apiVersion: '2024-06-20' as any,
+  });
 
   const pi = await stripe.paymentIntents.create({
     amount,

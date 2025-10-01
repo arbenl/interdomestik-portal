@@ -14,6 +14,7 @@ Goal: Prevent duplicate side effects (emails, receipts, audit logs, metrics) whe
   4. Send emails, receipts, audit logs, and metrics only when `create()` succeeded (first processing), and only for newly-activated memberships.
 
 This ensures:
+
 - Membership documents converge to the same active state on retries.
 - Side effects happen exactly once per (uid, year, source).
 
@@ -28,4 +29,3 @@ This ensures:
 - Repeated calls to `startMembership` with same (uid, year) return `idempotent: true` after the first success.
 - Only one audit entry and one metrics increment appears per key.
 - Emails/receipts sent once.
-

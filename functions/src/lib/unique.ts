@@ -1,4 +1,4 @@
-import { admin, db } from "../firebaseAdmin";
+import { admin, db } from '../firebaseAdmin';
 
 // Registry collections (cheap uniqueness registry):
 //  - registry_email/{emailLower}  -> { uid }
@@ -22,13 +22,15 @@ export async function reserveUniqueMemberNo(
 ) {
   const ref = db.collection('registry_memberNo').doc(memberNo);
   const snap = await tx.get(ref);
-  if (snap.exists && snap.get('uid') !== uid) throw new Error('MEMBERNO_IN_USE');
+  if (snap.exists && snap.get('uid') !== uid)
+    throw new Error('MEMBERNO_IN_USE');
   tx.set(ref, { uid }, { merge: true });
 }
 
 function resolveMemberYear(): number {
   const envYear = Number(process.env.MEMBER_YEAR);
-  if (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100) return envYear;
+  if (!Number.isNaN(envYear) && envYear >= 2020 && envYear <= 2100)
+    return envYear;
   return new Date().getUTCFullYear();
 }
 

@@ -1,1 +1,3 @@
-export function RoleManagerPanel() { return null; }
+export function RoleManagerPanel() {
+  return null;
+}

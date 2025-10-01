@@ -14,8 +14,8 @@ export default defineConfig({
   webServer: [
     // Start Firebase emulators (includes Auth/Functions/Firestore).
     {
-      command: 'pnpm dev:emu',                  // <- your script that runs `firebase emulators:start`
-      url: 'http://localhost:4000',             // emulator UI (or any port that guarantees it’s up)
+      command: 'pnpm dev:emu', // <- your script that runs `firebase emulators:start`
+      url: 'http://localhost:4000', // emulator UI (or any port that guarantees it’s up)
       reuseExistingServer: reuse,
       timeout: 90_000,
     },

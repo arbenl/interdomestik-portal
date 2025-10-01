@@ -9,7 +9,11 @@ export function useDirectory(max = 5) {
   return useQuery({
     queryKey: ['directory', max],
     queryFn: async () => {
-      const q = query(collection(firestore, 'members'), orderBy('createdAt', 'desc'), limit(max));
+      const q = query(
+        collection(firestore, 'members'),
+        orderBy('createdAt', 'desc'),
+        limit(max)
+      );
       const snap = await getDocs(q);
       return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Profile) }));
     },

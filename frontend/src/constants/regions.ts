@@ -8,5 +8,4 @@ export const REGIONS = [
   'MITROVICA',
 ] as const;
 
-export type Region = typeof REGIONS[number];
-
+export type Region = (typeof REGIONS)[number];

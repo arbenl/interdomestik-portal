@@ -27,12 +27,16 @@ async function main() {
   await Promise.all(ports.map(checkPort));
 
   if (fs.existsSync(debugLog)) {
-    console.error(`Error: The firebase-debug.log file exists. This may indicate a problem with the emulators.`);
+    console.error(
+      `Error: The firebase-debug.log file exists. This may indicate a problem with the emulators.`
+    );
     hasErrors = true;
   }
 
   if (!fs.existsSync(seedsDir)) {
-    console.error(`Error: The functions/seeds directory does not exist. Please create it and export your seed data.`);
+    console.error(
+      `Error: The functions/seeds directory does not exist. Please create it and export your seed data.`
+    );
     hasErrors = true;
   }
 
