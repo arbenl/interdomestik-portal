@@ -60,13 +60,13 @@ export async function shareDocument(payload: ShareDocumentPayload): Promise<Shar
   if (trimmedRecipients.length === 0) {
     throw new Error('At least one recipient uid is required');
   }
-  const result = await callFn<ShareDocumentResponse, { documentId?: string; fileName: string; storagePath: string; mimeType?: string; note?: string; recipients: Array<{ uid: string }> }>('shareDocument', {
+  const result = await callFn<ShareDocumentPayload, ShareDocumentResponse>('shareDocument', {
     documentId: payload.documentId,
     fileName: payload.fileName,
     storagePath: payload.storagePath,
     mimeType: payload.mimeType,
     note: payload.note,
-    recipients: trimmedRecipients.map(uid => ({ uid })),
+    recipients: trimmedRecipients,
   });
   return result;
 }

@@ -49,7 +49,7 @@ This is a PNPM monorepo with two primary packages:
   - Work in small PRs targeting `next`; keep CI green.
   - See cleanup plan: `docs/cleanup/ROADMAP.md`.
   - When ready, open a PR merging `next` back into `main`.
-
+2
 ## Documentation
 
 For detailed information on architecture, coding standards, and more, please refer to the `/docs` directory.

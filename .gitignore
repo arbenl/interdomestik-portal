@@ -58,3 +58,4 @@ coverage/
 .playwright-browsers/
 frontend/.playwright-browsers/
 frontend/test-results/
+frontend/e2e/.auth/

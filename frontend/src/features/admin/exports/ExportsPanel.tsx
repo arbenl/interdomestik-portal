@@ -88,7 +88,7 @@ export function ExportsPanel() {
     }
     setIsStarting(true);
     try {
-      const result = await callFunction<{ ok?: boolean; id?: string }, { preset?: 'BASIC' | 'FULL' }>('startMembersExport', { preset: 'BASIC' });
+      const result = await callFunction<{ preset?: 'BASIC' | 'FULL' }, { ok?: boolean; id?: string }>('startMembersExport', { preset: 'BASIC' });
       if (result && typeof result === 'object' && 'ok' in result && result.ok === false) {
         throw new Error('Export request failed');
       }
