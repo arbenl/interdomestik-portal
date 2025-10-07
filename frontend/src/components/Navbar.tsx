@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useRef, useState } from 'react';
 import { signOut as fbSignOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import ThemeToggle from './ThemeToggle';
 import { queryClient } from '../queryClient';
 import {
   getMemberProfile,
@@ -100,56 +101,59 @@ export default function Navbar() {
           <Link to="/billing">Billing</Link>
         </li>
       </ul>
-      {greeting && (
-        <div className="relative" ref={menuRef}>
-          <button
-            onClick={() => setOpen((v) => !v)}
-            className="flex items-center gap-2 text-sm text-gray-600"
-          >
-            <span className="hidden sm:inline">Hi, {greeting}</span>
-            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold">
-              {initials}
-            </div>
-          </button>
-          {open && (
-            <div className="absolute right-0 mt-2 w-44 rounded-md border bg-white shadow-md z-10">
-              <Link
-                to="/portal"
-                onClick={() => setOpen(false)}
-                className="block px-3 py-2 text-sm hover:bg-gray-50"
-              >
-                Portal
-              </Link>
-              <Link
-                to="/profile"
-                onClick={() => setOpen(false)}
-                className="block px-3 py-2 text-sm hover:bg-gray-50"
-              >
-                Profile
-              </Link>
-              <Link
-                to="/membership"
-                onClick={() => setOpen(false)}
-                className="block px-3 py-2 text-sm hover:bg-gray-50"
-              >
-                History
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  void fbSignOut(auth).finally(() => {
-                    setOpen(false);
-                    void navigate('/signin');
-                  });
-                }}
-                className="w-full text-left block px-3 py-2 text-sm text-red-600 hover:bg-gray-50"
-              >
-                Sign out
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      <div className="flex items-center gap-4">
+        <ThemeToggle />
+        {greeting && (
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setOpen((v) => !v)}
+              className="flex items-center gap-2 text-sm text-gray-600"
+            >
+              <span className="hidden sm:inline">Hi, {greeting}</span>
+              <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold">
+                {initials}
+              </div>
+            </button>
+            {open && (
+              <div className="absolute right-0 mt-2 w-44 rounded-md border bg-white shadow-md z-10">
+                <Link
+                  to="/portal"
+                  onClick={() => setOpen(false)}
+                  className="block px-3 py-2 text-sm hover:bg-gray-50"
+                >
+                  Portal
+                </Link>
+                <Link
+                  to="/profile"
+                  onClick={() => setOpen(false)}
+                  className="block px-3 py-2 text-sm hover:bg-gray-50"
+                >
+                  Profile
+                </Link>
+                <Link
+                  to="/membership"
+                  onClick={() => setOpen(false)}
+                  className="block px-3 py-2 text-sm hover:bg-gray-50"
+                >
+                  History
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void fbSignOut(auth).finally(() => {
+                      setOpen(false);
+                      void navigate('/signin');
+                    });
+                  }}
+                  className="w-full text-left block px-3 py-2 text-sm text-red-600 hover:bg-gray-50"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </nav>
   );
 }

@@ -111,27 +111,37 @@ describe('Admin Exports panel', () => {
   });
 
   it('surfaces load failures once and resumes after refresh', async () => {
-    global.__fsThrow(new Error('firestore unavailable'));
-    renderWithProviders(<ExportsPanel />);
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
 
-    await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith({
-        type: 'error',
-        message: 'Failed to load exports',
+    try {
+      global.__fsThrow(new Error('firestore unavailable'));
+      renderWithProviders(<ExportsPanel />);
+
+      await waitFor(() => {
+        expect(pushMock).toHaveBeenCalledWith({
+          type: 'error',
+          message: 'Failed to load exports',
+        });
       });
-    });
-    expect(pushMock).toHaveBeenCalledTimes(1);
+      expect(pushMock).toHaveBeenCalledTimes(1);
 
-    global.__fsReset();
-    const restoredExports = [
-      { id: 'exp1', type: 'members', status: 'done', createdAt: Date.now() },
-    ];
-    global.__fsSeed('exports', restoredExports);
-    const refreshBtn = await screen.findByRole('button', { name: /Refresh/i });
-    fireEvent.click(refreshBtn);
+      global.__fsReset();
+      const restoredExports = [
+        { id: 'exp1', type: 'members', status: 'done', createdAt: Date.now() },
+      ];
+      global.__fsSeed('exports', restoredExports);
+      const refreshBtn = await screen.findByRole('button', {
+        name: /Refresh/i,
+      });
+      fireEvent.click(refreshBtn);
 
-    await screen.findByText('exp1');
-    expect(pushMock).toHaveBeenCalledTimes(1);
+      await screen.findByText('exp1');
+      expect(pushMock).toHaveBeenCalledTimes(1);
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it('shows a friendly message when the export callable rejects with permission denied', async () => {
