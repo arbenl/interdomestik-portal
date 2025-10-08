@@ -93,4 +93,6 @@ Deliver a modernization pass that brings Interdomestik’s member portal in line
 - ✅ Renewal automation hooks send POST payloads to configured targets.
 - ✅ Automation status/assistant telemetry dashboards added to Admin metrics panel.
 - ✅ Assistant latency metrics and automation alerts surfaced in the Admin metrics panel.
+- ✅ Configurable Dashboard MVP shipped: widget grid, layout persistence, and live data via RenewalsWidget.
+- ✅ Dashboard customization enabled: drag-and-drop reordering and a widget picker modal.
 - ⏭️ Next session: add assistant latency dashboards to ops runbooks and build alert acknowledgement workflow.
