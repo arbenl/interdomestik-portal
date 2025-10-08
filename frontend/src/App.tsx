@@ -23,6 +23,23 @@ const PortalLayout = lazy(() =>
     default: m.PortalLayout,
   }))
 );
+const DashboardPage = lazy(() => import('@/pages/Dashboard/DashboardPage'));
+
+function DashboardRoute() {
+  const isDashboardEnabled =
+    String(import.meta.env.VITE_FF_DASHBOARD ?? '')
+      .trim()
+      .toLowerCase() === 'true';
+
+  if (!isDashboardEnabled) {
+    return <Navigate to="/" replace />;
+  }
+  return (
+    <RoleProtectedRoute roles={['member', 'admin']}>
+      <DashboardPage />
+    </RoleProtectedRoute>
+  );
+}
 
 export default function App() {
   return (
@@ -77,6 +94,7 @@ export default function App() {
               </RoleProtectedRoute>
             }
           />
+          <Route path="/dashboard" element={<DashboardRoute />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

@@ -8,7 +8,7 @@ import {
   beforeEach,
   afterEach,
 } from 'vitest';
-import { act } from 'react';
+import { act } from '@testing-library/react';
 import Billing from '../Billing';
 import { useAuth } from '@/hooks/useAuth';
 import { useMemberProfile } from '@/hooks/useMemberProfile';

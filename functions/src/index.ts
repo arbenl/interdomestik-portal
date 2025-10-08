@@ -27,11 +27,8 @@ import { monthlyReportCsv } from './lib/reports';
 import { generateMembersCsv, saveCsvToStorage } from './lib/exports';
 import { normalizeColumns, streamMembersCsv } from './lib/exportsV2';
 import { log } from './lib/logger';
-import {
-  getPortalDashboardLogic,
-  getPortalLayoutLogic,
-  upsertPortalLayoutLogic,
-} from './lib/dashboard';
+import { getPortalDashboardLogic, getPortalLayoutLogic } from './lib/dashboard';
+export { upsertPortalLayout } from './portalLayouts';
 import { startAssistantSuggestionLogic } from './lib/assistant';
 import { updateMfaPreferenceLogic } from './lib/security';
 import { shareDocumentLogic } from './lib/documents';
@@ -97,17 +94,6 @@ export const getPortalLayout = functions
       return await getPortalLayoutLogic(context);
     } catch (error) {
       log('get_portal_layout_error', { error: String(error) });
-      throw error;
-    }
-  });
-
-export const upsertPortalLayout = functions
-  .region(REGION)
-  .https.onCall(async (data, context) => {
-    try {
-      return await upsertPortalLayoutLogic(data, context);
-    } catch (error) {
-      log('upsert_portal_layout_error', { error: String(error) });
       throw error;
     }
   });

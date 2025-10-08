@@ -1,53 +1,55 @@
-import { describe, it, expect, vi } from 'vitest';
-import { renderWithProviders, screen } from '@/test-utils';
-import { useAuth } from '@/hooks/useAuth';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithProviders, screen, mockUseAuth } from '@/test-utils';
 import RoleProtectedRoute from '../RoleProtectedRoute';
-import { makeUser } from '@/tests/factories/user';
 
 vi.mock('@/hooks/useAuth');
 
 describe('RoleProtectedRoute', () => {
-  it('renders children when user has an allowed role', () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: makeUser(),
-      isAdmin: true,
-      isAgent: false,
-      allowedRegions: [],
-      loading: false,
-      mfaEnabled: true,
-      signIn: vi.fn(),
-      signUp: vi.fn(),
-      signOutUser: vi.fn(),
+  describe('when user has an allowed role', () => {
+    beforeEach(() => {
+      mockUseAuth({ isAdmin: true });
     });
 
-    renderWithProviders(
-      <RoleProtectedRoute roles={['admin']}>
-        <div>Protected Content</div>
-      </RoleProtectedRoute>
-    );
+    it('renders children when user has an allowed role', () => {
+      renderWithProviders(
+        <RoleProtectedRoute roles={['admin']}>
+          <div>Protected Content</div>
+        </RoleProtectedRoute>
+      );
 
-    expect(screen.getByText('Protected Content')).toBeInTheDocument();
+      expect(screen.getByText('Protected Content')).toBeInTheDocument();
+    });
   });
 
-  it('redirects to /signin when user is not authenticated', () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: null,
-      isAdmin: false,
-      isAgent: false,
-      allowedRegions: [],
-      loading: false,
-      mfaEnabled: false,
-      signIn: vi.fn(),
-      signUp: vi.fn(),
-      signOutUser: vi.fn(),
+  describe('when user is not authenticated', () => {
+    beforeEach(() => {
+      mockUseAuth({ user: null });
     });
 
-    renderWithProviders(
-      <RoleProtectedRoute roles={['admin']}>
-        <div>Protected Content</div>
-      </RoleProtectedRoute>
-    );
+    it('redirects to /signin when user is not authenticated', () => {
+      renderWithProviders(
+        <RoleProtectedRoute roles={['admin']}>
+          <div>Protected Content</div>
+        </RoleProtectedRoute>
+      );
 
-    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+      expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('when user lacks the required role', () => {
+    beforeEach(() => {
+      mockUseAuth({ isAdmin: false, isAgent: false });
+    });
+
+    it('redirects to the default portal route', () => {
+      renderWithProviders(
+        <RoleProtectedRoute roles={['admin']}>
+          <div>Protected Content</div>
+        </RoleProtectedRoute>
+      );
+
+      expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+    });
   });
 });

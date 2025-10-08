@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useRef, useState } from 'react';
 import { signOut as fbSignOut } from 'firebase/auth';
@@ -77,28 +77,34 @@ export default function Navbar() {
     <nav className="flex items-center justify-between px-4 py-2 border-b bg-white">
       <ul className="flex gap-4 text-sm list-none m-0 p-0">
         <li>
-          <Link to="/">Home</Link>
+          <NavLink to="/">Home</NavLink>
+        </li>
+        {String(import.meta.env.VITE_FF_DASHBOARD ?? '').toLowerCase() ===
+          'true' && (
+          <li>
+            <NavLink to="/dashboard">Dashboard</NavLink>
+          </li>
+        )}
+        <li onMouseEnter={prefetchPortalData}>
+          <NavLink to="/portal">Portal</NavLink>
+        </li>
+        <li>
+          <NavLink to="/signin">Sign In</NavLink>
+        </li>
+        <li>
+          <NavLink to="/signup">Sign Up</NavLink>
         </li>
         <li onMouseEnter={prefetchPortalData}>
-          <Link to="/portal">Portal</Link>
+          <NavLink to="/profile">Profile</NavLink>
         </li>
         <li>
-          <Link to="/signin">Sign In</Link>
-        </li>
-        <li>
-          <Link to="/signup">Sign Up</Link>
-        </li>
-        <li onMouseEnter={prefetchPortalData}>
-          <Link to="/profile">Profile</Link>
-        </li>
-        <li>
-          <Link to="/agent">Agent</Link>
+          <NavLink to="/agent">Agent</NavLink>
         </li>
         <li onMouseEnter={prefetchAdminData}>
-          <Link to="/admin">Admin</Link>
+          <NavLink to="/admin">Admin</NavLink>
         </li>
         <li onMouseEnter={prefetchBillingData}>
-          <Link to="/billing">Billing</Link>
+          <NavLink to="/billing">Billing</NavLink>
         </li>
       </ul>
       <div className="flex items-center gap-4">

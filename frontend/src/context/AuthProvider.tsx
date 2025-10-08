@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from 'react';
 import {
   getAuth,
   onIdTokenChanged,
@@ -13,7 +19,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Initial auth state check
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAgent, setIsAgent] = useState(false);
   const [allowedRegions, setAllowedRegions] = useState<string[]>([]);
@@ -44,6 +50,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
     return () => unsub();
   }, []);
 
+  const refreshClaims = useCallback(async () => {
+    if (!authRef.current.currentUser) return;
+    try {
+      setLoading(true);
+      await authRef.current.currentUser.getIdToken(true);
+    } catch (error) {
+      console.error('Failed to refresh user claims:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const value = useMemo<AuthContextType>(
     () => ({
       user,
@@ -52,17 +70,46 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
       isAgent,
       allowedRegions,
       mfaEnabled,
+      refreshClaims,
       async signIn(email, password) {
-        await signInWithEmailAndPassword(authRef.current, email, password);
+        setLoading(true);
+        try {
+          await signInWithEmailAndPassword(authRef.current, email, password);
+        } catch (error) {
+          console.error('Sign in failed:', error);
+          throw error;
+        } finally {
+          setLoading(false);
+        }
       },
       async signUp(email, password) {
-        await createUserWithEmailAndPassword(authRef.current, email, password);
+        setLoading(true);
+        try {
+          await createUserWithEmailAndPassword(
+            authRef.current,
+            email,
+            password
+          );
+        } catch (error) {
+          console.error('Sign up failed:', error);
+          throw error;
+        } finally {
+          setLoading(false);
+        }
       },
       async signOutUser() {
-        await signOut(authRef.current);
+        setLoading(true);
+        try {
+          await signOut(authRef.current);
+        } catch (error) {
+          console.error('Sign out failed:', error);
+          throw error;
+        } finally {
+          setLoading(false);
+        }
       },
     }),
-    [user, loading, isAdmin, isAgent, allowedRegions, mfaEnabled]
+    [user, loading, isAdmin, isAgent, allowedRegions, mfaEnabled, refreshClaims]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

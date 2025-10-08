@@ -40,7 +40,9 @@ test('Admin can trigger a new export', async ({ page, request }) => {
   await startBtn.click();
 
   // Wait until the empty state disappears and a new export row shows up.
-  await expect(panel.getByText(/No exports found/i)).toBeHidden();
+  await expect(panel.getByText(/No exports found/i)).toBeHidden({
+    timeout: 10000,
+  });
   await expect(panel.getByRole('cell', { name: /members_csv/i })).toBeVisible({
     timeout: 10000,
   });

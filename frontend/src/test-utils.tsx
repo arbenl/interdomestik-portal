@@ -10,8 +10,13 @@ import {
   type RenderHookOptions,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { User } from 'firebase/auth';
+import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
+import { vi } from 'vitest';
+import type { AuthContextType } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
+import { makeUser } from '@/tests/factories/user';
 import { createTestQueryClient } from './tests/helpers';
 
 export function TestProviders({
@@ -63,6 +68,40 @@ export function renderHookWithProviders<Result, Props>(
     </MemoryRouter>
   );
   return rtlRenderHook(hook, { wrapper: Wrapper, ...rtlOptions });
+}
+
+type MockUseAuthParams = Omit<Partial<AuthContextType>, 'user'> & {
+  user?: Partial<User> | null;
+};
+
+export function mockUseAuth(overrides?: MockUseAuthParams) {
+  const { user: userOverride, ...rest } = overrides ?? {};
+  const defaultUser = makeUser();
+  const user =
+    userOverride === null
+      ? null
+      : ({
+          ...defaultUser,
+          ...(userOverride ?? {}),
+        } as User);
+
+  const defaultValue: AuthContextType = {
+    user,
+    loading: false,
+    isAdmin: false,
+    isAgent: false,
+    allowedRegions: [],
+    mfaEnabled: false,
+    signIn: vi.fn(),
+    signUp: vi.fn(),
+    signOutUser: vi.fn(),
+  };
+
+  vi.mocked(useAuth).mockReturnValue({
+    ...defaultValue,
+    ...rest,
+    user,
+  });
 }
 
 export { screen, waitFor, fireEvent, userEvent, within, createTestQueryClient };

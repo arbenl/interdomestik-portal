@@ -9,7 +9,10 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] },
+    "paths": {
+      "@/*": ["src/*"],
+      "@radix-ui/react-dialog": ["../packages/radix-dialog/index"]
+    },
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "forceConsistentCasingInFileNames": true
   },

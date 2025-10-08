@@ -14,7 +14,7 @@ export default defineConfig({
   webServer: [
     // Start Firebase emulators (includes Auth/Functions/Firestore).
     {
-      command: 'pnpm dev:emu', // <- your script that runs `firebase emulators:start`
+      command: 'pnpm -C .. dev:emu', // run workspace root emulator script
       url: 'http://localhost:4000', // emulator UI (or any port that guarantees it’s up)
       reuseExistingServer: reuse,
       timeout: 90_000,
@@ -25,6 +25,9 @@ export default defineConfig({
       url: 'http://localhost:5173',
       reuseExistingServer: reuse,
       timeout: 90_000,
+      env: {
+        VITE_FF_DASHBOARD: 'true',
+      },
     },
   ],
   globalSetup: './e2e/global-setup.ts',
