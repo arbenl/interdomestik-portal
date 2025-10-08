@@ -33,6 +33,7 @@ import { startAssistantSuggestionLogic } from './lib/assistant';
 import { updateMfaPreferenceLogic } from './lib/security';
 import { shareDocumentLogic } from './lib/documents';
 import { runRenewalHooks } from './lib/automation';
+export { acknowledgeAlert } from './acknowledgeAlert';
 
 // Region constant for consistency
 const REGION = 'europe-west1' as const;

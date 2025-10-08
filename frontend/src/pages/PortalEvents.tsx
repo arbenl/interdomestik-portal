@@ -1,7 +1,5 @@
 'use client';
 
-import PortalShell from '@/components/layout/PortalShell';
-
 const upcomingEvents = [
   {
     id: 'summit-eu',
@@ -30,32 +28,28 @@ const quickFilters = ['All regions', 'My regions', 'Next 30 days', 'Workshops'];
 
 export default function PortalEvents() {
   return (
-    <PortalShell
-      header={
-        <div className="space-y-3">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Upcoming events
-            </h1>
-            <p className="text-sm text-gray-500">
-              Plan outreach with region-aware programming and onboarding
-              sessions.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 text-sm">
-            {quickFilters.map((filter) => (
-              <button
-                key={filter}
-                type="button"
-                className="rounded-full border border-indigo-100 bg-white px-3 py-1 text-indigo-600 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50"
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
+    <>
+      <div className="space-y-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Upcoming events
+          </h1>
+          <p className="text-sm text-gray-500">
+            Plan outreach with region-aware programming and onboarding sessions.
+          </p>
         </div>
-      }
-    >
+        <div className="flex flex-wrap gap-2 text-sm">
+          {quickFilters.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              className="rounded-full border border-indigo-100 bg-white px-3 py-1 text-indigo-600 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50"
+            >
+              {filter}
+            </button>
+          ))}
+        </div>
+      </div>
       <section aria-labelledby="events-heading" className="space-y-4">
         <div className="flex items-center justify-between">
           <h2
@@ -118,6 +112,6 @@ export default function PortalEvents() {
           automation hooks and filters roll out in Phase 2.
         </p>
       </section>
-    </PortalShell>
+    </>
   );
 }

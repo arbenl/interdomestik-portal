@@ -5,7 +5,6 @@ import usePortalDashboard from '@/hooks/usePortalDashboard';
 import { isFeatureEnabled } from '@/constants/featureFlags';
 import { AssistantLauncher } from '@/components/assistant/AssistantLauncher';
 import { DashboardWidgetGrid } from '@/components/dashboard/DashboardWidgetGrid';
-import PortalShell from '@/components/layout/PortalShell';
 import PanelBoundary from '../components/ui/PanelBoundary';
 
 const ProfilePanel = lazy(() =>
@@ -46,21 +45,18 @@ export default function MemberPortal() {
   const loadingFallback = <div className="p-4">Loading…</div>;
 
   return (
-    <PortalShell
-      header={
-        canShowWidgets ? (
-          <DashboardWidgetGrid
-            widgets={dashboard.widgets}
-            layout={dashboard.layout}
-            availableWidgets={dashboard.availableWidgets}
-            isLoading={dashboard.isLoading}
-            isUpdating={dashboard.updating}
-            onRefresh={dashboard.refresh}
-            onLayoutChange={dashboard.updateLayout}
-          />
-        ) : null
-      }
-    >
+    <div className="space-y-6">
+      {canShowWidgets ? (
+        <DashboardWidgetGrid
+          widgets={dashboard.widgets}
+          layout={dashboard.layout}
+          availableWidgets={dashboard.availableWidgets}
+          isLoading={dashboard.isLoading}
+          isUpdating={dashboard.updating}
+          onRefresh={dashboard.refresh}
+          onLayoutChange={dashboard.updateLayout}
+        />
+      ) : null}
       <div className="grid gap-4 lg:grid-cols-2">
         <PanelBoundary>
           <Suspense fallback={loadingFallback}>
@@ -79,6 +75,6 @@ export default function MemberPortal() {
         </PanelBoundary>
       </div>
       {showAssistant && (isAdmin || isAgent) && <AssistantLauncher />}
-    </PortalShell>
+    </div>
   );
 }

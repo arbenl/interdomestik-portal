@@ -27,6 +27,7 @@ export default defineConfig({
       timeout: 90_000,
       env: {
         VITE_FF_DASHBOARD: 'true',
+        VITE_FLAG_ALERT_WORKFLOW: 'true',
       },
     },
   ],

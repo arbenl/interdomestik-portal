@@ -1,17 +1,20 @@
-import { Link, NavLink } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import useMfaPreference from '@/hooks/useMfaPreference';
+import DesktopRailNav from './DesktopRailNav';
+import MobileTabNav from './MobileTabNav';
 
 type IconProps = { className?: string };
-type PortalNavLink = {
+
+export type PortalNavItem = {
   to: string;
   label: string;
-  icon: (props: IconProps) => ReactNode;
   end?: boolean;
+  icon: (props: IconProps) => ReactNode;
 };
 
-const portalLinks: PortalNavLink[] = [
+const PORTAL_NAV_ITEMS: PortalNavItem[] = [
   { to: '/portal', label: 'Overview', icon: OverviewIcon, end: true },
   { to: '/portal/profile', label: 'Profile', icon: ProfileIcon },
   { to: '/portal/membership', label: 'Membership', icon: MembershipIcon },
@@ -21,57 +24,20 @@ const portalLinks: PortalNavLink[] = [
   { to: '/portal/support', label: 'Support', icon: SupportIcon },
 ];
 
-function classNames(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(' ');
-}
-
 interface PortalShellProps {
   header?: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export function PortalShell({ header, children }: PortalShellProps) {
   const { isAdmin, isAgent, mfaEnabled } = useAuth();
   const { setMfaPreference, updating } = useMfaPreference();
   const showMfaPrompt = (isAdmin || isAgent) && !mfaEnabled;
+  const content = children ?? <Outlet />;
 
   return (
     <div className="relative mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-6xl gap-6 px-4 pb-24 pt-4 lg:pb-8 lg:pt-6">
-      <aside className="hidden w-56 flex-shrink-0 lg:flex lg:flex-col lg:gap-1">
-        <h2 className="px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-          Portal
-        </h2>
-        <nav aria-label="Portal sections" className="mt-2 flex flex-col gap-1">
-          {portalLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={Boolean(link.end)}
-              className={({ isActive }) =>
-                classNames(
-                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-indigo-50 hover:text-indigo-700',
-                  isActive && 'bg-indigo-600 text-white shadow'
-                )
-              }
-            >
-              {({ isActive }) => {
-                const Icon = link.icon;
-                return (
-                  <>
-                    <Icon
-                      className={classNames(
-                        'h-5 w-5 shrink-0 transition-colors',
-                        isActive && 'text-white'
-                      )}
-                    />
-                    <span>{link.label}</span>
-                  </>
-                );
-              }}
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
+      <DesktopRailNav items={PORTAL_NAV_ITEMS} />
       <main className="flex-1 space-y-4">
         {showMfaPrompt ? (
           <div className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -106,41 +72,9 @@ export function PortalShell({ header, children }: PortalShellProps) {
           </div>
         ) : null}
         {header ? <div className="space-y-2">{header}</div> : null}
-        {children}
+        {content}
       </main>
-      <nav
-        aria-label="Portal navigation"
-        className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t border-gray-200 bg-white px-2 py-2 shadow-lg lg:hidden"
-      >
-        {portalLinks.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            end={Boolean(link.end)}
-            className={({ isActive }) =>
-              classNames(
-                'flex w-full max-w-[96px] flex-col items-center rounded-2xl px-2 py-1 text-[11px] font-medium leading-tight text-gray-500 transition-colors',
-                isActive && 'bg-indigo-100 text-indigo-700 shadow'
-              )
-            }
-          >
-            {({ isActive }) => {
-              const Icon = link.icon;
-              return (
-                <>
-                  <Icon
-                    className={classNames(
-                      'mb-1 h-5 w-5 transition-colors',
-                      isActive && 'text-indigo-700'
-                    )}
-                  />
-                  <span>{link.label}</span>
-                </>
-              );
-            }}
-          </NavLink>
-        ))}
-      </nav>
+      <MobileTabNav items={PORTAL_NAV_ITEMS} />
     </div>
   );
 }

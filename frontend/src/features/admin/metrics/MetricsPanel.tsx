@@ -3,6 +3,7 @@ import useAutomationLogs from '@/hooks/useAutomationLogs';
 import useAutomationAlerts from '@/hooks/useAutomationAlerts';
 import useAssistantSessions from '@/hooks/useAssistantSessions';
 import useAssistantTelemetry from '@/hooks/useAssistantTelemetry';
+import AlertItem from '@/features/admin/components/AlertItem';
 
 function formatDate(value: Date | null): string {
   if (!value) return '—';
@@ -32,6 +33,10 @@ export function MetricsPanel() {
   const automationAlertsQuery = useAutomationAlerts();
   const assistantQuery = useAssistantSessions();
   const assistantTelemetryQuery = useAssistantTelemetry();
+  const isAlertWorkflowEnabled =
+    String(import.meta.env.VITE_FLAG_ALERT_WORKFLOW ?? '')
+      .trim()
+      .toLowerCase() === 'true';
 
   const assistantStats = useMemo(() => {
     const sessions = assistantQuery.data?.sessions ?? [];
@@ -204,35 +209,43 @@ export function MetricsPanel() {
             <p className="text-sm text-gray-500">No active alerts.</p>
           ) : null}
           {automationAlerts.length > 0 ? (
-            <ul className="space-y-2">
-              {automationAlerts.map((alert) => (
-                <li
-                  key={alert.id}
-                  className="rounded-md border border-gray-200 bg-gray-50 p-3 shadow-sm"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-gray-900">
-                      {alert.message || 'Automation issue detected'}
-                    </span>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${alertSeverityVariant(alert.severity)}`}
-                    >
-                      {alert.severity}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
-                    <span className="font-medium text-indigo-700 break-all">
-                      {alert.url}
-                    </span>
-                    <span>Status {alert.status}</span>
-                    <span>{alert.count} members</span>
-                    <span>{alert.windowDays} day window</span>
-                    <span>{alert.actor}</span>
-                    <span>{formatDate(alert.createdAt)}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            isAlertWorkflowEnabled ? (
+              <ul className="space-y-2" data-testid="alert-workflow-list">
+                {automationAlerts.map((alert) => (
+                  <AlertItem key={alert.id} alert={alert} />
+                ))}
+              </ul>
+            ) : (
+              <ul className="space-y-2">
+                {automationAlerts.map((alert) => (
+                  <li
+                    key={alert.id}
+                    className="rounded-md border border-gray-200 bg-gray-50 p-3 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {alert.message || 'Automation issue detected'}
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${alertSeverityVariant(alert.severity)}`}
+                      >
+                        {alert.severity}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                      <span className="font-medium text-indigo-700 break-all">
+                        {alert.url}
+                      </span>
+                      <span>Status {alert.status}</span>
+                      <span>{alert.count} members</span>
+                      <span>{alert.windowDays} day window</span>
+                      <span>{alert.actor}</span>
+                      <span>{formatDate(alert.createdAt)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )
           ) : null}
         </div>
       </section>

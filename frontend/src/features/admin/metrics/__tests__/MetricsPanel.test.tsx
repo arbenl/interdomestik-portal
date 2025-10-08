@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderWithProviders, screen } from '@/test-utils';
 import { MetricsPanel } from '../MetricsPanel';
 const { automationMock, alertsMock, assistantMock, telemetryMock } = vi.hoisted(
@@ -15,12 +15,31 @@ vi.mock('@/hooks/useAutomationAlerts', () => ({ default: alertsMock }));
 vi.mock('@/hooks/useAssistantSessions', () => ({ default: assistantMock }));
 vi.mock('@/hooks/useAssistantTelemetry', () => ({ default: telemetryMock }));
 
+const originalFlag = import.meta.env.VITE_FLAG_ALERT_WORKFLOW as
+  | string
+  | undefined;
+
+function setAlertFlag(value: 'true' | 'false') {
+  (import.meta.env as Record<string, string>).VITE_FLAG_ALERT_WORKFLOW = value;
+}
+
 describe('MetricsPanel', () => {
   beforeEach(() => {
     automationMock.mockReset();
     alertsMock.mockReset();
     assistantMock.mockReset();
     telemetryMock.mockReset();
+    setAlertFlag('true');
+  });
+
+  afterEach(() => {
+    if (typeof originalFlag === 'string') {
+      (import.meta.env as Record<string, string>).VITE_FLAG_ALERT_WORKFLOW =
+        originalFlag;
+    } else {
+      delete (import.meta.env as Record<string, string>)
+        .VITE_FLAG_ALERT_WORKFLOW;
+    }
   });
 
   it('renders automation logs and assistant telemetry', () => {
@@ -57,6 +76,8 @@ describe('MetricsPanel', () => {
             actor: 'automation',
             createdAt: new Date('2025-09-25T11:00:00Z'),
             acknowledged: false,
+            acknowledgedAt: null,
+            acknowledgedBy: null,
           },
         ],
       },
@@ -125,6 +146,9 @@ describe('MetricsPanel', () => {
     expect(screen.getByText(/Active alerts/i)).toBeInTheDocument();
     expect(
       screen.getByText(/Renewal webhook dispatch responded with status 503/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /acknowledge/i })
     ).toBeInTheDocument();
     expect(screen.getByText(/Avg/i).parentElement?.textContent).toContain(
       '250'

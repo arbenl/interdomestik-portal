@@ -3,7 +3,7 @@ import { Suspense, lazy } from 'react';
 import Layout from '@/components/Layout';
 import RoleProtectedRoute from '@/components/RoleProtectedRoute';
 import AdminRoute from '@/routes/AdminRoute';
-//
+import PortalShell from '@/components/layout/PortalShell';
 
 const Home = lazy(() => import('@/pages/Home'));
 const MemberPortal = lazy(() => import('@/pages/MemberPortal'));
@@ -18,11 +18,6 @@ const PortalEvents = lazy(() => import('@/pages/PortalEvents'));
 const PortalSupport = lazy(() => import('@/pages/PortalSupport'));
 const PortalDocuments = lazy(() => import('@/pages/PortalDocuments'));
 const Verify = lazy(() => import('@/pages/Verify'));
-const PortalLayout = lazy(() =>
-  import('@/features/portal/PortalLayout').then((m) => ({
-    default: m.PortalLayout,
-  }))
-);
 const DashboardPage = lazy(() => import('@/pages/Dashboard/DashboardPage'));
 
 function DashboardRoute() {
@@ -34,11 +29,7 @@ function DashboardRoute() {
   if (!isDashboardEnabled) {
     return <Navigate to="/" replace />;
   }
-  return (
-    <RoleProtectedRoute roles={['member', 'admin']}>
-      <DashboardPage />
-    </RoleProtectedRoute>
-  );
+  return <DashboardPage />;
 }
 
 export default function App() {
@@ -51,20 +42,29 @@ export default function App() {
           <Route path="signup" element={<SignUp />} />
           <Route path="verify" element={<Verify />} />
           <Route
-            path="portal/*"
             element={
               <RoleProtectedRoute roles={['member', 'agent', 'admin']}>
-                <PortalLayout />
+                <PortalShell />
               </RoleProtectedRoute>
             }
           >
-            <Route index element={<MemberPortal />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="membership" element={<Membership />} />
-            <Route path="billing" element={<Billing />} />
-            <Route path="documents" element={<PortalDocuments />} />
-            <Route path="events" element={<PortalEvents />} />
-            <Route path="support" element={<PortalSupport />} />
+            <Route path="portal">
+              <Route index element={<MemberPortal />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="membership" element={<Membership />} />
+              <Route path="billing" element={<Billing />} />
+              <Route path="documents" element={<PortalDocuments />} />
+              <Route path="events" element={<PortalEvents />} />
+              <Route path="support" element={<PortalSupport />} />
+            </Route>
+            <Route
+              path="dashboard"
+              element={
+                <RoleProtectedRoute roles={['member', 'admin']}>
+                  <DashboardRoute />
+                </RoleProtectedRoute>
+              }
+            />
           </Route>
           <Route
             path="profile"
@@ -94,7 +94,6 @@ export default function App() {
               </RoleProtectedRoute>
             }
           />
-          <Route path="/dashboard" element={<DashboardRoute />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

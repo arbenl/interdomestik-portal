@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderWithProviders, screen, fireEvent } from '@/test-utils';
 import Navbar from './Navbar';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +11,10 @@ const originalFlag = import.meta.env.VITE_FF_DASHBOARD ?? 'true';
 function setDashboardFlag(value: 'true' | 'false') {
   (import.meta.env as Record<string, string>).VITE_FF_DASHBOARD = value;
 }
+
+afterEach(() => {
+  setDashboardFlag(originalFlag as 'true' | 'false');
+});
 
 describe('Navbar', () => {
   it('renders links and toggles user menu', () => {

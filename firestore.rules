@@ -94,6 +94,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /alertAcknowledgements/{alertId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
     match /assistantTelemetry/{entryId} {
       allow read: if isAdmin();
       allow write: if false;

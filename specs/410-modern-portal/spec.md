@@ -85,6 +85,7 @@ Deliver a modernization pass that brings Interdomestik’s member portal in line
 
 - ✅ Assistant MVP wired: `startAssistantSuggestion` callable, per-user transcripts, responsive drawer UI, and frontend tests in place.
 - ✅ Responsive shell scaffold landed: `/portal` renders inside `PortalShell` with desktop rail + mobile tabs; Profile, Membership, Billing reuse the shell.
+- ✅ Layout routing refactored so `PortalShell` wraps dashboard + portal pages via shared React Router layout; mobile tabs/desktop rail appear everywhere consistently.
 - ✅ Resolved: scoped TanStack Query cache per signed-in admin/agent (dashboard query now keyed with `uid` + `allowedRegions`).
 - ✅ Responsive nav polish delivered: shell nav now includes icons plus Events/Support placeholders across desktop and mobile.
 - ✅ Staff MFA reminder + gating: portal banner + `updateMfaPreference` callable ensure exports stay blocked until MFA acknowledged.

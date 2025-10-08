@@ -1,7 +1,5 @@
 'use client';
 
-import PortalShell from '@/components/layout/PortalShell';
-
 const supportShortcuts = [
   {
     id: 'renewal-checklist',
@@ -34,16 +32,13 @@ const helpChannels = [
 
 export default function PortalSupport() {
   return (
-    <PortalShell
-      header={
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-gray-900">Support hub</h1>
-          <p className="text-sm text-gray-500">
-            Self-service tasks today, proactive alerts and MFA enforcement next.
-          </p>
-        </div>
-      }
-    >
+    <>
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold text-gray-900">Support hub</h1>
+        <p className="text-sm text-gray-500">
+          Self-service tasks today, proactive alerts and MFA enforcement next.
+        </p>
+      </div>
       <section aria-labelledby="support-shortcuts" className="space-y-4">
         <h2
           id="support-shortcuts"
@@ -106,6 +101,6 @@ export default function PortalSupport() {
           while the services are finalized.
         </p>
       </section>
-    </PortalShell>
+    </>
   );
 }

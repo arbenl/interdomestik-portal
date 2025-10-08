@@ -12,7 +12,6 @@ import {
 } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import type { Invoice } from '@/types';
-import PortalShell from '@/components/layout/PortalShell';
 
 function formatMoney(amount: number, currency: string) {
   try {
@@ -84,15 +83,13 @@ export default function Billing() {
 
   if (!user) {
     return (
-      <PortalShell>
-        <div className="max-w-3xl">
-          <h1 className="text-2xl font-bold mb-3">Billing & Subscription</h1>
-          <p className="text-gray-600 mb-4">Please sign in to view billing.</p>
-          <a className="text-indigo-600 underline" href="/signin">
-            Go to Sign In
-          </a>
-        </div>
-      </PortalShell>
+      <div className="max-w-3xl">
+        <h1 className="text-2xl font-bold mb-3">Billing & Subscription</h1>
+        <p className="text-gray-600 mb-4">Please sign in to view billing.</p>
+        <a className="text-indigo-600 underline" href="/signin">
+          Go to Sign In
+        </a>
+      </div>
     );
   }
 
@@ -104,108 +101,103 @@ export default function Billing() {
       : '—';
 
   return (
-    <PortalShell>
-      <div className="max-w-3xl">
-        <h1 className="text-2xl font-bold mb-1">Billing & Subscription</h1>
-        <p className="text-gray-600 mb-4">
-          Manage your membership payments and invoices.
-        </p>
+    <div className="max-w-3xl">
+      <h1 className="text-2xl font-bold mb-1">Billing & Subscription</h1>
+      <p className="text-gray-600 mb-4">
+        Manage your membership payments and invoices.
+      </p>
 
-        {ENABLE_PAYMENTS_UI && (
-          <div className="mb-6">
-            <PaymentElementBox amountCents={2500} currency="EUR" />
-          </div>
-        )}
+      {ENABLE_PAYMENTS_UI && (
+        <div className="mb-6">
+          <PaymentElementBox amountCents={2500} currency="EUR" />
+        </div>
+      )}
 
-        <div className="border rounded p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-gray-500">Member</div>
-              <div className="font-medium">{name}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-500">Renewal date</div>
-              <div className="font-medium">{expiry}</div>
-            </div>
+      <div className="border rounded p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm text-gray-500">Member</div>
+            <div className="font-medium">{name}</div>
           </div>
-          <div className="mt-3 text-sm text-gray-500">
-            For local testing, use the button below to simulate a paid invoice
-            via the emulator-friendly webhook.
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <Button
-              onClick={() => {
-                void simulatePayment();
-              }}
-              disabled={busy}
-            >
-              {busy ? 'Simulating…' : 'Add test paid invoice'}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                void (async () => {
-                  try {
-                    const fn = httpsCallable<
-                      { uid?: string; year?: number },
-                      { ok: boolean }
-                    >(functions, 'resendMembershipCard');
-                    await fn({});
-                    alert('Card email queued. Check your inbox.');
-                  } catch {
-                    alert('Failed to resend card');
-                  }
-                })();
-              }}
-            >
-              Resend card email
-            </Button>
+          <div>
+            <div className="text-sm text-gray-500">Renewal date</div>
+            <div className="font-medium">{expiry}</div>
           </div>
         </div>
+        <div className="mt-3 text-sm text-gray-500">
+          For local testing, use the button below to simulate a paid invoice via
+          the emulator-friendly webhook.
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <Button
+            onClick={() => {
+              void simulatePayment();
+            }}
+            disabled={busy}
+          >
+            {busy ? 'Simulating…' : 'Add test paid invoice'}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              void (async () => {
+                try {
+                  const fn = httpsCallable<
+                    { uid?: string; year?: number },
+                    { ok: boolean }
+                  >(functions, 'resendMembershipCard');
+                  await fn({});
+                  alert('Card email queued. Check your inbox.');
+                } catch {
+                  alert('Failed to resend card');
+                }
+              })();
+            }}
+          >
+            Resend card email
+          </Button>
+        </div>
+      </div>
 
-        <h2 className="text-xl font-semibold mb-2">Invoices</h2>
-        {isLoading && <div className="text-gray-600">Loading…</div>}
-        {error && (
-          <div className="border border-red-300 bg-red-50 text-red-800 rounded p-2 mb-3">
-            Failed to load invoices: {error.message}
-          </div>
-        )}
-        {!isLoading && invoices?.length === 0 ? (
-          <div className="text-gray-600">No invoices yet.</div>
-        ) : (
-          <div className="divide-y border rounded">
-            {invoices?.map((inv: Invoice, index: number) => {
-              const key =
-                inv.id ||
-                inv.invoiceId ||
-                `${inv.created?.seconds ?? 0}-${index}`;
-              return (
-                <div
-                  key={key}
-                  className="p-3 flex items-center justify-between"
-                >
-                  <div>
-                    <div className="font-medium">{inv.id}</div>
-                    <div className="text-xs text-gray-500">
-                      {inv.created
-                        ? new Date(inv.created.seconds * 1000).toLocaleString()
-                        : ''}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium">
-                      {formatMoney(inv.amount || 0, inv.currency || 'EUR')}
-                    </div>
-                    <div className="text-xs uppercase tracking-wide text-gray-500">
-                      {inv.status || 'unknown'}
-                    </div>
+      <h2 className="text-xl font-semibold mb-2">Invoices</h2>
+      {isLoading && <div className="text-gray-600">Loading…</div>}
+      {error && (
+        <div className="border border-red-300 bg-red-50 text-red-800 rounded p-2 mb-3">
+          Failed to load invoices: {error.message}
+        </div>
+      )}
+      {!isLoading && invoices?.length === 0 ? (
+        <div className="text-gray-600">No invoices yet.</div>
+      ) : (
+        <div className="divide-y border rounded">
+          {invoices?.map((inv: Invoice, index: number) => {
+            const key =
+              inv.id ||
+              inv.invoiceId ||
+              `${inv.created?.seconds ?? 0}-${index}`;
+            return (
+              <div key={key} className="p-3 flex items-center justify-between">
+                <div>
+                  <div className="font-medium">{inv.id}</div>
+                  <div className="text-xs text-gray-500">
+                    {inv.created
+                      ? new Date(inv.created.seconds * 1000).toLocaleString()
+                      : ''}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </PortalShell>
+                <div className="text-right">
+                  <div className="font-medium">
+                    {formatMoney(inv.amount || 0, inv.currency || 'EUR')}
+                  </div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">
+                    {inv.status || 'unknown'}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

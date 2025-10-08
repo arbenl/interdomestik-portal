@@ -20,6 +20,8 @@ export type AutomationAlert = {
   actor: string;
   createdAt: Date | null;
   acknowledged: boolean;
+  acknowledgedAt: Date | null;
+  acknowledgedBy: string | null;
 };
 
 const MAX_ALERTS = 15;
@@ -37,6 +39,11 @@ function normalizeAlert(id: string, data: DocumentData): AutomationAlert {
     actor: typeof data.actor === 'string' ? data.actor : 'automation',
     createdAt,
     acknowledged: Boolean(data.acknowledged),
+    acknowledgedAt: data.acknowledgedAt?.toDate
+      ? data.acknowledgedAt.toDate()
+      : null,
+    acknowledgedBy:
+      typeof data.acknowledgedBy === 'string' ? data.acknowledgedBy : null,
   };
 }
 

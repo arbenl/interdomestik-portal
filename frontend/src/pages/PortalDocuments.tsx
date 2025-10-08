@@ -1,7 +1,6 @@
 'use client';
 
 import { FormEvent, Fragment, useState } from 'react';
-import PortalShell from '@/components/layout/PortalShell';
 import { useAuth } from '@/hooks/useAuth';
 import useDocumentShares from '@/hooks/useDocumentShares';
 import useDocumentShareActivity from '@/hooks/useDocumentShareActivity';
@@ -69,19 +68,14 @@ export default function PortalDocuments() {
   const canShare = isAdmin || isAgent;
 
   return (
-    <PortalShell
-      header={
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Document vault
-          </h1>
-          <p className="text-sm text-gray-500">
-            Securely distribute policy updates, invoices, or identity files to
-            individual members.
-          </p>
-        </div>
-      }
-    >
+    <>
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold text-gray-900">Document vault</h1>
+        <p className="text-sm text-gray-500">
+          Securely distribute policy updates, invoices, or identity files to
+          individual members.
+        </p>
+      </div>
       {canShare ? (
         <section
           aria-labelledby="share-form"
@@ -256,7 +250,7 @@ export default function PortalDocuments() {
           </div>
         )}
       </section>
-    </PortalShell>
+    </>
   );
 }
 
