@@ -9,8 +9,13 @@ export async function acknowledgeAlert(alertId: string) {
   if (!alertId || typeof alertId !== 'string') {
     throw new Error('alertId is required');
   }
-  return callFn<{ alertId: string }, AcknowledgeAlertResponse>(
-    'acknowledgeAlert',
-    { alertId }
-  );
+  try {
+    return await callFn<{ alertId: string }, AcknowledgeAlertResponse>(
+      'acknowledgeAlert',
+      { alertId }
+    );
+  } catch (error) {
+    console.error('[alerts] acknowledge failure', error);
+    throw error;
+  }
 }

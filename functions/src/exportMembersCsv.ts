@@ -1,6 +1,7 @@
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
+import cors from 'cors';
 import { log } from './lib/logger';
 
 try {
@@ -10,6 +11,11 @@ try {
 }
 
 const db = admin.firestore();
+const corsHandler = cors({
+  origin: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
+});
 
 /**
  * Admin-only CSV export:
@@ -20,18 +26,8 @@ const db = admin.firestore();
 export const exportMembersCsv = functions
   .runWith({ memory: '256MB', timeoutSeconds: 60 })
   .region('europe-west1')
-  .https.onRequest(
-    async (
-      req: functions.https.Request,
-      res: functions.Response
-    ): Promise<void> => {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-      if (req.method === 'OPTIONS') {
-        res.status(200).send('ok');
-        return;
-      }
-
+  .https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
       try {
         // AuthZ: admin only
         const authHeader = (req.headers.authorization || '')
@@ -107,5 +103,5 @@ export const exportMembersCsv = functions
         res.status(500).send(String(e));
         return;
       }
-    }
-  );
+    });
+  });

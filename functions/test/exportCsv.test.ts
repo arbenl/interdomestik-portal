@@ -11,6 +11,10 @@ function makeReqRes(token?: string) {
   let statusCode = 200;
   let body: any;
   const outHeaders: Record<string, string> = {};
+  let resolveDone: (() => void) | undefined;
+  const done = new Promise<void>((resolve) => {
+    resolveDone = resolve;
+  });
   const res: any = {
     set: (k: string, v: string) => {
       outHeaders[k] = v;
@@ -19,16 +23,32 @@ function makeReqRes(token?: string) {
     setHeader: (k: string, v: string) => {
       outHeaders[k] = v as any;
     },
+    getHeader: (k: string) => outHeaders[k],
+    header: (k: string, v: string) => {
+      outHeaders[k] = v;
+      return res;
+    },
     status: (c: number) => {
       statusCode = c;
       return res;
     },
     send: (b: any) => {
       body = b;
+       resolveDone?.();
+      return res;
+    },
+    end: (b?: any) => {
+      if (typeof b !== 'undefined') body = b;
+      resolveDone?.();
       return res;
     },
   };
-  return { req, res, get: () => ({ statusCode, body, headers: outHeaders }) };
+  return {
+    req,
+    res,
+    done,
+    get: () => ({ statusCode, body, headers: outHeaders }),
+  };
 }
 
 describe('exportMembersCsv', () => {
@@ -64,10 +84,15 @@ describe('exportMembersCsv', () => {
     const verifyStub = (auth as any).verifyIdToken as (
       t: string
     ) => Promise<any>;
-    (auth as any).verifyIdToken = async () => ({ uid: 'admin', role: 'admin' });
+    (auth as any).verifyIdToken = async () => ({
+      uid: 'admin',
+      role: 'admin',
+      mfaEnabled: true,
+    });
 
-    const { req, res, get } = makeReqRes('dummy');
+    const { req, res, get, done } = makeReqRes('dummy');
     await (exportMembersCsv as any)(req, res);
+    await done;
     const out = get();
     expect(out.statusCode).to.equal(200);
     expect(String(out.body)).to.include('memberNo,name,email');

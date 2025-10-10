@@ -28,6 +28,13 @@ import { generateMembersCsv, saveCsvToStorage } from './lib/exports';
 import { normalizeColumns, streamMembersCsv } from './lib/exportsV2';
 import { log } from './lib/logger';
 import { getPortalDashboardLogic, getPortalLayoutLogic } from './lib/dashboard';
+import {
+  ensureAdminMfaForToken,
+  getExportById,
+  listExportsForAdmin,
+  mapHttpsErrorToResponse,
+  requireAdminWithMfa,
+} from './lib/exportStatus';
 export { upsertPortalLayout } from './portalLayouts';
 import { startAssistantSuggestionLogic } from './lib/assistant';
 import { updateMfaPreferenceLogic } from './lib/security';
@@ -76,6 +83,49 @@ export const createPaymentIntent = functions
   .https.onCall((data, context) =>
     createPaymentIntentLogic(data as any, context)
   );
+
+export const getMyExports = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => {
+    const auth = requireAdminWithMfa(context);
+    const limitRaw = Number(
+      typeof data?.limit === 'string' || typeof data?.limit === 'number'
+        ? data.limit
+        : NaN
+    );
+    const limit = Number.isFinite(limitRaw)
+      ? Math.max(1, Math.min(Math.trunc(limitRaw), 50))
+      : undefined;
+    const jobs = await listExportsForAdmin({
+      uid: auth.uid,
+      limit,
+    });
+    return { jobs };
+  });
+
+export const getExportStatus = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => {
+    requireAdminWithMfa(context);
+    const raw = data?.id;
+    const id =
+      typeof raw === 'string'
+        ? raw.trim()
+        : typeof raw === 'number'
+          ? String(raw)
+          : '';
+    if (!id) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Export id is required'
+      );
+    }
+    const record = await getExportById(id);
+    if (!record) {
+      throw new functions.https.HttpsError('not-found', 'Export not found');
+    }
+    return record;
+  });
 
 export const getPortalDashboard = functions
   .region(REGION)
@@ -417,6 +467,11 @@ export const clearDatabase = functions
           isAdmin = (decoded as any)?.role === 'admin';
         } catch {
           isAdmin = false;
+        }
+
+        if (req.method === 'OPTIONS') {
+          res.status(204).end();
+          return;
         }
       }
       if (!(isAdmin || (isEmulator && emuBypassOk))) {
@@ -1069,6 +1124,7 @@ if (process.env.FUNCTIONS_EMULATOR) {
           ...(adminUser.customClaims || {}),
           role: 'admin',
           allowedRegions: ['PRISHTINA', 'PEJA'],
+          mfaEnabled: true,
         });
         await upsertMember(adminUser.uid, {
           name: 'Admin User',
@@ -1129,12 +1185,18 @@ if (process.env.FUNCTIONS_EMULATOR) {
           title: 'Welcome meetup — PRISHTINA',
           startAt: Timestamp.fromDate(new Date(Date.now() + 7 * 86400000)),
           location: 'PRISHTINA',
+          focus: 'Orientation • Region onboarding',
+          tags: ['meetup'],
+          regions: ['PRISHTINA'],
           createdAt: Timestamp.now(),
         });
         await db.collection('events').add({
           title: 'Volunteer day',
           startAt: Timestamp.fromDate(new Date(Date.now() + 21 * 86400000)),
           location: 'PEJA',
+          focus: 'Community projects • Outreach planning',
+          tags: ['workshop'],
+          regions: ['PEJA'],
           createdAt: Timestamp.now(),
         });
 
@@ -1552,22 +1614,41 @@ export const startMembersExportLegacy = functions
 export const startMembersExport = functions
   .runWith({ memory: '256MB', timeoutSeconds: 60 })
   .region(REGION)
-  .https.onCall(async (data, context) => {
+  .https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
+
     try {
-      if (!context.auth || (context.auth.token as any)?.role !== 'admin') {
-        throw new functions.https.HttpsError('permission-denied', 'Admin only');
+      // AuthZ: admin only
+      const authHeader = (req.headers.authorization || '')
+        .replace('Bearer ', '')
+        .trim();
+      if (!authHeader) {
+        throw new functions.https.HttpsError(
+          'unauthenticated',
+          'Missing Authorization'
+        );
       }
-      const actor = context.auth.uid;
+      const token = await admin.auth().verifyIdToken(authHeader);
+      await ensureAdminMfaForToken(token);
+      const actor = token.uid;
+
       const running = await db
         .collection('exports')
         .where('createdBy', '==', actor)
         .where('status', '==', 'running')
         .get();
-      if (running.size >= 2)
+      if (running.size >= 2) {
         throw new functions.https.HttpsError(
           'resource-exhausted',
           'Too many concurrent exports'
         );
+      }
 
       function tsSafe(input: any): admin.firestore.Timestamp | undefined {
         if (!input) return undefined;
@@ -1579,6 +1660,8 @@ export const startMembersExport = functions
           return undefined;
         }
       }
+
+      const data = req.body || {};
       const filters: any = {
         regions: Array.isArray(data?.filters?.regions)
           ? data.filters.regions.map((x: any) => String(x)).filter(Boolean)
@@ -1598,11 +1681,17 @@ export const startMembersExport = functions
       );
 
       const exportRef = db.collection('exports').doc();
+      const ts = new Date();
+      const dateKey = `${ts.getUTCFullYear()}-${String(ts.getUTCMonth() + 1).padStart(2, '0')}-${String(ts.getUTCDate()).padStart(2, '0')}_${String(ts.getUTCHours()).padStart(2, '0')}${String(ts.getUTCMinutes()).padStart(2, '0')}`;
+      const path = `exports/members/members_${dateKey}_${exportRef.id}.csv`;
+
       await exportRef.set(
         {
           type: 'members_csv',
-          status: 'pending',
+          status: 'running',
+          path,
           createdAt: FieldValue.serverTimestamp(),
+          startedAt: FieldValue.serverTimestamp(),
           createdBy: actor,
           filters,
           columns,
@@ -1610,16 +1699,71 @@ export const startMembersExport = functions
         },
         { merge: true }
       );
-      return { ok: true, id: exportRef.id };
-    } catch (e) {
-      // Map unknown errors to HttpsError with details for easier debugging in UI
-      const msg =
-        e instanceof functions.https.HttpsError ? e.message : String(e);
-      if (e instanceof functions.https.HttpsError) throw e;
-      throw new functions.https.HttpsError(
-        'internal',
-        `startMembersExport failed: ${msg}`
+
+      const runningInEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
+
+      if (runningInEmulator) {
+        await exportRef.set(
+          {
+            status: 'success',
+            finishedAt: FieldValue.serverTimestamp(),
+            progress: { rows: 0, bytes: 0 },
+            rows: 0,
+            size: 0,
+            url: null,
+            path,
+          },
+          { merge: true }
+        );
+        res.status(200).json({ data: { ok: true, id: exportRef.id } });
+        return;
+      }
+
+      try {
+        const { rows, size, url } = await streamMembersCsv({
+          exportId: exportRef.id,
+          filters,
+          columns,
+          actorUid: actor,
+          path,
+        });
+
+        await exportRef.set(
+          {
+            status: 'success',
+            finishedAt: FieldValue.serverTimestamp(),
+            progress: { rows, bytes: size },
+            rows,
+            size,
+            url,
+          },
+          { merge: true }
+        );
+        res.status(200).json({ data: { ok: true, id: exportRef.id } });
+      } catch (err) {
+        await exportRef.set(
+          {
+            status: 'error',
+            finishedAt: FieldValue.serverTimestamp(),
+            error: String(err),
+          },
+          { merge: true }
+        );
+        throw err;
+      }
+    } catch (error) {
+      const err =
+        error instanceof Error ? error : new Error(String(error));
+      const code =
+        error instanceof functions.https.HttpsError ? error.code : 'internal';
+      log('start_members_export_error', {
+        error: err.message,
+        code,
+      });
+      const { status, body } = mapHttpsErrorToResponse(
+        error instanceof functions.https.HttpsError ? error : err
       );
+      res.status(status).json(body);
     }
   });
 

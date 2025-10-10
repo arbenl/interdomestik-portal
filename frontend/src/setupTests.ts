@@ -244,7 +244,12 @@ const applyFunctionsImpl = (
 };
 
 const resetFunctions = () => {
-  applyFunctionsImpl(async () => ({}));
+  applyFunctionsImpl(async (name: string) => {
+    if (name === 'startMembersExport') {
+      return { ok: true, id: 'test-export' };
+    }
+    return {};
+  });
 };
 
 resetFunctions();

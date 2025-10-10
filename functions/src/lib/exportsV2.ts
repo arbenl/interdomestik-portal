@@ -1,13 +1,8 @@
 import { admin, db } from '../firebaseAdmin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { log } from './logger';
-
-export type ExportStatus =
-  | 'pending'
-  | 'running'
-  | 'success'
-  | 'error'
-  | 'cancelled';
+import type { ExportStatus } from './exportStatus';
+export type { ExportStatus } from './exportStatus';
 
 export type ExportFilters = {
   regions?: string[];
