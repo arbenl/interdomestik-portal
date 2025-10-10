@@ -3,3 +3,4 @@ packages:
   - functions
   - packages/eslint-config-custom
   - packages/radix-dialog
+  - packages/mcp

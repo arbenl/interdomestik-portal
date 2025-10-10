@@ -21,7 +21,11 @@
     "test:rules": "vitest -c vitest.config.rules.ts",
     "check": "node scripts/check-errors.js",
     "verify:frontend": "pnpm --filter frontend typecheck && pnpm --filter frontend lint --no-fix && pnpm --filter frontend build && pnpm --filter frontend test:ci",
-    "specify": "uvx --from git+https://github.com/github/spec-kit.git specify"
+    "specify": "uvx --from git+https://github.com/github/spec-kit.git specify",
+    "mcp:docs": "pnpm --filter mcp-servers docs-server",
+    "mcp:auth": "pnpm --filter mcp-servers auth-server",
+    "mcp:tests": "pnpm --filter mcp-servers tests-server",
+    "mcp:emu": "pnpm --filter mcp-servers emu-server"
   },
   "keywords": [
     "member-portal",
@@ -76,7 +80,7 @@
   "packageManager": "pnpm@10.16.1+sha521.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706",
   "pnpm": {
     "overrides": {
-      "zod": "^4.1.11"
+      "zod": "3.23.8"
     }
   }
 }

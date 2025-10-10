@@ -14,10 +14,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { User } from 'firebase/auth';
 import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
 import { vi } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio';
 import type { AuthContextType } from '@/context/AuthContext';
 import { useAuth } from '@/hooks/useAuth';
 import { makeUser } from '@/tests/factories/user';
 import { createTestQueryClient } from './tests/helpers';
+
+const AUTH_FIXTURES_COMMAND =
+  process.env.MCP_AUTH_SERVER_COMMAND ?? 'pnpm';
+const AUTH_FIXTURES_ARGS =
+  process.env.MCP_AUTH_SERVER_ARGS?.split(' ').filter(Boolean) ?? [
+    '--filter',
+    'mcp-servers',
+    'auth-server',
+  ];
 
 export function TestProviders({
   children,
@@ -105,3 +116,83 @@ export function mockUseAuth(overrides?: MockUseAuthParams) {
 }
 
 export { screen, waitFor, fireEvent, userEvent, within, createTestQueryClient };
+
+
+
+export type BuildAuthContextOptions = {
+  role?: 'admin' | 'agent' | 'member' | 'guest';
+  user?: {
+    uid?: string;
+    email?: string;
+    displayName?: string;
+    photoURL?: string;
+  } | null;
+  loading?: boolean;
+  isAdmin?: boolean;
+  isAgent?: boolean;
+  allowedRegions?: string[];
+  mfaEnabled?: boolean;
+};
+
+export async function buildAuthContextFixture(
+  options?: BuildAuthContextOptions
+): Promise<AuthContextType & { refreshClaims: () => Promise<void> }> {
+  const transport = new StdioClientTransport({
+    command: AUTH_FIXTURES_COMMAND,
+    args: AUTH_FIXTURES_ARGS,
+    env: {
+      ...process.env,
+      FORCE_COLOR: '0',
+    },
+  });
+
+  const client = new Client(
+    { name: 'frontend-tests', version: '0.1.0' },
+    {
+      capabilities: {
+        tools: {},
+      },
+    }
+  );
+
+  await client.connect(transport);
+
+  try {
+    const result = await client.callTool({
+      name: 'build-auth-context',
+      arguments: options ?? {},
+    });
+
+    const context = result?.structuredContent?.context as
+      | {
+          user: unknown;
+          loading: boolean;
+          isAdmin: boolean;
+          isAgent: boolean;
+          allowedRegions: string[];
+          mfaEnabled: boolean;
+        }
+      | undefined;
+
+    if (!context) {
+      throw new Error('Auth fixtures server returned no context payload.');
+    }
+
+    return {
+      user: (context.user as User | null) ?? null,
+      loading: Boolean(context.loading),
+      isAdmin: Boolean(context.isAdmin),
+      isAgent: Boolean(context.isAgent),
+      allowedRegions: Array.isArray(context.allowedRegions)
+        ? [...context.allowedRegions]
+        : [],
+      mfaEnabled: Boolean(context.mfaEnabled),
+      refreshClaims: vi.fn(async () => {}),
+      signIn: vi.fn(async () => {}),
+      signUp: vi.fn(async () => {}),
+      signOutUser: vi.fn(async () => {}),
+    };
+  } finally {
+    await client.close();
+  }
+}

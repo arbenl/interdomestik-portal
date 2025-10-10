@@ -1,0 +1,22 @@
+{
+  "name": "mcp-servers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "docs-server": "tsx src/docsServer.ts",
+    "auth-server": "tsx src/authFixturesServer.ts",
+    "tests-server": "tsx src/testOrchestratorServer.ts",
+    "emu-server": "tsx src/emulatorServer.ts"
+  },
+  "dependencies": {
+    "execa": "^7.2.0",
+    "zod": "^4.1.8",
+    "@modelcontextprotocol/sdk": "^1.20.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
