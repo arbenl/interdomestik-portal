@@ -41,10 +41,23 @@ async function main() {
 
     console.log(`Calling tool "${toolName}"...`);
 
-    const result = await client.callTool({
-      name: toolName,
-      arguments: toolArgs,
-    });
+    const timeoutEnv = Number.parseInt(
+      process.env.MCP_TIMEOUT_MS || process.env.MCP_REQUEST_TIMEOUT_MS || '',
+      10
+    );
+    const timeout = Number.isFinite(timeoutEnv) ? timeoutEnv : 180_000;
+
+    const result = await client.callTool(
+      {
+        name: toolName,
+        arguments: toolArgs,
+      },
+      undefined,
+      {
+        timeout,
+        maxTotalTimeout: timeout,
+      }
+    );
 
     if (result.isError) {
       console.error('Tool execution failed:');
