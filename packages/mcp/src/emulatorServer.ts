@@ -1,10 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
-import { z } from 'zod';
-import { resolve } from 'node:path';
+import { z } from './z.js';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const repoRoot = resolve(import.meta.dirname, '..', '..');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const repoRoot = resolve(__dirname, '..', '..');
 
 type EmulatorMode = 'default' | 'seeded';
 
@@ -18,21 +20,13 @@ type EmulatorState = {
 
 const LOG_LIMIT = 10_000;
 
-const StartEmulatorInputSchema = z
-  .object({
-    mode: z.enum(['default', 'seeded']),
-  })
-  .partial();
+const StartEmulatorInput = {
+  mode: z.enum(['default', 'seeded']).optional(),
+};
 
-type StartEmulatorInput = z.infer<typeof StartEmulatorInputSchema>;
-
-const EmulatorLogsInputSchema = z
-  .object({
-    tail: z.number(),
-  })
-  .partial();
-
-type EmulatorLogsInput = z.infer<typeof EmulatorLogsInputSchema>;
+const EmulatorLogsInput = {
+  tail: z.number().optional(),
+};
 
 let emulatorState: EmulatorState | null = null;
 
@@ -70,10 +64,7 @@ function startEmulatorProcess(mode: EmulatorMode) {
     throw new Error('Emulators already running');
   }
 
-  const args =
-    mode === 'seeded'
-      ? ['dev:emu:seed']
-      : ['dev:emu'];
+  const args = mode === 'seeded' ? ['dev:emu:seed'] : ['dev:emu'];
 
   const child = spawn('pnpm', args, {
     cwd: repoRoot,
@@ -96,7 +87,10 @@ function startEmulatorProcess(mode: EmulatorMode) {
   child.stderr.on('data', (chunk) => appendLog(state, chunk));
 
   child.on('exit', (code, signal) => {
-    appendLog(state, `\n[emulator] exited with code ${code ?? 'null'} signal ${signal ?? 'null'}\n`);
+    appendLog(
+      state,
+      `\n[emulator] exited with code ${code ?? 'null'} signal ${signal ?? 'null'}\n`
+    );
     emulatorState = null;
   });
 
@@ -164,13 +158,8 @@ function registerShutdownHook() {
   });
 }
 
-async function main() {
+export function registerEmulatorTools(server: McpServer) {
   registerShutdownHook();
-
-  const server = new McpServer({
-    name: 'emulator-control',
-    version: '0.1.0',
-  });
 
   server.registerTool(
     'emulator-status',
@@ -205,7 +194,7 @@ async function main() {
       title: 'Start Firebase Emulators',
       description:
         'Launch pnpm dev:emu (or dev:emu:seed) so local Firebase services are available.',
-      inputSchema: undefined,
+      inputSchema: StartEmulatorInput,
       outputSchema: {
         running: z.boolean(),
         pid: z.number().nullable(),
@@ -214,23 +203,7 @@ async function main() {
         command: z.array(z.string()).nullable(),
       },
     },
-    async (extra) => {
-      const rawArgs = readToolArguments(extra);
-      const parsed = StartEmulatorInputSchema.safeParse(rawArgs);
-
-      if (!parsed.success) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Invalid arguments: ${parsed.error.message}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      const { mode } = parsed.data;
+    async ({ mode }) => {
       try {
         const state = startEmulatorProcess(mode ?? 'default');
         const status = currentStatus();
@@ -256,7 +229,8 @@ async function main() {
     'stop-emulators',
     {
       title: 'Stop Firebase Emulators',
-      description: 'Terminate running emulator processes started by this server.',
+      description:
+        'Terminate running emulator processes started by this server.',
       outputSchema: {
         stopped: z.boolean(),
       },
@@ -281,30 +255,15 @@ async function main() {
     'emulator-logs',
     {
       title: 'Tail Emulator Logs',
-      description: 'Retrieve recent stdout/stderr output captured from the running emulators.',
-      inputSchema: undefined,
+      description:
+        'Retrieve recent stdout/stderr output captured from the running emulators.',
+      inputSchema: EmulatorLogsInput,
       outputSchema: {
         logs: z.string(),
         running: z.boolean(),
       },
     },
-    async (extra) => {
-      const rawArgs = readToolArguments(extra);
-      const parsed = EmulatorLogsInputSchema.safeParse(rawArgs);
-
-      if (!parsed.success) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Invalid arguments: ${parsed.error.message}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      const { tail } = parsed.data;
+    async ({ tail }) => {
       const logs = formatLogOutput(emulatorState, tail ?? undefined);
       const running = Boolean(emulatorState);
       return {
@@ -318,12 +277,4 @@ async function main() {
       };
     }
   );
-
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
 }
-
-main().catch((error) => {
-  console.error('[emulator-control] Server error', error);
-  process.exit(1);
-});

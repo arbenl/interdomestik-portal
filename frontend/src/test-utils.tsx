@@ -21,14 +21,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { makeUser } from '@/tests/factories/user';
 import { createTestQueryClient } from './tests/helpers';
 
-const AUTH_FIXTURES_COMMAND =
-  process.env.MCP_AUTH_SERVER_COMMAND ?? 'pnpm';
-const AUTH_FIXTURES_ARGS =
-  process.env.MCP_AUTH_SERVER_ARGS?.split(' ').filter(Boolean) ?? [
-    '--filter',
-    'mcp-servers',
-    'auth-server',
-  ];
+const AUTH_FIXTURES_COMMAND = process.env.MCP_AUTH_SERVER_COMMAND ?? 'pnpm';
+const AUTH_FIXTURES_ARGS = process.env.MCP_AUTH_SERVER_ARGS?.split(' ').filter(
+  Boolean
+) ?? ['mcp'];
 
 export function TestProviders({
   children,
@@ -116,8 +112,6 @@ export function mockUseAuth(overrides?: MockUseAuthParams) {
 }
 
 export { screen, waitFor, fireEvent, userEvent, within, createTestQueryClient };
-
-
 
 export type BuildAuthContextOptions = {
   role?: 'admin' | 'agent' | 'member' | 'guest';

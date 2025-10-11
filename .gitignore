@@ -59,3 +59,5 @@ coverage/
 frontend/.playwright-browsers/
 frontend/test-results/
 frontend/e2e/.auth/
+
+gha-creds-*.json

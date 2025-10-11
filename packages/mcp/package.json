@@ -5,15 +5,14 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "docs-server": "tsx src/docsServer.ts",
-    "auth-server": "tsx src/authFixturesServer.ts",
-    "tests-server": "tsx src/testOrchestratorServer.ts",
-    "emu-server": "tsx src/emulatorServer.ts"
+    "start": "tsx src/index.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
     "execa": "^7.2.0",
-    "zod": "^4.1.8",
-    "@modelcontextprotocol/sdk": "^1.20.0"
+    "fast-glob": "^3.3.2",
+    "zod": "3.23.8",
+    "zod3": "npm:zod@3.23.8"
   },
   "devDependencies": {
     "tsx": "^4.20.5",

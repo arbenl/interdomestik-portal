@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  zod: 3.23.8
-
 importers:
 
   .:
@@ -81,9 +78,6 @@ importers:
       wait-on:
         specifier: ^9.0.1
         version: 9.0.1
-      zod:
-        specifier: 3.23.8
-        version: 3.23.8
 
   frontend:
     dependencies:
@@ -211,9 +205,6 @@ importers:
 
   functions:
     dependencies:
-      '@types/cors':
-        specifier: ^2.8.19
-        version: 2.8.19
       cors:
         specifier: ^2.8.5
         version: 2.8.5
@@ -236,6 +227,9 @@ importers:
       '@types/chai':
         specifier: ^5.2.2
         version: 5.2.2
+      '@types/cors':
+        specifier: ^2.8.19
+        version: 2.8.19
       '@types/express':
         specifier: ^5.0.3
         version: 5.0.3
@@ -308,9 +302,15 @@ importers:
       execa:
         specifier: ^7.2.0
         version: 7.2.0
+      fast-glob:
+        specifier: ^3.3.2
+        version: 3.3.3
       zod:
         specifier: 3.23.8
         version: 3.23.8
+      zod3:
+        specifier: npm:zod@3.23.8
+        version: zod@3.23.8
     devDependencies:
       tsx:
         specifier: ^4.20.5
@@ -6160,10 +6160,16 @@ packages:
   zod-to-json-schema@3.24.6:
     resolution: {integrity: sha512-h/z3PKvcTcTetyjl1fkj79MHNEjm+HpD6NXheWjzOekY7kV+lwDYnHw+ivHkijnCSMz1yJaWBD9vu/Fcmk+vEg==}
     peerDependencies:
-      zod: 3.23.8
+      zod: ^3.24.1
 
   zod@3.23.8:
     resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
+
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
+  zod@4.1.12:
+    resolution: {integrity: sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==}
 
 snapshots:
 
@@ -8236,7 +8242,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/node@24.3.3)(@vitest/ui@3.2.4)(jiti@2.6.0)(jsdom@26.1.0)(lightningcss@1.30.1)(tsx@4.20.5)(yaml@2.8.1)
+      vitest: 3.2.4(@types/node@24.5.2)(@vitest/ui@3.2.4)(jiti@2.6.0)(jsdom@26.1.0)(lightningcss@1.30.1)(tsx@4.20.5)(yaml@2.8.1)
     optional: true
 
   '@vitest/utils@3.2.4':
@@ -9601,8 +9607,8 @@ snapshots:
       winston-transport: 4.9.0
       ws: 7.5.10
       yaml: 2.8.1
-      zod: 3.23.8
-      zod-to-json-schema: 3.24.6(zod@3.23.8)
+      zod: 3.25.76
+      zod-to-json-schema: 3.24.6(zod@3.25.76)
     transitivePeerDependencies:
       - '@types/node'
       - bufferutil
@@ -10693,7 +10699,7 @@ snapshots:
       smol-toml: 1.4.2
       strip-json-comments: 5.0.2
       typescript: 5.9.2
-      zod: 3.23.8
+      zod: 4.1.12
 
   kuler@2.0.0: {}
 
@@ -12980,4 +12986,12 @@ snapshots:
     dependencies:
       zod: 3.23.8
 
+  zod-to-json-schema@3.24.6(zod@3.25.76):
+    dependencies:
+      zod: 3.25.76
+
   zod@3.23.8: {}
+
+  zod@3.25.76: {}
+
+  zod@4.1.12: {}

@@ -1,15 +1,18 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
+import { z } from './z.js';
 import { readdir, readFile, stat } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Dirent } from 'node:fs';
 
 const DOC_DIRECTORIES = ['docs', 'specs'];
 const DOC_FILES = ['frontend/TESTING.md', 'docs/TESTING.md'];
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 function projectRoot() {
-  return resolve(import.meta.dirname, '..', '..');
+  return resolve(__dirname, '..', '..');
 }
 
 async function fileExists(relativePath: string) {
@@ -24,13 +27,22 @@ async function fileExists(relativePath: string) {
 
 async function listDocs(): Promise<{ path: string; size: number }[]> {
   const root = projectRoot();
+  const seen = new Set<string>();
   const entries: { path: string; size: number }[] = [];
+
+  async function addEntry(relativePath: string) {
+    if (seen.has(relativePath)) return;
+    const absPath = join(root, relativePath);
+    const stats = await stat(absPath);
+    entries.push({ path: relativePath, size: stats.size });
+    seen.add(relativePath);
+  }
 
   async function walk(relativePath: string) {
     const absPath = join(root, relativePath);
     const stats = await stat(absPath);
     if (stats.isFile()) {
-      entries.push({ path: relativePath, size: stats.size });
+      await addEntry(relativePath);
       return;
     }
     const children: Dirent[] = await readdir(absPath, { withFileTypes: true });
@@ -39,8 +51,7 @@ async function listDocs(): Promise<{ path: string; size: number }[]> {
       if (entry.isDirectory()) {
         await walk(childPath);
       } else {
-        const childStats = await stat(join(root, childPath));
-        entries.push({ path: childPath, size: childStats.size });
+        await addEntry(childPath);
       }
     }
   }
@@ -53,9 +64,7 @@ async function listDocs(): Promise<{ path: string; size: number }[]> {
 
   for (const filePath of DOC_FILES) {
     if (await fileExists(filePath)) {
-      const absPath = join(root, filePath);
-      const fileStats = await stat(absPath);
-      entries.push({ path: filePath, size: fileStats.size });
+      await addEntry(filePath);
     }
   }
 
@@ -70,17 +79,40 @@ async function readDoc(relativePath: string) {
   return { path: relativePath, contents };
 }
 
-async function main() {
-  const server = new McpServer({
-    name: 'project-docs',
-    version: '0.1.0',
-  });
+type SearchMatch = {
+  path: string;
+  lineNumber: number;
+  line: string;
+};
 
+async function searchDocs(query: string): Promise<SearchMatch[]> {
+  const documents = await listDocs();
+  const results: SearchMatch[] = [];
+  const lowerCaseQuery = query.toLowerCase();
+
+  for (const doc of documents) {
+    const { contents } = await readDoc(doc.path);
+    const lines = contents.split('\n');
+    lines.forEach((line, i) => {
+      if (line.toLowerCase().includes(lowerCaseQuery)) {
+        results.push({
+          path: doc.path,
+          lineNumber: i + 1,
+          line: line.trim(),
+        });
+      }
+    });
+  }
+  return results;
+}
+
+export function registerDocsTools(server: McpServer) {
   server.registerTool(
     'list-documents',
     {
       title: 'List Project Docs',
-      description: 'Enumerate documents under docs/, specs/, and key testing guides.',
+      description:
+        'Enumerate documents under docs/, specs/, and key testing guides.',
       outputSchema: {
         documents: z.array(
           z.object({
@@ -109,7 +141,8 @@ async function main() {
     'read-document',
     {
       title: 'Read Project Doc',
-      description: 'Read a project document by relative path from the repo root.',
+      description:
+        'Read a project document by relative path from the repo root.',
       inputSchema: {
         path: z
           .string()
@@ -137,11 +170,43 @@ async function main() {
     }
   );
 
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  server.registerTool(
+    'search-documents',
+    {
+      title: 'Search Project Docs',
+      description: 'Search for a keyword across all project documents.',
+      inputSchema: {
+        query: z.string().describe('The keyword to search for.'),
+      },
+      outputSchema: {
+        results: z.array(
+          z.object({
+            path: z.string(),
+            lineNumber: z.number(),
+            line: z.string(),
+          })
+        ),
+      },
+    },
+    async ({ query }) => {
+      const results = await searchDocs(query);
+      const output = { results };
+      return {
+        content: [
+          {
+            type: 'text',
+            text:
+              results.length > 0
+                ? results
+                    .map(
+                      (r) => `${r.path}:${r.lineNumber}:${r.line.slice(0, 100)}`
+                    )
+                    .join('\n')
+                : 'No results found.',
+          },
+        ],
+        structuredContent: output,
+      };
+    }
+  );
 }
-
-main().catch((error) => {
-  console.error('[project-docs] Server error', error);
-  process.exit(1);
-});

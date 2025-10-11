@@ -1,6 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
+import { z } from './z.js';
 
 type AuthFixtureUser = {
   uid: string;
@@ -37,8 +36,7 @@ function toAuthUser(overrides?: Record<string, unknown>) {
   return {
     uid: `uid-${(overrides?.uid as string | undefined) ?? 'user'}`,
     email: (overrides?.email as string | undefined) ?? 'user@example.com',
-    displayName:
-      (overrides?.displayName as string | undefined) ?? 'Test User',
+    displayName: (overrides?.displayName as string | undefined) ?? 'Test User',
     ...overrides,
   } as AuthFixtureUser;
 }
@@ -140,12 +138,7 @@ function buildContextFromRole(role: 'admin' | 'agent' | 'member' | 'guest') {
   }
 }
 
-async function main() {
-  const server = new McpServer({
-    name: 'auth-fixtures',
-    version: '0.1.0',
-  });
-
+export function registerAuthFixturesTools(server: McpServer) {
   server.registerTool(
     'list-auth-fixtures',
     {
@@ -295,19 +288,9 @@ async function main() {
 
       const output = { context };
       return {
-        content: [
-          { type: 'text', text: JSON.stringify(output, null, 2) },
-        ],
+        content: [{ type: 'text', text: JSON.stringify(output, null, 2) }],
         structuredContent: output,
       };
     }
   );
-
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
 }
-
-main().catch((error) => {
-  console.error('[auth-fixtures] Server error', error);
-  process.exit(1);
-});

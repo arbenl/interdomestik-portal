@@ -1,10 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { execa } from 'execa';
-import { z } from 'zod';
-import { resolve } from 'node:path';
+import { z } from './z.js';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const repoRoot = resolve(import.meta.dirname, '..', '..');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const repoRoot = resolve(__dirname, '..', '..');
 
 type TestCommandName =
   | 'frontend:test'
@@ -87,12 +89,7 @@ async function executeTestCommand(command: TestCommand, extraArgs?: string[]) {
   };
 }
 
-async function main() {
-  const server = new McpServer({
-    name: 'test-orchestrator',
-    version: '0.1.0',
-  });
-
+export function registerTestOrchestratorTools(server: McpServer) {
   server.registerTool(
     'list-test-commands',
     {
@@ -178,12 +175,4 @@ async function main() {
       };
     }
   );
-
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
 }
-
-main().catch((error) => {
-  console.error('[test-orchestrator] Server error', error);
-  process.exit(1);
-});
