@@ -40,7 +40,8 @@ const QUERY_KEY = ['admin', 'exports'];
 
 function toDate(value: unknown): Date | null {
   if (!value) return null;
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (value instanceof Date)
+    return Number.isNaN(value.getTime()) ? null : value;
   if (typeof value === 'string') {
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -91,11 +92,11 @@ function normalizeJob(raw: Record<string, unknown>): ExportJob {
   const rowsValue = Number(raw.rows as number | string | undefined);
   const rows = Number.isFinite(rowsValue)
     ? Math.trunc(rowsValue)
-    : progressRows ?? null;
+    : (progressRows ?? null);
   const sizeValue = Number(raw.size as number | string | undefined);
   const sizeBytes = Number.isFinite(sizeValue)
     ? sizeValue
-    : progressBytes ?? null;
+    : (progressBytes ?? null);
 
   return {
     id: String(raw.id ?? ''),
@@ -156,20 +157,18 @@ export function useExportJobs() {
   const query = useQuery<ExportJob[], Error>({
     queryKey: QUERY_KEY,
     queryFn: async () => {
-      const response = await callFn<
-        { limit?: number },
-        GetMyExportsResponse
-      >('getMyExports', { limit: 25 });
+      const response = await callFn<{ limit?: number }, GetMyExportsResponse>(
+        'getMyExports',
+        { limit: 25 }
+      );
       const jobsRaw = Array.isArray(response?.jobs) ? response.jobs : [];
       const jobs = jobsRaw
         .map((job) => normalizeJob(job as Record<string, unknown>))
         .filter((job) => job.id);
       return sortJobs(jobs);
     },
-    refetchInterval: (result) => {
-      const current = Array.isArray((result as any)?.data)
-        ? ((result as { data: ExportJob[] }).data as ExportJob[])
-        : undefined;
+    refetchInterval: (data) => {
+      const current = Array.isArray(data) ? (data as ExportJob[]) : undefined;
       if (!current) return false;
       return current.some((job) => ACTIVE_STATUSES.has(job.status))
         ? 5000
