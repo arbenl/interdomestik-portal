@@ -16,16 +16,16 @@
     "clean": "kill-port 9099 8080 5001 5000 4400 4500 && rm -f firebase-debug.log"
   },
   "dependencies": {
-    "@types/cors": "^2.8.19",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
     "firebase-admin": "^13.5.0",
     "firebase-functions": "^6.4.0",
     "stripe": "^16.6.0",
-    "zod": "^4.1.7"
+    "zod": "3.23.8"
   },
   "devDependencies": {
     "@types/chai": "^5.2.2",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.3.1",

@@ -1,65 +1,27 @@
 import { Route, Routes } from 'react-router-dom';
-import { describe, it, expect, vi } from 'vitest';
-import { AuthContext, type AuthContextType } from '@/context/AuthContext';
-import { renderWithProviders, screen } from '@/test-utils';
-import { makeUser } from '@/tests/factories/user';
+import { describe, it, expect } from 'vitest';
+import { AuthContext } from '@/context/AuthContext';
+import {
+  renderWithProviders,
+  screen,
+  buildAuthContextFixture,
+  type BuildAuthContextOptions,
+} from '@/test-utils';
 import type { Role } from '@/types';
-import type { User } from 'firebase/auth';
 import RoleProtectedRoute from '../RoleProtectedRoute';
 
-type ExtendedAuthContextType = AuthContextType & {
-  refreshClaims: () => Promise<void>;
-};
-
-type AuthOverrides = Omit<Partial<ExtendedAuthContextType>, 'user'> & {
-  user?: Partial<User> | null;
-};
-
-function createAuthContextValue(
-  overrides?: AuthOverrides
-): ExtendedAuthContextType {
-  const { user: userOverride, ...rest } = overrides ?? {};
-  const defaultUser = makeUser();
-  const user =
-    userOverride === null
-      ? null
-      : ({
-          ...defaultUser,
-          ...(userOverride ?? {}),
-        } as User);
-
-  const baseValue: ExtendedAuthContextType = {
-    user,
-    loading: false,
-    isAdmin: false,
-    isAgent: false,
-    allowedRegions: [],
-    mfaEnabled: false,
-    refreshClaims: vi.fn(() => Promise.resolve()),
-    signIn: vi.fn(() => Promise.resolve()),
-    signUp: vi.fn(() => Promise.resolve()),
-    signOutUser: vi.fn(() => Promise.resolve()),
-  };
-
-  return {
-    ...baseValue,
-    ...rest,
-    user,
-  };
-}
-
-function renderRoleProtectedRoute({
-  authOverrides,
+async function renderRoleProtectedRoute({
+  fixtureOptions,
   roles = ['admin'],
   redirectTo,
   initialEntries = ['/admin'],
 }: {
-  authOverrides?: AuthOverrides;
+  fixtureOptions?: BuildAuthContextOptions;
   roles?: Role[];
   redirectTo?: string;
   initialEntries?: string[];
 } = {}) {
-  const authValue = createAuthContextValue(authOverrides);
+  const authValue = await buildAuthContextFixture(fixtureOptions);
 
   return renderWithProviders(
     <AuthContext.Provider value={authValue}>
@@ -83,9 +45,9 @@ function renderRoleProtectedRoute({
 
 describe('RoleProtectedRoute', () => {
   describe('when user has an allowed role', () => {
-    it('renders children when user has an allowed role', () => {
-      renderRoleProtectedRoute({
-        authOverrides: { isAdmin: true },
+    it('renders children when user has an allowed role', async () => {
+      await renderRoleProtectedRoute({
+        fixtureOptions: { role: 'admin' },
       });
 
       expect(screen.getByText('Protected Content')).toBeInTheDocument();
@@ -93,9 +55,9 @@ describe('RoleProtectedRoute', () => {
   });
 
   describe('when user is not authenticated', () => {
-    it('redirects to /signin when user is not authenticated', () => {
-      renderRoleProtectedRoute({
-        authOverrides: { user: null },
+    it('redirects to /signin when user is not authenticated', async () => {
+      await renderRoleProtectedRoute({
+        fixtureOptions: { role: 'guest' },
       });
 
       expect(screen.getByText('Sign In Page')).toBeInTheDocument();
@@ -104,18 +66,18 @@ describe('RoleProtectedRoute', () => {
   });
 
   describe('when user lacks the required role', () => {
-    it('redirects to the default portal route', () => {
-      renderRoleProtectedRoute({
-        authOverrides: { isAdmin: false, isAgent: false },
+    it('redirects to the default portal route', async () => {
+      await renderRoleProtectedRoute({
+        fixtureOptions: { role: 'member' },
       });
 
       expect(screen.getByText('Portal Page')).toBeInTheDocument();
       expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
     });
 
-    it('supports a custom redirect path', () => {
-      renderRoleProtectedRoute({
-        authOverrides: { isAdmin: false },
+    it('supports a custom redirect path', async () => {
+      await renderRoleProtectedRoute({
+        fixtureOptions: { role: 'member' },
         redirectTo: '/agent',
       });
 
@@ -124,9 +86,9 @@ describe('RoleProtectedRoute', () => {
     });
   });
 
-  it('shows a loading state while permissions are being checked', () => {
-    renderRoleProtectedRoute({
-      authOverrides: { loading: true },
+  it('shows a loading state while permissions are being checked', async () => {
+    await renderRoleProtectedRoute({
+      fixtureOptions: { role: 'guest', loading: true },
     });
 
     expect(screen.getByText('Checking permissions…')).toBeInTheDocument();

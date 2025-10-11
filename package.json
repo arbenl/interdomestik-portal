@@ -21,7 +21,9 @@
     "test:rules": "vitest -c vitest.config.rules.ts",
     "check": "node scripts/check-errors.js",
     "verify:frontend": "pnpm --filter frontend typecheck && pnpm --filter frontend lint --no-fix && pnpm --filter frontend build && pnpm --filter frontend test:ci",
-    "specify": "uvx --from git+https://github.com/github/spec-kit.git specify"
+    "specify": "uvx --from git+https://github.com/github/spec-kit.git specify",
+    "mcp": "pnpm --filter mcp-servers start",
+    "orchestrate:e2e": "tsx scripts/orchestrate-e2e.ts"
   },
   "keywords": [
     "member-portal",
@@ -55,8 +57,7 @@
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4",
-    "wait-on": "^9.0.1",
-    "zod": "^4.1.8"
+    "wait-on": "^9.0.1"
   },
   "engines": {
     "node": ">=20.19.4 <21",
@@ -73,10 +74,5 @@
       "sh -c 'npm --prefix functions run typecheck'"
     ]
   },
-  "packageManager": "pnpm@10.16.1+sha521.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706",
-  "pnpm": {
-    "overrides": {
-      "zod": "^4.1.11"
-    }
-  }
+  "packageManager": "pnpm@10.16.1+sha521.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706"
 }
