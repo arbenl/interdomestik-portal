@@ -13,6 +13,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { User } from 'firebase/auth';
 import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
+import { resolve } from 'node:path';
 import { vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio';
@@ -131,9 +132,12 @@ export type BuildAuthContextOptions = {
 export async function buildAuthContextFixture(
   options?: BuildAuthContextOptions
 ): Promise<AuthContextType & { refreshClaims: () => Promise<void> }> {
+  // Ensure we spawn the MCP server from the workspace root where the `mcp` script exists
+  const repoRoot = resolve(process.cwd(), '..');
   const transport = new StdioClientTransport({
     command: AUTH_FIXTURES_COMMAND,
     args: AUTH_FIXTURES_ARGS,
+    cwd: repoRoot,
     env: {
       ...process.env,
       FORCE_COLOR: '0',
