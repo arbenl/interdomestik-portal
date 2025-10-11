@@ -8,7 +8,8 @@ import { readFile } from 'node:fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const repoRoot = resolve(__dirname, '..', '..');
+// packages/mcp/src -> repo root
+const repoRoot = resolve(__dirname, '..', '..', '..');
 
 const listFilesInput = {
   globs: z.array(z.string()).optional(),
@@ -17,10 +18,12 @@ const listFilesInput = {
 
 const searchCodeInput = {
   query: z.string(),
+  mode: z.enum(['regex', 'literal']).optional().default('regex'),
   globs: z.array(z.string()).optional(),
   context: z.number().optional(),
   caseSensitive: z.boolean().optional(),
   maxResults: z.number().optional(),
+  maxFileSizeBytes: z.number().optional(),
 };
 
 const gitWhoInput = {
@@ -80,18 +83,22 @@ export function registerRepoTools(server: McpServer) {
     async (input) => {
       const {
         query,
+        mode = 'regex',
         globs,
         context = 0,
         caseSensitive = false,
         maxResults = 100,
+        maxFileSizeBytes = 1_000_000,
       } = input;
 
       const results: any[] = [];
-      const regex = new RegExp(query, caseSensitive ? '' : 'i');
+      const escaped = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = mode === 'literal' ? escaped(query) : query;
+      const regex = new RegExp(pattern, caseSensitive ? '' : 'i');
 
       const files = await fg(globs ?? '**/*', {
         cwd: repoRoot,
-        ignore: ['**/node_modules/**', '**/.git/**'],
+        ignore: ['**/node_modules/**', '**/.git/**', '**/dist/**'],
         onlyFiles: true,
         absolute: true, // Read paths need to be absolute
       });
@@ -102,6 +109,12 @@ export function registerRepoTools(server: McpServer) {
         }
 
         try {
+          const stat = await import('node:fs/promises').then((m) =>
+            m.stat(file)
+          );
+          if (stat.size > maxFileSizeBytes) {
+            continue;
+          }
           const content = await readFile(file, 'utf-8');
           const lines = content.split('\n');
 

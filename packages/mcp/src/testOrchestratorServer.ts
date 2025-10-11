@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const repoRoot = resolve(__dirname, '..', '..');
+// packages/mcp/src -> repo root
+const repoRoot = resolve(__dirname, '..', '..', '..');
 
 type TestCommandName =
   | 'frontend:test'
@@ -64,29 +65,49 @@ const TEST_COMMAND_NAMES = TEST_COMMAND_LIST.map(
   (command) => command.name
 ) as unknown as readonly [TestCommandName, ...TestCommandName[]];
 
-async function executeTestCommand(command: TestCommand, extraArgs?: string[]) {
+async function executeTestCommand(
+  command: TestCommand,
+  extraArgs?: string[],
+  streamToLogOnFailure = true
+) {
   const start = Date.now();
   const args = [...command.args, ...(extraArgs ?? [])];
+
+  const logDir = resolve(repoRoot, 'frontend', 'test-results', 'mcp-logs');
+  const fs = await import('node:fs');
+  try {
+    fs.mkdirSync(logDir, { recursive: true });
+  } catch {}
+  const logPath = resolve(logDir, `run-${Date.now()}.log`);
+  const logStream = fs.createWriteStream(logPath, { flags: 'a' });
 
   const subprocess = execa('pnpm', args, {
     cwd: command.cwd ?? repoRoot,
     reject: false,
+    all: true,
     env: {
       ...process.env,
       CI: process.env.CI ?? 'false',
     },
   });
 
+  subprocess.all?.on('data', (chunk: Buffer) => {
+    logStream.write(chunk);
+  });
+
   const { exitCode, stdout, stderr } = await subprocess;
+  logStream.end();
+
   const durationMs = Date.now() - start;
   return {
     exitCode,
     succeeded: exitCode === 0,
     durationMs,
-    stdout: stdout.trim(),
-    stderr: stderr.trim(),
+    stdout: (stdout ?? '').trim(),
+    stderr: (stderr ?? '').trim(),
     executed: ['pnpm', ...args],
-  };
+    logFile: `frontend/test-results/mcp-logs/${logPath.split('/').slice(-1)[0]}`,
+  } as const;
 }
 
 export function registerTestOrchestratorTools(server: McpServer) {
@@ -143,10 +164,17 @@ export function registerTestOrchestratorTools(server: McpServer) {
         stdout: z.string(),
         stderr: z.string(),
         executed: z.array(z.string()),
+        logFile: z.string().optional(),
       },
     },
-    async ({ name, extraArgs }) => {
-      const command = TEST_COMMANDS[name];
+    async ({
+      name,
+      extraArgs,
+    }: {
+      name?: TestCommandName;
+      extraArgs?: string[];
+    }) => {
+      const command = name ? TEST_COMMANDS[name] : undefined;
       if (!command) {
         const message = `Unknown test command: ${name}`;
         return {
@@ -164,6 +192,7 @@ export function registerTestOrchestratorTools(server: McpServer) {
               `Command: ${result.executed.join(' ')}`,
               `Exit code: ${result.exitCode}`,
               `Duration: ${result.durationMs}ms`,
+              result.logFile ? `Log file: ${result.logFile}` : '',
               result.stdout ? `stdout:\n${result.stdout}` : '',
               result.stderr ? `stderr:\n${result.stderr}` : '',
             ]

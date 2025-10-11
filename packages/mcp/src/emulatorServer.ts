@@ -61,7 +61,8 @@ function formatLogOutput(state: EmulatorState | null, length?: number) {
 
 function startEmulatorProcess(mode: EmulatorMode) {
   if (emulatorState) {
-    throw new Error('Emulators already running');
+    // Already running; return current state without error
+    return emulatorState;
   }
 
   const args = mode === 'seeded' ? ['dev:emu:seed'] : ['dev:emu'];
@@ -204,24 +205,21 @@ export function registerEmulatorTools(server: McpServer) {
       },
     },
     async ({ mode }) => {
-      try {
-        const state = startEmulatorProcess(mode ?? 'default');
-        const status = currentStatus();
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Emulators started (PID ${state.process.pid}) in ${state.mode} mode.`,
-            },
-          ],
-          structuredContent: status,
-        };
-      } catch (error) {
-        return {
-          content: [{ type: 'text', text: (error as Error).message }],
-          isError: true,
-        };
-      }
+      const state = startEmulatorProcess(mode ?? 'default');
+      const status = currentStatus();
+      const message =
+        emulatorState && emulatorState.process.pid === state.process.pid
+          ? `Emulators running (PID ${state.process.pid}) in ${state.mode} mode.`
+          : `Emulators started (PID ${state.process.pid}) in ${state.mode} mode.`;
+      return {
+        content: [
+          {
+            type: 'text',
+            text: message,
+          },
+        ],
+        structuredContent: status,
+      };
     }
   );
 

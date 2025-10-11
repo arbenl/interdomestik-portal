@@ -12,7 +12,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 function projectRoot() {
-  return resolve(__dirname, '..', '..');
+  // packages/mcp/src -> repo root is three levels up
+  return resolve(__dirname, '..', '..', '..');
 }
 
 async function fileExists(relativePath: string) {

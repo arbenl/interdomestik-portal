@@ -10,17 +10,22 @@ import { execa } from 'execa';
 const require = createRequire(import.meta.url);
 
 const checkPortsInput = {
+  host: z.string().optional(),
   ports: z.array(z.number()).optional(),
 };
 
 const waitForEmulatorsInput = {
   timeoutMs: z.number().optional(),
+  host: z.string().optional(),
   ports: z.array(z.number()).optional(),
 };
 
 const defaultPorts = [5000, 5001, 8080, 9099];
 
-function checkPort(port: number): Promise<{ port: number; isOpen: boolean }> {
+function checkPort(
+  port: number,
+  host: string
+): Promise<{ port: number; isOpen: boolean }> {
   return new Promise((resolve) => {
     const socket = new net.Socket();
     const timeout = 200;
@@ -42,7 +47,7 @@ function checkPort(port: number): Promise<{ port: number; isOpen: boolean }> {
       resolve({ port, isOpen: false });
     });
 
-    socket.connect(port, '127.0.0.1');
+    socket.connect(port, host);
   });
 }
 
@@ -89,7 +94,10 @@ export function registerHealthTools(server: McpServer) {
     },
     async (input) => {
       const portsToCheck = input.ports ?? defaultPorts;
-      const results = await Promise.all(portsToCheck.map(checkPort));
+      const host = input.host ?? '127.0.0.1';
+      const results = await Promise.all(
+        portsToCheck.map((p: number) => checkPort(p, host))
+      );
       const output = { ports: results };
       return {
         content: [{ type: 'text', text: JSON.stringify(output, null, 2) }],
@@ -110,15 +118,19 @@ export function registerHealthTools(server: McpServer) {
         checkedPorts: z.array(
           z.object({ port: z.number(), isOpen: z.boolean() })
         ),
+        error: z.string().optional(),
       },
     },
     async (input) => {
       const timeout = input.timeoutMs ?? 60000;
       const start = Date.now();
       const portsToCheck = input.ports ?? defaultPorts;
+      const host = input.host ?? '127.0.0.1';
 
       while (Date.now() - start < timeout) {
-        const results = await Promise.all(portsToCheck.map(checkPort));
+        const results = await Promise.all(
+          portsToCheck.map((p: number) => checkPort(p, host))
+        );
         if (results.every((res) => res.isOpen)) {
           const output = {
             success: true,
@@ -133,11 +145,15 @@ export function registerHealthTools(server: McpServer) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
-      const finalResults = await Promise.all(portsToCheck.map(checkPort));
+      const finalResults = await Promise.all(
+        portsToCheck.map((p: number) => checkPort(p, host))
+      );
+      const closed = finalResults.filter((r) => !r.isOpen).map((r) => r.port);
       const output = {
         success: false,
         durationMs: Date.now() - start,
         checkedPorts: finalResults,
+        error: `Timed out after ${Date.now() - start}ms waiting for ${host}:${closed.join(', ')} to open`,
       };
 
       return {
